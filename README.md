@@ -2,6 +2,8 @@
 
 **Trouvez votre prochain rendez-vous, sans l’indécision.**
 
+[![CI](https://github.com/Annayia-04/a-deux/actions/workflows/ci.yml/badge.svg)](https://github.com/Annayia-04/a-deux/actions/workflows/ci.yml)
+
 Une application fullstack de cartes à swiper : on choisit d’abord son budget, le lieu, le moment, l’ambiance et ses thèmes, puis on garde les idées de rendez-vous qui ressemblent au couple. Chacun peut swiper de son côté et être prévenu dès que les deux partenaires aiment la même idée. Pas de compte, pas d’asset externe, pas de donnée personnelle demandée.
 
 ## Fonctionnalités
@@ -63,6 +65,16 @@ npm start -- -p 3100 # autre port
 | `npm test` | Tests unitaires Vitest |
 | `npm run test:watch` | Tests en mode watch |
 | `npm run smoke` | Test de fumée HTTP contre un serveur déjà démarré |
+
+### Branches et intégration continue
+
+| Branche | Usage |
+| --- | --- |
+| `main` | Version stable, déployable |
+| `staging` | Pré-production, validation avant fusion dans `main` |
+| `dev` | Développement courant |
+
+Le workflow `.github/workflows/ci.yml` s’exécute sur chaque push et pull request vers ces trois branches : installation reproductible (`npm ci`), vérification TypeScript, tests unitaires, build de production, puis test de fumée HTTP contre un serveur `next start` temporaire. Les exécutions obsolètes d’une même branche sont annulées automatiquement.
 
 ## Variables d’environnement
 

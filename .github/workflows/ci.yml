@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+    branches: [main, dev, staging]
+  pull_request:
+    branches: [main, dev, staging]
+
+# Une seule exécution par branche : les pushs rapprochés annulent les runs obsolètes.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NEXT_TELEMETRY_DISABLED: "1"
+  CI: "1"
+
+jobs:
+  verify:
+    name: Types, tests, build et smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v4
+
+      - name: Installer Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Installer les dépendances
+        run: npm ci
+
+      - name: Vérifier les types
+        run: npm run typecheck
+
+      - name: Lancer les tests unitaires
+        run: npm test
+
+      - name: Construire l'application
+        run: npm run build
+
+      - name: Démarrer le serveur de production
+        run: |
+          npm start -- -p 3100 > /tmp/next-start.log 2>&1 &
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://localhost:3100/ > /dev/null 2>&1; then
+              echo "Serveur prêt après ${attempt}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Le serveur n'a pas démarré dans les 30 s"
+          cat /tmp/next-start.log
+          exit 1
+
+      - name: Test de fumée HTTP
+        run: node scripts/smoke.mjs http://localhost:3100
+
+      - name: Journaux du serveur en cas d'échec
+        if: failure()
+        run: cat /tmp/next-start.log || true
