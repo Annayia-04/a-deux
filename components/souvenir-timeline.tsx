@@ -56,10 +56,11 @@ export function SouvenirTimeline({
     <section className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h3 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-cream/50">
+          <h3 className="font-display text-[22px] leading-none tracking-[0.01em] text-cream">
             Votre journal
           </h3>
-          <p className="mt-0.5 text-[10.5px] text-cream/35">
+          <span aria-hidden className="rule-ornament mt-2 block h-px w-24" />
+          <p className="mt-1.5 text-[10.5px] text-ash">
             {souvenirs.length > 0
               ? `${souvenirs.length} date${souvenirs.length > 1 ? "s" : ""} racontée${souvenirs.length > 1 ? "s" : ""}`
               : "Les dates vécues, racontées à deux."}
@@ -68,7 +69,7 @@ export function SouvenirTimeline({
         <button
           type="button"
           onClick={onAdd}
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-rose/25 bg-rose/10 px-3 py-2 text-[11.5px] font-medium text-rose-soft transition hover:border-rose/40 hover:bg-rose/15"
+          className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-xl border border-gold/40 bg-gold/[0.06] px-3 py-2 text-[11.5px] font-medium text-gold transition hover:border-gold/65 hover:bg-gold/10"
         >
           <SparklesIcon className="h-3.5 w-3.5" />
           Ajouter
@@ -96,21 +97,21 @@ export function SouvenirTimeline({
       ) : null}
 
       {!loading && souvenirs.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-white/12 bg-white/[0.02] px-4 py-8 text-center">
+        <div className="grimoire ornament-corners rounded-2xl px-5 py-9 text-center">
           <span aria-hidden className="text-4xl">
             📖
           </span>
           <p className="mt-3 font-display text-[18px] text-cream">
             Votre histoire commence ici
           </p>
-          <p className="mx-auto mt-1.5 max-w-[280px] text-[11.5px] leading-relaxed text-cream/45">
+          <p className="mx-auto mt-1.5 max-w-[280px] text-[11.5px] leading-relaxed text-ash">
             Après un date, racontez chacun votre moment préféré. Les deux
             versions se retrouvent dans cette timeline.
           </p>
           <button
             type="button"
             onClick={onAdd}
-            className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-rose to-[#ff8f6b] px-4 py-2.5 text-[12px] font-semibold text-ink-950 transition hover:brightness-105"
+            className="mt-4 inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-gold/45 bg-gradient-to-r from-ember to-rose px-4 py-2.5 text-[12px] font-semibold text-cream transition hover:border-gold/70 hover:brightness-110"
           >
             <SparklesIcon className="h-3.5 w-3.5" />
             Écrire un premier souvenir
@@ -120,11 +121,11 @@ export function SouvenirTimeline({
 
       {[...groups.entries()].map(([month, items]) => (
         <div key={month}>
-          <p className="mb-2 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-cream/35">
-            <span className="h-1.5 w-1.5 rounded-full bg-rose/70" />
+          <p className="mb-2 flex items-center gap-2 font-display text-[13px] tracking-[0.08em] text-gold/85">
+            <span className="h-1.5 w-1.5 rotate-45 bg-gold/80" />
             {capitalize(month)}
           </p>
-          <div className="relative space-y-2.5 border-l border-white/10 pl-3.5">
+          <div className="relative space-y-2.5 border-l border-gold/20 pl-3.5">
             {items.map((souvenir, index) => (
               <motion.article
                 key={souvenir.id}
@@ -135,17 +136,17 @@ export function SouvenirTimeline({
                   delay: Math.min(index * 0.04, 0.2),
                   ease: [0.3, 0.8, 0.2, 1],
                 }}
-                className="relative rounded-2xl border border-white/10 bg-white/[0.03] p-3.5"
+                className="grimoire relative rounded-2xl p-3.5"
               >
                 <span
                   aria-hidden
-                  className="absolute -left-[21px] top-5 h-2.5 w-2.5 rounded-full border-2 border-ink-900 bg-rose"
+                  className="absolute -left-[22px] top-5 h-2.5 w-2.5 rotate-45 border border-gold/60 bg-ember"
                 />
 
                 <div className="flex items-start gap-3">
                   <span
                     aria-hidden
-                    className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-rose/25 to-gold/15 text-[20px] ring-1 ring-white/10"
+                    className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-rose/30 to-gold/15 text-[20px] ring-1 ring-gold/25"
                   >
                     {souvenir.emoji}
                   </span>
@@ -155,19 +156,19 @@ export function SouvenirTimeline({
                         {souvenir.title}
                       </h4>
                       {souvenir.complete ? (
-                        <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-mint/10 px-1.5 py-0.5 text-[9px] font-medium text-mint ring-1 ring-inset ring-mint/25">
+                        <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-gold/10 px-1.5 py-0.5 text-[9px] font-medium text-gold ring-1 ring-inset ring-gold/30">
                           <CheckIcon className="h-2.5 w-2.5" />
                           2/2
                         </span>
                       ) : (
-                        <span className="shrink-0 rounded-full bg-white/[0.05] px-1.5 py-0.5 text-[9px] text-cream/40">
+                        <span className="shrink-0 rounded-full bg-white/[0.05] px-1.5 py-0.5 text-[9px] text-ash">
                           {Number(souvenir.mine !== null) +
                             Number(souvenir.partner !== null)}
                           /2
                         </span>
                       )}
                     </div>
-                    <p className="mt-0.5 text-[10px] text-cream/30">
+                    <p className="mt-0.5 text-[10px] text-ash">
                       {formatDate(souvenir.happenedAt)}
                     </p>
                   </div>
@@ -175,7 +176,7 @@ export function SouvenirTimeline({
 
                 <div className="mt-2.5 grid gap-2 sm:grid-cols-2">
                   <div className="rounded-xl border border-rose/15 bg-rose/[0.05] px-2.5 py-2">
-                    <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-rose-soft/70">
+                    <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-rose-soft/85">
                       Votre moment
                     </p>
                     {souvenir.mine ? (
@@ -186,7 +187,7 @@ export function SouvenirTimeline({
                         <button
                           type="button"
                           onClick={() => onEditMine(souvenir)}
-                          className="mt-1.5 text-[10px] text-cream/35 underline-offset-2 transition hover:text-cream/70 hover:underline"
+                          className="mt-1.5 text-[10px] text-ash underline-offset-2 transition hover:text-cream/70 hover:underline"
                         >
                           Modifier
                         </button>
@@ -203,8 +204,8 @@ export function SouvenirTimeline({
                     )}
                   </div>
 
-                  <div className="rounded-xl border border-white/[0.07] bg-white/[0.02] px-2.5 py-2">
-                    <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-cream/35">
+                  <div className="rounded-xl border border-gold/12 bg-ink-800/50 px-2.5 py-2">
+                    <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-ash">
                       Votre partenaire
                     </p>
                     {souvenir.partner ? (
@@ -212,7 +213,7 @@ export function SouvenirTimeline({
                         {souvenir.partner}
                       </p>
                     ) : (
-                      <p className="mt-1 text-[11px] italic text-cream/30">
+                      <p className="mt-1 text-[11px] italic text-ash">
                         En attente de son moment…
                       </p>
                     )}

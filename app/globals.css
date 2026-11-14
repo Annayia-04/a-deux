@@ -1,21 +1,37 @@
 @import "tailwindcss";
 
+/*
+ * Design system « Gothique romantique ».
+ *
+ * Toutes les couleurs et les polices vivent ici : les composants ne
+ * manipulent que des jetons (`ink`, `cream`, `rose`, `gold`, `mint`).
+ * Les valeurs sont calibrées pour rester lisibles sur les fonds sombres
+ * (texte sur `ink-950` : 15,7:1 ; `rose-soft` : 7,4:1 ; `gold` : 8,1:1).
+ */
 @theme {
-  --color-ink-950: #08050c;
-  --color-ink-900: #100a18;
-  --color-ink-850: #150e1f;
-  --color-ink-800: #1b1227;
-  --color-ink-700: #261933;
-  --color-cream: #fbf4ec;
-  --color-rose: #ff6b95;
-  --color-rose-soft: #ffb3c8;
-  --color-gold: #f5c98a;
-  --color-mint: #9be6c6;
+  /* Fonds : noir velouté, anthracite fumé. */
+  --color-ink-950: #0a090c;
+  --color-ink-900: #100d12;
+  --color-ink-850: #141218;
+  --color-ink-800: #1a161c;
+  --color-ink-700: #241e26;
 
-  --font-display: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua",
-    Georgia, ui-serif, serif;
+  /* Textes : parchemin et cendre. */
+  --color-cream: #eae4dc;
+  --color-ash: #8e8894;
+  --color-rose: #9e192d;
+  --color-rose-soft: #c98f93;
+  --color-gold: #c5a059;
+  --color-mint: #a8a9ad;
+  --color-ember: #7a1120;
+
+  --font-display: "Cormorant Garamond", "Playfair Display", Didot, "Bodoni MT",
+    "Iowan Old Style", "Palatino Linotype", "Noto Serif", Georgia, ui-serif,
+    serif;
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, sans-serif;
+
+  --radius-tarot: 1.75rem;
 }
 
 @layer base {
@@ -24,12 +40,26 @@
   }
 
   body {
+    min-height: 100vh;
     min-height: 100dvh;
     background-color: var(--color-ink-950);
     background-image:
-      radial-gradient(65rem 50rem at 8% -12%, rgba(255, 107, 149, 0.16), transparent 62%),
-      radial-gradient(55rem 45rem at 102% -4%, rgba(124, 92, 255, 0.14), transparent 60%),
-      radial-gradient(45rem 40rem at 50% 118%, rgba(245, 201, 138, 0.08), transparent 65%);
+      /* Trame de papier ancien, très discrète (première couche = dessus). */
+      radial-gradient(
+        circle at 1px 1px,
+        rgba(234, 228, 220, 0.028) 1px,
+        transparent 0
+      ),
+      radial-gradient(65rem 48rem at 50% -14%, rgba(122, 17, 32, 0.3), transparent 64%),
+      radial-gradient(52rem 40rem at 104% 18%, rgba(197, 160, 89, 0.09), transparent 62%),
+      radial-gradient(48rem 40rem at -6% 46%, rgba(122, 17, 32, 0.14), transparent 60%),
+      radial-gradient(55rem 45rem at 50% 116%, rgba(122, 17, 32, 0.16), transparent 66%);
+    background-size:
+      9px 9px,
+      auto,
+      auto,
+      auto,
+      auto;
     background-attachment: fixed;
     color: var(--color-cream);
     font-family: var(--font-sans);
@@ -38,12 +68,12 @@
   }
 
   ::selection {
-    background: var(--color-rose);
-    color: #2a0a15;
+    background: var(--color-gold);
+    color: #17110a;
   }
 
   :focus-visible {
-    outline: 2px solid var(--color-rose);
+    outline: 2px solid var(--color-gold);
     outline-offset: 3px;
   }
 
@@ -67,8 +97,8 @@
   }
 
   .glass {
-    background: rgba(255, 255, 255, 0.045);
-    border: 1px solid rgba(255, 255, 255, 0.09);
+    background: rgba(20, 18, 24, 0.72);
+    border: 1px solid rgba(197, 160, 89, 0.22);
     backdrop-filter: blur(18px);
     -webkit-backdrop-filter: blur(18px);
   }
@@ -80,10 +110,75 @@
   .grain {
     background-image: radial-gradient(
       circle at 1px 1px,
-      rgba(255, 255, 255, 0.3) 1px,
+      rgba(234, 228, 220, 0.22) 1px,
       transparent 0
     );
     background-size: 18px 18px;
+  }
+
+  /*
+   * Cadre « carte de tarot » : deux filets d'or (1 px) séparés par une
+   * réserve sombre. À poser sur une carte `overflow-hidden`.
+   */
+  .frame-gold {
+    box-shadow:
+      inset 0 0 0 1px rgba(197, 160, 89, 0.5),
+      inset 0 0 0 4px rgba(10, 9, 12, 0.92),
+      inset 0 0 0 5px rgba(197, 160, 89, 0.2),
+      0 30px 80px -24px rgba(0, 0, 0, 0.92);
+  }
+
+  /* Coins ornementés : quatre équerres d'or, façon enluminure. */
+  .ornament-corners {
+    --orn-color: rgba(197, 160, 89, 0.55);
+    background-image:
+      linear-gradient(var(--orn-color), var(--orn-color)),
+      linear-gradient(var(--orn-color), var(--orn-color)),
+      linear-gradient(var(--orn-color), var(--orn-color)),
+      linear-gradient(var(--orn-color), var(--orn-color)),
+      linear-gradient(var(--orn-color), var(--orn-color)),
+      linear-gradient(var(--orn-color), var(--orn-color)),
+      linear-gradient(var(--orn-color), var(--orn-color)),
+      linear-gradient(var(--orn-color), var(--orn-color));
+    background-repeat: no-repeat;
+    background-size:
+      16px 1px,
+      1px 16px,
+      16px 1px,
+      1px 16px,
+      16px 1px,
+      1px 16px,
+      16px 1px,
+      1px 16px;
+    background-position:
+      left 10px top 10px,
+      left 10px top 10px,
+      right 10px top 10px,
+      right 10px top 10px,
+      left 10px bottom 10px,
+      left 10px bottom 10px,
+      right 10px bottom 10px,
+      right 10px bottom 10px;
+  }
+
+  /* Surface « grimoire » : parchemin fumé, filet d'or. */
+  .grimoire {
+    background-image:
+      linear-gradient(180deg, rgba(197, 160, 89, 0.05), transparent 40%),
+      linear-gradient(180deg, rgba(26, 22, 28, 0.96), rgba(16, 13, 18, 0.98));
+    border: 1px solid rgba(197, 160, 89, 0.22);
+  }
+
+  /* Filet ornemental horizontal, pour séparer deux sections. */
+  .rule-ornament {
+    background-image: linear-gradient(
+      90deg,
+      transparent,
+      rgba(197, 160, 89, 0.45) 22%,
+      rgba(197, 160, 89, 0.7) 50%,
+      rgba(197, 160, 89, 0.45) 78%,
+      transparent
+    );
   }
 
   .animate-drift {
@@ -92,6 +187,10 @@
 
   .animate-pulse-soft {
     animation: pulse-soft 1.8s ease-in-out infinite;
+  }
+
+  .animate-heartbeat {
+    animation: heartbeat 2.4s ease-in-out infinite;
   }
 }
 
@@ -115,6 +214,22 @@
   }
 }
 
+/* Battement de cœur lent : deux impulsions puis un long repos. */
+@keyframes heartbeat {
+  0%,
+  30%,
+  60%,
+  100% {
+    transform: scale(1);
+  }
+  12% {
+    transform: scale(1.08);
+  }
+  42% {
+    transform: scale(1.05);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -130,4 +245,22 @@
   body {
     background-attachment: scroll;
   }
+}
+
+/*
+ * Compatibilité WebView ancienne (Chrome < 111) : Tailwind v4 interpole les
+ * dégradés avec `in oklab`, une syntaxe inconnue des anciens moteurs, qui
+ * annulent alors tout le `background-image`. On rétablit une interpolation
+ * classique. Ces règles non calquées priment sur les utilitaires de Tailwind.
+ */
+.bg-gradient-to-r {
+  --tw-gradient-position: to right;
+}
+
+.bg-gradient-to-b {
+  --tw-gradient-position: to bottom;
+}
+
+.bg-gradient-to-br {
+  --tw-gradient-position: to bottom right;
 }

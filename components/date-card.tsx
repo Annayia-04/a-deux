@@ -27,8 +27,8 @@ function MetaItem({
   label: string;
 }) {
   return (
-    <li className="flex min-w-0 items-center gap-1 rounded-lg bg-white/[0.05] px-1.5 py-1 ring-1 ring-inset ring-white/[0.06] [@media(min-height:701px)]:gap-1.5 [@media(min-height:701px)]:px-2 [@media(min-height:701px)]:py-1.5">
-      <Icon className="h-3 w-3 shrink-0 text-cream/40 [@media(min-height:701px)]:h-3.5 [@media(min-height:701px)]:w-3.5" />
+    <li className="flex min-w-0 items-center gap-1 rounded-lg bg-ink-800/70 px-1.5 py-1 ring-1 ring-inset ring-gold/15 [@media(min-height:701px)]:gap-1.5 [@media(min-height:701px)]:px-2 [@media(min-height:701px)]:py-1.5">
+      <Icon className="h-3 w-3 shrink-0 text-ash [@media(min-height:701px)]:h-3.5 [@media(min-height:701px)]:w-3.5" />
       <span className="truncate text-[10px] text-cream/75 [@media(min-height:701px)]:text-[11px]">
         {label}
       </span>
@@ -44,7 +44,11 @@ export function DateCard({ idea }: { idea: Idea }) {
   const primaryTheme = THEME_META[idea.themes[0] ?? "detente"];
 
   return (
-    <article className="relative flex h-full w-full flex-col overflow-hidden rounded-[28px] border border-white/10 bg-ink-900 shadow-[0_30px_80px_-24px_rgba(0,0,0,0.9)]">
+    <article className="relative flex h-full w-full flex-col overflow-hidden rounded-[28px] border border-gold/30 bg-ink-850 shadow-[0_30px_80px_-24px_rgba(0,0,0,0.92)] frame-gold">
+      <div
+        aria-hidden
+        className="ornament-corners pointer-events-none absolute inset-0 z-20 rounded-[28px]"
+      />
       <div
         className="relative h-[34%] min-h-[118px] shrink-0 overflow-hidden [@media(min-height:701px)]:min-h-[148px]"
         style={{
@@ -70,13 +74,13 @@ export function DateCard({ idea }: { idea: Idea }) {
             {idea.themes.slice(0, 2).map((theme) => (
               <span
                 key={theme}
-                className="rounded-full bg-black/25 px-2.5 py-1 text-[9.5px] font-semibold uppercase tracking-[0.13em] text-white/90 ring-1 ring-white/25 backdrop-blur-md"
+                className="rounded-full bg-ink-950/55 px-2.5 py-1 text-[9.5px] font-semibold uppercase tracking-[0.13em] text-cream/90 ring-1 ring-gold/35 backdrop-blur-md"
               >
                 {THEME_META[theme].label}
               </span>
             ))}
           </div>
-          <span className="shrink-0 rounded-full bg-black/25 px-2.5 py-1 text-[11px] font-medium text-white/90 ring-1 ring-white/25 backdrop-blur-md">
+          <span className="shrink-0 rounded-full bg-ink-950/55 px-2.5 py-1 text-[11px] font-medium text-cream/90 ring-1 ring-gold/35 backdrop-blur-md">
             {idea.budget === 0 ? "Gratuit" : `≈ ${idea.budget} €`}
           </span>
         </div>
@@ -95,7 +99,7 @@ export function DateCard({ idea }: { idea: Idea }) {
           className="absolute inset-x-0 -bottom-px h-16"
           style={{
             backgroundImage:
-              "linear-gradient(to top, rgba(16,10,24,0.85), transparent)",
+              "linear-gradient(to top, rgba(20,18,24,0.92), transparent)",
           }}
         />
       </div>

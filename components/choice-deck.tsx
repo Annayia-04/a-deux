@@ -74,7 +74,7 @@ export function ChoiceDeck({
 
   return (
     <section className="space-y-4">
-      <div className="flex rounded-xl border border-white/10 bg-white/[0.03] p-1">
+      <div className="flex rounded-xl border border-gold/20 bg-ink-800/50 p-1">
         {(["food", "movie"] as const).map((key) => {
           const item = CHOICE_CATEGORY_META[key];
           const active = category === key;
@@ -86,8 +86,8 @@ export function ChoiceDeck({
               aria-pressed={active}
               className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-[11.5px] font-medium transition ${
                 active
-                  ? "bg-white/[0.09] text-cream shadow-sm"
-                  : "text-cream/45 hover:text-cream/75"
+                  ? "bg-gold/[0.1] text-cream shadow-[inset_0_-1px_0_rgba(197,160,89,0.65)]"
+                  : "text-ash hover:text-cream/75"
               }`}
             >
               <span aria-hidden className="text-[14px]">
@@ -100,7 +100,7 @@ export function ChoiceDeck({
       </div>
 
       <div>
-        <div className="mb-1.5 flex items-center justify-between gap-2 text-[10px] text-cream/40">
+        <div className="mb-1.5 flex items-center justify-between gap-2 text-[10px] text-ash">
           <span className="tabular-nums">
             {snapshot ? `${snapshot.swiped} / ${snapshot.total} cartes` : "—"}
           </span>
@@ -115,7 +115,7 @@ export function ChoiceDeck({
           aria-valuemin={0}
           aria-valuemax={snapshot?.total ?? 0}
           aria-valuenow={snapshot?.swiped ?? 0}
-          className="h-1 overflow-hidden rounded-full bg-white/[0.07]"
+          className="h-1 overflow-hidden rounded-full bg-ink-700/70 ring-1 ring-inset ring-gold/10"
         >
           <div
             className="h-full rounded-full transition-[width] duration-500 ease-out"
@@ -146,7 +146,7 @@ export function ChoiceDeck({
 
       {snapshot && snapshot.matches.length > 0 ? (
         <div>
-          <p className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-cream/45">
+          <p className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-gold/80">
             <HeartIcon className="h-3 w-3 text-rose" />
             Vos matchs {meta.label.toLowerCase()}
             <span className="rounded-full bg-rose/15 px-1.5 py-0.5 text-[9px] normal-case tracking-normal text-rose-soft">
@@ -159,8 +159,8 @@ export function ChoiceDeck({
                 key={`${match.category}:${match.choiceId}`}
                 className={`inline-flex max-w-full items-center gap-1.5 rounded-full px-2 py-1 text-[10.5px] ring-1 ring-inset ${
                   match.seen
-                    ? "bg-white/[0.04] text-cream/60 ring-white/10"
-                    : "bg-rose/12 text-rose-soft ring-rose/30"
+                    ? "bg-ink-800/70 text-cream/60 ring-gold/15"
+                    : "bg-rose/20 text-rose-soft ring-gold/30"
                 }`}
               >
                 <span aria-hidden>{match.choice.emoji}</span>
@@ -168,7 +168,7 @@ export function ChoiceDeck({
                 {!match.seen ? (
                   <span
                     aria-label="Nouveau match"
-                    className="h-1.5 w-1.5 shrink-0 rounded-full bg-rose"
+                    className="h-1.5 w-1.5 shrink-0 rotate-45 bg-gold"
                   />
                 ) : null}
               </li>
@@ -177,17 +177,17 @@ export function ChoiceDeck({
         </div>
       ) : null}
 
-      <div className="relative mx-auto h-[232px] w-full max-w-[320px]">
+      <div className="relative mx-auto h-[248px] w-full max-w-[320px]">
         {third ? (
           <div
             aria-hidden
-            className="absolute inset-x-2 bottom-0 top-4 rounded-[24px] border border-white/[0.05] bg-white/[0.02]"
+            className="absolute inset-x-2 bottom-0 top-4 rounded-[24px] border border-gold/12 bg-ink-850/70"
           />
         ) : null}
         {second ? (
           <div
             aria-hidden
-            className="absolute inset-x-1 bottom-0 top-2 rounded-[26px] border border-white/[0.07] bg-white/[0.035]"
+            className="absolute inset-x-1 bottom-0 top-2 rounded-[26px] border border-gold/18 bg-ink-850/80"
           />
         ) : null}
 
@@ -217,7 +217,7 @@ export function ChoiceDeck({
                   decide(top, "pass");
                 }
               }}
-              className="absolute inset-0 z-10 flex cursor-grab touch-pan-y flex-col overflow-hidden rounded-[26px] border border-white/12 bg-ink-850 p-4 shadow-[0_24px_60px_-30px_rgba(0,0,0,0.9)] active:cursor-grabbing"
+              className="frame-gold absolute inset-0 z-10 flex cursor-grab touch-pan-y flex-col overflow-hidden rounded-[26px] border border-gold/30 bg-ink-850 p-4 shadow-[0_24px_60px_-30px_rgba(0,0,0,0.9)] active:cursor-grabbing"
             >
               <div
                 aria-hidden
@@ -229,19 +229,19 @@ export function ChoiceDeck({
               <div className="relative flex items-start justify-between gap-2">
                 <span
                   aria-hidden
-                  className="grid h-16 w-16 place-items-center rounded-2xl text-[34px] ring-1 ring-white/15"
+                  className="grid h-16 w-16 place-items-center rounded-2xl text-[34px] ring-1 ring-gold/25"
                   style={{
                     backgroundImage: `linear-gradient(145deg, ${meta.gradient[0]}, ${meta.gradient[1]})`,
                   }}
                 >
                   {top.emoji}
                 </span>
-                <span className="rounded-full border border-white/10 bg-ink-950/45 px-2 py-0.5 text-[9px] uppercase tracking-[0.14em] text-cream/45">
+                <span className="rounded-full border border-gold/25 bg-ink-950/60 px-2 py-0.5 text-[9px] uppercase tracking-[0.14em] text-gold/80">
                   {meta.kicker}
                 </span>
               </div>
 
-              <div className="relative mt-3 min-h-0 flex-1">
+              <div className="relative mt-3 min-h-0 flex-1 overflow-hidden">
                 <h4 className="balance font-display text-[24px] leading-[1.1] text-cream">
                   {top.title}
                 </h4>
@@ -252,7 +252,7 @@ export function ChoiceDeck({
                   {top.tags.map((tag) => (
                     <li
                       key={tag}
-                      className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[9.5px] text-cream/50"
+                      className="rounded-full bg-ink-800/80 px-2 py-0.5 text-[9.5px] text-cream/55 ring-1 ring-inset ring-gold/10"
                     >
                       {tag.replaceAll("-", " ")}
                     </li>
@@ -266,7 +266,7 @@ export function ChoiceDeck({
                   onClick={() => decide(top, "pass")}
                   disabled={pending !== null}
                   aria-label={`Passer ${top.title}`}
-                  className="grid h-11 w-11 place-items-center rounded-full border border-white/15 bg-white/[0.04] text-cream/65 transition hover:border-rose/40 hover:bg-rose/10 hover:text-rose-soft active:scale-95 disabled:opacity-40"
+                  className="grid h-12 w-12 place-items-center rounded-full border border-gold/25 bg-ink-800/70 text-cream/65 transition hover:border-rose/60 hover:bg-rose/15 hover:text-rose-soft active:scale-95 disabled:opacity-40"
                 >
                   <XIcon className="h-5 w-5" />
                 </button>
@@ -275,7 +275,7 @@ export function ChoiceDeck({
                   onClick={() => decide(top, "like")}
                   disabled={pending !== null}
                   aria-label={`Garder ${top.title}`}
-                  className="inline-flex h-11 items-center gap-1.5 rounded-full bg-gradient-to-r from-rose to-[#ff8f6b] px-4 text-[12px] font-semibold text-ink-950 shadow-[0_12px_26px_-12px_rgba(255,107,149,0.9)] transition hover:brightness-105 active:scale-95 disabled:opacity-40"
+                  className="inline-flex h-12 items-center gap-1.5 rounded-full border border-gold/45 bg-gradient-to-r from-ember to-rose px-4 text-[12px] font-semibold text-cream shadow-[0_12px_26px_-14px_rgba(158,25,45,0.95)] transition hover:border-gold/70 hover:brightness-110 active:scale-95 disabled:opacity-40"
                 >
                   <HeartIcon className="h-4 w-4" />
                   Ça me tente
@@ -286,24 +286,24 @@ export function ChoiceDeck({
         </AnimatePresence>
 
         {!top && loading ? (
-          <div className="absolute inset-0 animate-pulse rounded-[26px] border border-white/[0.07] bg-white/[0.03]" />
+          <div className="absolute inset-0 animate-pulse rounded-[26px] border border-gold/15 bg-ink-850/70" />
         ) : null}
 
         {!top && !loading ? (
-          <div className="absolute inset-0 flex flex-col items-center justify-center rounded-[26px] border border-dashed border-white/12 bg-white/[0.02] px-5 text-center">
+          <div className="absolute inset-0 flex flex-col items-center justify-center rounded-[26px] border border-dashed border-gold/20 bg-ink-850/70 px-5 text-center">
             <span aria-hidden className="text-3xl">
               {category === "food" ? "🍽️" : "🎬"}
             </span>
             <p className="mt-2 font-display text-[17px] text-cream">
               {meta.emptyTitle}
             </p>
-            <p className="mt-1 max-w-[240px] text-[11px] leading-relaxed text-cream/45">
+            <p className="mt-1 max-w-[240px] text-[11px] leading-relaxed text-ash">
               {meta.emptyText}
             </p>
             <button
               type="button"
               onClick={onRefresh}
-              className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-white/12 bg-white/[0.04] px-2.5 py-1.5 text-[10.5px] text-cream/60 transition hover:border-white/25 hover:text-cream"
+              className="mt-3 inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-gold/30 bg-gold/[0.06] px-2.5 py-1.5 text-[10.5px] text-gold transition hover:border-gold/55 hover:text-cream"
             >
               <RefreshIcon className="h-3 w-3" />
               Rafraîchir
@@ -312,7 +312,7 @@ export function ChoiceDeck({
         ) : null}
       </div>
 
-      <p className="flex items-center justify-center gap-1.5 text-center text-[10px] text-cream/25">
+      <p className="flex items-center justify-center gap-1.5 text-center text-[10px] text-ash">
         <SparklesIcon className="h-3 w-3" />
         Glissez la carte ou utilisez les boutons · un match apparaît quand vous
         aimez la même carte

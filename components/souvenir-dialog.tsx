@@ -5,7 +5,7 @@ import { AlertIcon, SparklesIcon, XIcon } from "@/components/icons";
 import type { SouvenirDraft } from "@/lib/api-client";
 import type { SouvenirSnapshot } from "@/lib/types";
 
-const EMOJIS = ["✨", "📸", "🍽️", "🎬", "🌙", "💞"];
+const EMOJIS = ["✨", "🕯️", "🥀", "🍽️", "🎬", "🌙"];
 const MAX_BODY = 500;
 
 function toDateInput(timestamp: number): string {
@@ -151,11 +151,11 @@ export function SouvenirDialog({
           mode === "note" ? "Votre moment préféré" : "Nouveau souvenir"
         }
         onClick={(event) => event.stopPropagation()}
-        className="flex max-h-[92dvh] w-full max-w-md flex-col overflow-hidden rounded-t-[28px] border border-white/10 bg-ink-900 shadow-[0_30px_80px_-30px_rgba(0,0,0,0.95)] sm:max-h-[85dvh] sm:rounded-[28px]"
+        className="flex max-h-[92vh] max-h-[92dvh] w-full max-w-md flex-col overflow-hidden rounded-t-[28px] border border-gold/25 bg-ink-900 shadow-[0_30px_80px_-30px_rgba(0,0,0,0.95)] sm:max-h-[85vh] sm:max-h-[85dvh] sm:rounded-[28px]"
       >
-        <header className="flex items-start justify-between gap-3 border-b border-white/[0.07] px-5 py-4">
+        <header className="flex items-start justify-between gap-3 border-b border-gold/12 px-5 py-4">
           <div>
-            <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-rose-soft/80">
+            <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.22em] text-gold/85">
               <SparklesIcon className="h-3 w-3" />
               Journal de souvenirs
             </p>
@@ -168,7 +168,7 @@ export function SouvenirDialog({
             onClick={onClose}
             disabled={busy}
             aria-label="Fermer"
-            className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-cream/60 transition hover:border-white/20 hover:text-cream disabled:opacity-40"
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-gold/20 bg-ink-800/70 text-cream/60 transition hover:border-gold/40 hover:text-cream disabled:opacity-40"
           >
             <XIcon className="h-4 w-4" />
           </button>
@@ -186,10 +186,10 @@ export function SouvenirDialog({
           ) : null}
 
           {mode === "note" && souvenir ? (
-            <div className="mb-4 flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+            <div className="grimoire mb-4 flex items-center gap-3 rounded-2xl p-3">
               <span
                 aria-hidden
-                className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-rose/25 to-gold/15 text-[20px] ring-1 ring-white/10"
+                className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-rose/30 to-gold/15 text-[20px] ring-1 ring-gold/25"
               >
                 {souvenir.emoji}
               </span>
@@ -197,7 +197,7 @@ export function SouvenirDialog({
                 <p className="font-display text-[16px] text-cream">
                   {souvenir.title}
                 </p>
-                <p className="text-[10px] text-cream/35">
+                <p className="text-[10px] text-ash">
                   {new Intl.DateTimeFormat("fr-FR", {
                     day: "numeric",
                     month: "long",
@@ -211,12 +211,12 @@ export function SouvenirDialog({
           {mode === "create" ? (
             <>
               {usingIdea ? (
-                <div className="mb-4 flex items-center gap-3 rounded-2xl border border-rose/20 bg-rose/[0.06] p-3">
+                <div className="mb-4 flex items-center gap-3 rounded-2xl border border-gold/25 bg-rose/[0.1] p-3">
                   <span aria-hidden className="text-[26px]">
                     {prefill?.emoji ?? "✨"}
                   </span>
                   <div>
-                    <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-rose-soft/70">
+                    <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-gold/80">
                       Depuis votre match
                     </p>
                     <p className="font-display text-[16px] text-cream">
@@ -228,7 +228,7 @@ export function SouvenirDialog({
                 <>
                   <label
                     htmlFor="souvenir-title"
-                    className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-cream/50"
+                    className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-gold/80"
                   >
                     Le date
                   </label>
@@ -239,11 +239,11 @@ export function SouvenirDialog({
                     maxLength={80}
                     autoFocus
                     placeholder="Ex. Dîner sur les quais"
-                    className="mt-2 w-full rounded-xl border border-white/12 bg-ink-950/60 px-3 py-2.5 text-[13px] text-cream placeholder:text-cream/25 focus:border-rose/60 focus:outline-none"
+                    className="mt-2 w-full rounded-xl border border-gold/25 bg-ink-950/70 px-3 py-2.5 text-[13px] text-cream placeholder:text-ash focus:border-gold/60 focus:outline-none"
                   />
 
                   <div className="mt-3">
-                    <p className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-cream/50">
+                    <p className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-gold/80">
                       Ambiance
                     </p>
                     <div className="mt-2 flex flex-wrap gap-1.5">
@@ -256,8 +256,8 @@ export function SouvenirDialog({
                           aria-pressed={emoji === choice}
                           className={`grid h-9 w-9 place-items-center rounded-xl border text-[17px] transition ${
                             emoji === choice
-                              ? "border-rose/50 bg-rose/15"
-                              : "border-white/10 bg-white/[0.03] hover:border-white/25"
+                              ? "border-gold/60 bg-rose/20"
+                              : "border-gold/15 bg-ink-800/60 hover:border-gold/35"
                           }`}
                         >
                           {choice}
@@ -270,7 +270,7 @@ export function SouvenirDialog({
 
               <label
                 htmlFor="souvenir-date"
-                className="mt-4 block text-[10.5px] font-semibold uppercase tracking-[0.14em] text-cream/50"
+                className="mt-4 block text-[10.5px] font-semibold uppercase tracking-[0.16em] text-gold/80"
               >
                 Quand ?
               </label>
@@ -280,14 +280,14 @@ export function SouvenirDialog({
                 value={date}
                 max={toDateInput(Date.now())}
                 onChange={(event) => setDate(event.target.value)}
-                className="mt-2 w-full rounded-xl border border-white/12 bg-ink-950/60 px-3 py-2.5 text-[13px] text-cream [color-scheme:dark] focus:border-rose/60 focus:outline-none"
+                className="mt-2 w-full rounded-xl border border-gold/25 bg-ink-950/70 px-3 py-2.5 text-[13px] text-cream [color-scheme:dark] focus:border-gold/60 focus:outline-none"
               />
             </>
           ) : null}
 
           <label
             htmlFor="souvenir-body"
-            className="mt-4 block text-[10.5px] font-semibold uppercase tracking-[0.14em] text-cream/50"
+            className="mt-4 block text-[10.5px] font-semibold uppercase tracking-[0.16em] text-gold/80"
           >
             {mode === "note"
               ? "Ce que vous avez préféré"
@@ -300,9 +300,9 @@ export function SouvenirDialog({
             rows={4}
             autoFocus={mode === "note"}
             placeholder="Un détail, une phrase, une sensation…"
-            className="mt-2 w-full resize-none rounded-xl border border-white/12 bg-ink-950/60 px-3 py-2.5 text-[13px] leading-relaxed text-cream placeholder:text-cream/25 focus:border-rose/60 focus:outline-none"
+            className="mt-2 w-full resize-none rounded-xl border border-gold/25 bg-ink-950/70 px-3 py-2.5 text-[13px] leading-relaxed text-cream placeholder:text-ash focus:border-gold/60 focus:outline-none"
           />
-          <div className="mt-1 flex items-center justify-between text-[10px] text-cream/30">
+          <div className="mt-1 flex items-center justify-between text-[10px] text-ash">
             <span>Texte brut · visible uniquement par vous deux</span>
             <span className={remaining < 40 ? "text-gold" : undefined}>
               {body.length} / {MAX_BODY}
@@ -310,7 +310,7 @@ export function SouvenirDialog({
           </div>
         </div>
 
-        <footer className="flex items-center justify-end gap-2 border-t border-white/[0.07] px-5 py-3.5">
+        <footer className="flex items-center justify-end gap-2 border-t border-gold/12 px-5 py-3.5">
           <button
             type="button"
             onClick={onClose}
@@ -323,7 +323,7 @@ export function SouvenirDialog({
             type="button"
             onClick={() => void handleSubmit()}
             disabled={!canSubmit}
-            className="rounded-xl bg-gradient-to-r from-rose to-[#ff8f6b] px-4 py-2.5 text-[12.5px] font-semibold text-ink-950 transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-xl border border-gold/45 bg-gradient-to-r from-ember to-rose px-4 py-2.5 text-[12.5px] font-semibold text-cream transition hover:border-gold/70 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
           >
             {busy
               ? "Enregistrement…"

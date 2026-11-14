@@ -260,7 +260,7 @@ export function DateSwipeApp({
     vibrateTap();
     playTapChime();
     setIncomingTap(Date.now());
-    showToast("Une pensée de votre partenaire 💗", "success");
+    showToast("Une pensée de votre partenaire 🥀", "success");
   }, [showToast]);
 
   const clearIncomingTap = useCallback(() => setIncomingTap(null), []);
@@ -855,10 +855,10 @@ export function DateSwipeApp({
             role={toast.tone === "error" ? "alert" : "status"}
             className={`fixed inset-x-0 bottom-4 z-[70] mx-auto flex w-[calc(100%-2rem)] max-w-sm items-start gap-2.5 rounded-xl border px-3.5 py-2.5 text-[12px] shadow-[0_20px_50px_-20px_rgba(0,0,0,0.9)] backdrop-blur-xl ${
               toast.tone === "success"
-                ? "border-mint/30 bg-[#0d1f1a]/95 text-mint"
+                ? "border-gold/35 bg-[#171208]/95 text-gold"
                 : toast.tone === "error"
-                  ? "border-rose/35 bg-[#241019]/95 text-rose-soft"
-                  : "border-white/15 bg-ink-800/95 text-cream/80"
+                  ? "border-rose/40 bg-[#1c0b10]/95 text-rose-soft"
+                  : "border-gold/20 bg-ink-850/95 text-cream/80"
             }`}
           >
             <span className="mt-0.5 shrink-0">
@@ -875,9 +875,9 @@ export function DateSwipeApp({
               type="button"
               onClick={() => setToast(null)}
               aria-label="Fermer la notification"
-              className="shrink-0 rounded p-0.5 opacity-60 transition hover:opacity-100"
+              className="-my-1.5 -mr-1.5 grid h-11 w-11 shrink-0 place-items-center rounded-lg opacity-70 transition hover:bg-gold/10 hover:opacity-100"
             >
-              <XIcon className="h-3.5 w-3.5" />
+              <XIcon className="h-4 w-4" />
             </button>
           </motion.div>
         ) : null}

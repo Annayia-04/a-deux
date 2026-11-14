@@ -108,9 +108,9 @@ export function PreferenceForm({
   return (
     <section className="glass relative rounded-[28px] p-4 sm:p-6">
       {resume && !isEditing ? (
-        <div className="mb-5 flex flex-col gap-3 rounded-2xl border border-mint/25 bg-mint/[0.07] p-3.5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mb-5 flex flex-col gap-3 rounded-2xl border border-gold/25 bg-gold/[0.06] p-3.5 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-3">
-            <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full bg-mint/15 text-mint ring-1 ring-mint/25">
+            <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gold/15 text-gold ring-1 ring-gold/30">
               <UndoIcon className="h-4 w-4" />
             </span>
             <div>
@@ -127,7 +127,7 @@ export function PreferenceForm({
           <button
             type="button"
             onClick={onResume}
-            className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl bg-mint px-3.5 py-2 text-[12.5px] font-semibold text-ink-950 transition hover:brightness-105"
+            className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl bg-gold px-3.5 py-2 text-[12.5px] font-semibold text-[#17110a] transition hover:brightness-110"
           >
             Reprendre
             <ArrowRightIcon className="h-4 w-4" />
@@ -174,8 +174,8 @@ export function PreferenceForm({
                   }
                   className={`flex flex-col items-start rounded-xl border px-3 py-2.5 text-left transition ${
                     selected
-                      ? "border-rose/70 bg-rose/15 shadow-[inset_0_0_0_1px_rgba(255,107,149,0.25)]"
-                      : "border-white/10 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.06]"
+                      ? "border-gold/60 bg-rose/20 shadow-[inset_0_0_0_1px_rgba(197,160,89,0.22)]"
+                      : "border-gold/15 bg-ink-800/50 hover:border-gold/35 hover:bg-ink-700/60"
                   }`}
                 >
                   <span
@@ -185,7 +185,7 @@ export function PreferenceForm({
                   >
                     {option.label}
                   </span>
-                  <span className="mt-0.5 text-[10.5px] text-cream/40">
+                  <span className="mt-0.5 text-[10.5px] text-ash">
                     {option.hint}
                   </span>
                 </button>
@@ -267,10 +267,10 @@ export function PreferenceForm({
                   onClick={() => toggleTheme(theme.value)}
                   className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-2 text-[12px] transition ${
                     selected
-                      ? "border-transparent text-ink-950"
+                      ? "border-gold/40 text-cream"
                       : themesFull
-                        ? "cursor-not-allowed border-white/[0.06] bg-white/[0.02] text-cream/30"
-                        : "border-white/10 bg-white/[0.03] text-cream/70 hover:border-white/20 hover:bg-white/[0.06]"
+                        ? "cursor-not-allowed border-white/[0.06] bg-white/[0.02] text-ash"
+                        : "border-gold/15 bg-ink-800/50 text-cream/70 hover:border-gold/35 hover:bg-ink-700/60"
                   }`}
                   style={
                     selected
@@ -287,12 +287,12 @@ export function PreferenceForm({
               );
             })}
           </div>
-          <p className="mt-2 text-[11px] leading-relaxed text-cream/35">
+          <p className="mt-2 text-[11px] leading-relaxed text-ash">
             Aucun thème = toutes les envies. {themesFull ? "Retirez-en un pour en ajouter un autre." : "Jusqu’à trois univers."}
           </p>
         </FieldGroup>
 
-        <div className="mt-2 rounded-2xl border border-white/10 bg-ink-900/70 p-2.5 backdrop-blur-xl">
+        <div className="mt-2 rounded-2xl border border-gold/25 bg-ink-900/80 p-2.5 backdrop-blur-xl">
           <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
             <div
               className="flex items-center gap-2 px-1 text-[12px] text-cream/55"
@@ -300,7 +300,7 @@ export function PreferenceForm({
             >
               {checking ? (
                 <>
-                  <span className="h-1.5 w-1.5 animate-pulse-soft rounded-full bg-rose" />
+                  <span className="h-1.5 w-1.5 animate-pulse-soft rounded-full bg-gold" />
                   On prépare la sélection…
                 </>
               ) : count === 0 ? (
@@ -312,7 +312,7 @@ export function PreferenceForm({
                 </>
               ) : count !== null ? (
                 <>
-                  <SparklesIcon className="h-3.5 w-3.5 text-rose" />
+                  <SparklesIcon className="h-3.5 w-3.5 text-gold" />
                   <span>
                     <strong className="font-semibold text-cream">{count}</strong>{" "}
                     idée{count > 1 ? "s" : ""} compatible{count > 1 ? "s" : ""}
@@ -336,7 +336,7 @@ export function PreferenceForm({
               <button
                 type="submit"
                 disabled={!canStart}
-                className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-rose to-[#ff8f6b] px-5 py-2.5 text-[13px] font-semibold text-ink-950 shadow-[0_12px_30px_-12px_rgba(255,107,149,0.9)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-40 sm:flex-none"
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-gold/45 bg-gradient-to-r from-ember to-rose px-5 py-2.5 text-[13px] font-semibold text-cream shadow-[0_12px_30px_-14px_rgba(158,25,45,0.9)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-40 sm:flex-none"
               >
                 {starting ? "Préparation…" : "Commencer à swiper"}
                 {!starting ? <ArrowRightIcon className="h-4 w-4" /> : null}
@@ -377,11 +377,11 @@ function FieldGroup({
   return (
     <fieldset>
       <legend className="mb-2 flex w-full items-baseline justify-between gap-2">
-        <span className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-cream/50">
+        <span className="text-[10.5px] font-semibold uppercase tracking-[0.18em] text-gold/80">
           {title}
         </span>
         {hint ? (
-          <span className="text-[10.5px] text-cream/35">{hint}</span>
+          <span className="text-[10.5px] text-ash">{hint}</span>
         ) : null}
       </legend>
       {children}
@@ -409,8 +409,8 @@ function Chip({
       onClick={onClick}
       className={`inline-flex min-h-9 items-center justify-center gap-1 rounded-xl border px-1.5 py-1.5 text-[11px] font-medium transition sm:gap-1.5 sm:px-2 sm:text-[11.5px] ${
         selected
-          ? "border-rose/70 bg-rose/15 text-cream shadow-[inset_0_0_0_1px_rgba(255,107,149,0.22)]"
-          : "border-white/10 bg-white/[0.03] text-cream/65 hover:border-white/20 hover:bg-white/[0.06]"
+          ? "border-gold/60 bg-rose/20 text-cream shadow-[inset_0_0_0_1px_rgba(197,160,89,0.2)]"
+          : "border-gold/15 bg-ink-800/50 text-cream/65 hover:border-gold/35 hover:bg-ink-700/60"
       }`}
     >
       {children}

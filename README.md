@@ -24,6 +24,29 @@ Une application fullstack de cartes à swiper : on choisit d’abord son budget,
 - **240 idées de rendez-vous** dans un catalogue typé, avec visuels CSS/emoji (aucune image distante), dont 81 gratuites.
 - **Installable sur mobile et desktop (PWA)** : manifeste, icônes locales, service worker limité aux assets statiques, page hors ligne et invitation contextuelle à installer depuis Safari ou Chrome.
 
+## Direction artistique
+
+L’application suit une identité **gothique romantique et aristocratique** : noir velouté, bordeaux profond, or vieilli et parchemin. Tout est centralisé dans `app/globals.css` (`@theme`) ; les composants n’utilisent que des jetons sémantiques.
+
+| Jeton | Valeur | Usage |
+| --- | --- | --- |
+| `ink-950` | `#0A090C` | Fond velouté |
+| `ink-850` | `#141218` | Cartes, panneaux |
+| `cream` | `#EAE4DC` | Texte courant (15,7:1 sur `ink-950`) |
+| `ash` | `#8E8894` | Métadonnées, légendes (5,8:1) |
+| `rose` | `#9E192D` | Actions clés, matchs, tap |
+| `ember` | `#7A1120` | Creux des dégradés bordeaux |
+| `rose-soft` | `#C98F93` | Accents textuels (7,4:1) |
+| `gold` | `#C5A059` | Filets, ornements, liens (8,1:1) |
+| `mint` | `#A8A9AD` | Statuts « validé », argent terni |
+| `ink-700` | `#241E26` | Bordures et séparateurs discrets |
+
+- **Typographie** : titres en serif victorien (`Cormorant Garamond`, `Playfair Display`, replis Didot/Palatino/Noto Serif), corps en sans-serif système. Aucune police distante.
+- **Ornements** : `.frame-gold` (double filet d’or façon carte de tarot), `.ornament-corners` (équerres d’enluminure), `.grimoire` (surface parchemin fumé pour les souvenirs) et `.rule-ornament` (filet dégradé).
+- **Micro-interactions** : le tap utilise `.animate-heartbeat` (battement lent bordeaux/or) ; le halo de réception reste en bordeaux et or ; `prefers-reduced-motion` désactive tout.
+- **Accessibilité** : les textes secondaires utilisent `ash` ou `cream/55` (≥ 4,5:1), les cibles tactiles font 44 px minimum et le focus est doré.
+- **Compatibilité moteurs anciens** : deux garde-fous dans `globals.css` — les dégradés Tailwind sont réécrits sans interpolation `oklab` (WebView < 111) et les hauteurs `dvh` ont un repli `vh`.
+
 ## Stack
 
 | Outil | Version |
@@ -69,6 +92,8 @@ npm start -- -p 3100 # autre port
 | `npm run smoke` | Test de fumée HTTP contre un serveur déjà démarré |
 | `npm run db:migrate` | Applique les migrations Postgres (nécessite `DATABASE_URL`) |
 | `npm run db:status` | État des migrations Postgres |
+| `node scripts/render-icons.mjs` | Régénère les icônes PWA depuis `public/icons/icon.svg` |
+| `node scripts/render-android-assets.mjs` | Régénère les icônes et l’écran de démarrage Android |
 
 ## Application installable (PWA)
 
@@ -80,7 +105,7 @@ L’application est une PWA complète : elle peut s’installer sur l’écran d
 - **Service worker** enregistré uniquement en production : il ne met en cache que `/_next/static/*`, `/icons/*`, le manifeste et la page hors ligne. Les pages SSR et les API ne sont **jamais** mises en cache, car elles dépendent de la session et du nonce CSP.
 - **HTTPS requis** hors `localhost` : c’est la condition posée par les navigateurs pour installer une PWA et enregistrer un service worker.
 - **Raccourcis de l’icône installée** : appui long sur l’icône → **Petit ping** (ouvre l’app et envoie aussitôt une pensée au partenaire) ou **Mon duo** (ouvre l’espace à deux). Le paramètre `?ping=1` / `?duo=1` est lu une seule fois puis retiré de l’URL, pour qu’un rechargement ne rejoue jamais l’envoi.
-  - Un vrai widget d’écran d’accueil, utilisable **sans ouvrir l’app**, n’est pas possible en PWA : il demande le wrapper natif Capacitor (App Widget Android, WidgetKit iOS). La conception est décrite dans `docs/architecture-comptes-postgres.md`.
+  - Le widget d’écran d’accueil **Petit ping**, utilisable sans ouvrir l’app, est fourni par le wrapper natif Android (Capacitor). Voir `docs/android-widget.md`. Sur iOS, WidgetKit reste bloqué par le compte Apple Developer payant.
 
 Fichiers concernés : `app/manifest.ts` (manifeste généré), `lib/launch-action.ts` (raccourcis), `public/sw.js`, `public/offline.html`, `public/icons/` (192, 512, 1024, maskable, icône Apple), `components/service-worker-register.tsx` et `components/install-card.tsx`.
 

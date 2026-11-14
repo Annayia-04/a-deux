@@ -19,6 +19,18 @@ d’appareil dédié, révocable.
 Le jeton ne permet **que** d’envoyer un ping. Il ne lit ni les matchs, ni les
 swipes, ni les souvenirs, et il est supprimé avec la session (cascade SQLite).
 
+## Apparence
+
+Le widget suit la palette gothique romantique de l’application : fond
+anthracite `#141218`, double filet d’or `#C5A059`, titre parchemin `#EAE4DC`
+(serif) et sous-titre cendre `#8E8894`. Les icônes de l’application et l’écran
+de démarrage sont générés depuis `public/icons/icon.svg` :
+
+```bash
+node scripts/render-android-assets.mjs
+node scripts/render-icons.mjs
+```
+
 ## Prérequis de build
 
 - JDK 21 (Temurin) ;
@@ -89,8 +101,6 @@ sans oracle). La suppression de la session supprime ses appareils par cascade.
 - Le widget n’affiche pas les pings reçus : il ne fait qu’envoyer.
 - En HTTP local, Google OAuth ne fonctionne pas (URI de redirection déclarée en
   HTTPS/localhost) ; le mode anonyme et le duo restent utilisables.
-- L’icône de l’application native utilise encore l’icône Capacitor par défaut :
-  prévoir `@capacitor/assets` et les visuels définitifs avant publication.
 
 ## Dépannage
 

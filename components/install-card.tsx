@@ -119,7 +119,7 @@ export function InstallCard() {
               type="button"
               onClick={dismiss}
               aria-label="Masquer l’invitation à installer"
-              className="absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-full text-cream/35 transition hover:bg-white/5 hover:text-cream/70"
+              className="absolute right-0 top-0 grid h-11 w-11 place-items-center rounded-full text-ash transition hover:bg-gold/10 hover:text-cream/70"
             >
               <XIcon className="h-3.5 w-3.5" />
             </button>
@@ -149,7 +149,7 @@ export function InstallCard() {
                     <button
                       type="button"
                       onClick={() => setSheetOpen(true)}
-                      className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[11.5px] text-cream/60 transition hover:text-cream"
+                      className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-gold/20 bg-ink-800/60 px-3 py-1.5 text-[11.5px] text-cream/65 transition hover:border-gold/40 hover:text-cream"
                     >
                       <ShareIcon className="h-3.5 w-3.5" />
                       Comment faire
@@ -157,7 +157,7 @@ export function InstallCard() {
                   ) : null}
                 </div>
                 {mode === "native" ? (
-                  <p className="mt-2 text-[10.5px] leading-relaxed text-cream/40">
+                  <p className="mt-2 text-[10.5px] leading-relaxed text-ash">
                     Astuce : après installation, appui long sur l’icône de
                     l’app → « Petit ping ».
                   </p>
@@ -183,7 +183,7 @@ export function InstallCard() {
               initial={{ opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 24 }}
-              className="w-full max-w-md rounded-t-[26px] border border-white/10 bg-ink-900 p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-2xl sm:rounded-[26px]"
+              className="w-full max-w-md rounded-t-[26px] border border-gold/25 bg-ink-900 p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-2xl sm:rounded-[26px]"
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -198,7 +198,7 @@ export function InstallCard() {
                   type="button"
                   onClick={() => setSheetOpen(false)}
                   aria-label="Fermer les instructions d’installation"
-                  className="grid h-9 w-9 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-cream/60 transition hover:text-cream"
+                  className="grid h-11 w-11 place-items-center rounded-full border border-gold/20 bg-ink-800/70 text-cream/60 transition hover:border-gold/40 hover:text-cream"
                 >
                   <XIcon className="h-4 w-4" />
                 </button>
@@ -228,7 +228,7 @@ export function InstallCard() {
                 </li>
               </ol>
 
-              <p className="mt-4 rounded-xl border border-white/[0.07] bg-white/[0.03] px-3 py-2 text-[11px] leading-relaxed text-cream/45">
+              <p className="mt-4 rounded-xl border border-gold/15 bg-ink-850/60 px-3 py-2 text-[11px] leading-relaxed text-ash">
                 L’installation nécessite une connexion HTTPS. En local, elle
                 fonctionne sur l’ordinateur via localhost ; sur le réseau, il
                 faut un hébergement sécurisé.
@@ -237,7 +237,7 @@ export function InstallCard() {
               <button
                 type="button"
                 onClick={dismiss}
-                className="mt-4 w-full rounded-full border border-white/10 bg-white/[0.04] px-4 py-2.5 text-[12px] font-medium text-cream/60 transition hover:text-cream"
+                className="mt-4 min-h-11 w-full rounded-full border border-gold/20 bg-gold/[0.06] px-4 py-2.5 text-[12px] font-medium text-gold transition hover:border-gold/40 hover:text-cream"
               >
                 Ne plus afficher pendant 14 jours
               </button>

@@ -61,10 +61,10 @@ export function AccountCard({
   return (
     <section
       aria-label="Compte"
-      className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.025] p-4"
+      className="grimoire relative overflow-hidden rounded-2xl p-4"
     >
       <div className="flex items-start gap-3">
-        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-rose/25 bg-rose/10 text-rose-soft">
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-gold/30 bg-rose/15 text-gold">
           <UserIcon className="h-5 w-5" />
         </span>
 
@@ -74,10 +74,10 @@ export function AccountCard({
               <h3 className="font-display text-[17px] leading-tight text-cream">
                 {account.displayName ?? "Compte connecté"}
               </h3>
-              <p className="mt-1 truncate text-[11.5px] text-cream/45">
+              <p className="mt-1 truncate text-[11.5px] text-ash">
                 {account.email ?? "Identité Google liée à cet espace"}
               </p>
-              <p className="mt-2 text-[11px] leading-relaxed text-cream/40">
+              <p className="mt-2 text-[11px] leading-relaxed text-ash">
                 Vos swipes, votre duo et vos souvenirs suivent votre compte sur
                 vos autres appareils.
               </p>
@@ -85,7 +85,7 @@ export function AccountCard({
                 type="button"
                 disabled={busy}
                 onClick={() => void signOut()}
-                className="mt-3 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[11.5px] font-medium text-cream/60 transition hover:text-cream disabled:opacity-50"
+                className="mt-3 min-h-11 rounded-full border border-gold/20 bg-ink-800/70 px-3 py-1.5 text-[11.5px] font-medium text-cream/60 transition hover:border-gold/40 hover:text-cream disabled:opacity-50"
               >
                 {busy ? "Déconnexion…" : "Se déconnecter"}
               </button>
@@ -104,7 +104,7 @@ export function AccountCard({
                 {providers.includes("google") ? (
                   <a
                     href="/api/auth/google"
-                    className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white px-3.5 py-1.5 text-[11.5px] font-semibold text-ink-950 transition hover:bg-cream"
+                    className="inline-flex min-h-11 items-center gap-2 rounded-full border border-gold/30 bg-white px-3.5 py-1.5 text-[11.5px] font-semibold text-ink-950 transition hover:bg-cream"
                   >
                     <GoogleIcon className="h-3.5 w-3.5" />
                     Continuer avec Google
@@ -113,7 +113,7 @@ export function AccountCard({
                 {providers.includes("apple") ? (
                   <a
                     href="/api/auth/apple"
-                    className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.06] px-3.5 py-1.5 text-[11.5px] font-semibold text-cream transition hover:bg-white/[0.12]"
+                    className="inline-flex min-h-11 items-center gap-2 rounded-full border border-gold/25 bg-ink-800/70 px-3.5 py-1.5 text-[11.5px] font-semibold text-cream transition hover:bg-ink-700/70"
                   >
                     Continuer avec Apple
                   </a>
@@ -125,7 +125,7 @@ export function AccountCard({
           {notice ? (
             <p
               role="status"
-              className="mt-3 rounded-xl border border-white/[0.07] bg-white/[0.03] px-3 py-2 text-[11px] leading-relaxed text-cream/55"
+              className="mt-3 rounded-xl border border-gold/15 bg-ink-850/60 px-3 py-2 text-[11px] leading-relaxed text-cream/55"
             >
               {NOTICES[notice]}
             </p>

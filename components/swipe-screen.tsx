@@ -138,7 +138,7 @@ const SwipeCard = forwardRef<SwipeCardHandle, SwipeCardProps>(
         <motion.div
           style={{ opacity: likeOpacity }}
           aria-hidden
-          className="pointer-events-none absolute left-5 top-20 z-10 rotate-[-7deg] rounded-lg border-2 border-mint bg-ink-950/45 px-3 py-1 text-[12px] font-extrabold uppercase tracking-[0.08em] text-mint shadow-lg backdrop-blur-sm"
+          className="pointer-events-none absolute left-5 top-20 z-10 rotate-[-7deg] rounded-lg border border-gold bg-ink-950/55 px-3 py-1 font-display text-[15px] font-semibold uppercase tracking-[0.14em] text-gold shadow-lg backdrop-blur-sm"
         >
           Ça me tente
         </motion.div>
@@ -146,7 +146,7 @@ const SwipeCard = forwardRef<SwipeCardHandle, SwipeCardProps>(
         <motion.div
           style={{ opacity: passOpacity }}
           aria-hidden
-          className="pointer-events-none absolute right-5 top-20 z-10 rotate-[7deg] rounded-lg border-2 border-rose bg-ink-950/45 px-3 py-1 text-[12px] font-extrabold uppercase tracking-[0.08em] text-rose shadow-lg backdrop-blur-sm"
+          className="pointer-events-none absolute right-5 top-20 z-10 rotate-[7deg] rounded-lg border border-rose-soft/70 bg-ink-950/55 px-3 py-1 font-display text-[15px] font-semibold uppercase tracking-[0.14em] text-rose-soft shadow-lg backdrop-blur-sm"
         >
           Pas pour moi
         </motion.div>
@@ -228,7 +228,7 @@ export function SwipeScreen({
   }, [decide, onUndo]);
 
   return (
-    <main className="flex h-dvh flex-col overflow-hidden [@media(max-height:520px)]:overflow-y-auto">
+    <main className="flex h-screen h-dvh flex-col overflow-hidden [@media(max-height:520px)]:overflow-y-auto">
       <header className="shrink-0 px-3 pt-4 sm:px-6">
         <div className="mx-auto flex w-full max-w-4xl items-center justify-between gap-2">
           <Brand />
@@ -247,14 +247,14 @@ export function SwipeScreen({
               }
               className={`relative inline-flex items-center gap-1.5 rounded-full border px-2 py-2 text-[12px] font-medium transition sm:px-3 ${
                 duoActive
-                  ? "border-mint/30 bg-mint/[0.08] text-mint hover:bg-mint/15"
-                  : "border-white/10 bg-white/[0.04] text-cream/60 hover:border-white/20 hover:text-cream"
+                  ? "border-gold/35 bg-gold/[0.08] text-gold hover:bg-gold/15"
+                  : "border-gold/20 bg-ink-800/60 text-cream/60 hover:border-gold/40 hover:text-cream"
               }`}
             >
               <UsersIcon className="h-4 w-4" />
               <span className="hidden sm:inline">Duo</span>
               {duoUnread > 0 ? (
-                <span className="grid h-4 min-w-4 place-items-center rounded-full bg-rose px-1 text-[9.5px] font-bold leading-none text-ink-950">
+                <span className="grid h-4 min-w-4 place-items-center rounded-full bg-rose px-1 text-[9.5px] font-bold leading-none text-cream ring-1 ring-gold/40">
                   {duoUnread > 9 ? "9+" : duoUnread}
                 </span>
               ) : duoActive ? (
@@ -273,12 +273,12 @@ export function SwipeScreen({
                     ? `Nourriture et Films, ${choiceUnread} nouveau${choiceUnread > 1 ? "x" : ""} match${choiceUnread > 1 ? "s" : ""}`
                     : "Nourriture et Films"
                 }
-                className="relative inline-flex items-center gap-1.5 rounded-full border border-gold/25 bg-gold/[0.07] px-2 py-2 text-[12px] font-medium text-gold transition hover:border-gold/45 hover:bg-gold/15 sm:px-3"
+                className="relative inline-flex min-h-11 items-center gap-1.5 rounded-full border border-mint/25 bg-mint/[0.07] px-2 py-2 text-[12px] font-medium text-mint transition hover:border-mint/40 hover:bg-mint/15 sm:px-3"
               >
                 <CardsIcon className="h-4 w-4" />
                 <span className="hidden sm:inline">Choix</span>
                 {choiceUnread > 0 ? (
-                  <span className="grid h-4 min-w-4 place-items-center rounded-full bg-rose px-1 text-[9.5px] font-bold leading-none text-ink-950">
+                  <span className="grid h-4 min-w-4 place-items-center rounded-full bg-rose px-1 text-[9.5px] font-bold leading-none text-cream ring-1 ring-gold/40">
                     {choiceUnread > 9 ? "9+" : choiceUnread}
                   </span>
                 ) : null}
@@ -288,7 +288,7 @@ export function SwipeScreen({
               type="button"
               onClick={onOpenResults}
               aria-label={`Voir mes envies (${likedCount})`}
-              className="inline-flex items-center gap-1.5 rounded-full border border-rose/25 bg-rose/10 px-2 py-2 text-[12px] font-medium text-rose-soft transition hover:border-rose/40 hover:bg-rose/15 sm:px-3"
+              className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-rose/40 bg-rose/15 px-2 py-2 text-[12px] font-medium text-rose-soft transition hover:border-rose/60 hover:bg-rose/20 sm:px-3"
             >
               <HeartIcon className="h-4 w-4" />
               <span className="tabular-nums">{likedCount}</span>
@@ -298,7 +298,7 @@ export function SwipeScreen({
               type="button"
               onClick={onOpenSettings}
               aria-label="Modifier mes envies"
-              className="grid h-8 w-8 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-cream/60 transition hover:border-white/20 hover:text-cream sm:h-9 sm:w-9"
+              className="grid h-11 w-11 place-items-center rounded-full border border-gold/20 bg-ink-800/60 text-cream/60 transition hover:border-gold/40 hover:text-cream"
             >
               <SlidersIcon className="h-4 w-4" />
             </button>
@@ -306,7 +306,7 @@ export function SwipeScreen({
         </div>
 
         <div className="mx-auto mt-3 w-full max-w-4xl">
-          <div className="mb-1.5 flex items-center justify-between gap-3 text-[10.5px] text-cream/40">
+          <div className="mb-1.5 flex items-center justify-between gap-3 text-[10.5px] text-ash">
             <span className="tabular-nums">
               {Math.min(swiped, total)} / {total} cartes
             </span>
@@ -319,10 +319,10 @@ export function SwipeScreen({
             aria-valuemin={0}
             aria-valuemax={total}
             aria-valuenow={Math.min(swiped, total)}
-            className="h-1 overflow-hidden rounded-full bg-white/[0.07]"
+            className="h-1 overflow-hidden rounded-full bg-ink-700/70 ring-1 ring-inset ring-gold/10"
           >
             <div
-              className="h-full rounded-full bg-gradient-to-r from-rose via-[#ff8f6b] to-gold transition-[width] duration-500 ease-out"
+              className="h-full rounded-full bg-gradient-to-r from-ember via-rose to-gold transition-[width] duration-500 ease-out"
               style={{ width: `${progress}%` }}
             />
           </div>
@@ -361,7 +361,7 @@ export function SwipeScreen({
         <div className="relative h-full max-h-[620px] w-full max-w-[400px]">
           <div
             aria-hidden
-            className="pointer-events-none absolute inset-x-6 bottom-3 top-6 rounded-[38px] bg-gradient-to-b from-rose/20 via-rose/5 to-transparent blur-2xl"
+            className="pointer-events-none absolute inset-x-6 bottom-3 top-6 rounded-[38px] bg-gradient-to-b from-rose/25 via-ember/10 to-transparent blur-2xl"
           />
 
           {top ? (
@@ -392,7 +392,7 @@ export function SwipeScreen({
               />
             </>
           ) : (
-            <div className="flex h-full flex-col items-center justify-center rounded-[28px] border border-white/10 bg-white/[0.03] p-7 text-center">
+            <div className="flex h-full flex-col items-center justify-center rounded-[28px] p-7 text-center grimoire ornament-corners">
               <span aria-hidden className="text-5xl">
                 🌙
               </span>
@@ -409,7 +409,7 @@ export function SwipeScreen({
                 <button
                   type="button"
                   onClick={onOpenResults}
-                  className="mt-5 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-rose to-[#ff8f6b] px-5 py-2.5 text-[13px] font-semibold text-ink-950 transition hover:brightness-105"
+                  className="mt-5 inline-flex items-center gap-2 rounded-xl border border-gold/45 bg-gradient-to-r from-ember to-rose px-5 py-2.5 text-[13px] font-semibold text-cream shadow-[0_14px_30px_-16px_rgba(158,25,45,0.95)] transition hover:border-gold/70 hover:brightness-110"
                 >
                   Voir mes envies
                   <ArrowRightIcon className="h-4 w-4" />
@@ -419,7 +419,7 @@ export function SwipeScreen({
               <button
                 type="button"
                 onClick={onOpenSettings}
-                className="mt-3 inline-flex items-center gap-1.5 text-[12px] text-cream/45 transition hover:text-cream/80"
+                className="mt-3 inline-flex items-center gap-1.5 text-[12px] text-ash transition hover:text-cream/80"
               >
                 <SlidersIcon className="h-3.5 w-3.5" />
                 Ajuster mes envies
@@ -437,7 +437,7 @@ export function SwipeScreen({
               onClick={() => decide("pass")}
               disabled={!top}
               aria-label="Passer cette idée"
-              className="grid h-[62px] w-[62px] place-items-center rounded-full border border-white/15 bg-white/[0.04] text-cream/70 shadow-[0_14px_30px_-18px_rgba(0,0,0,0.9)] transition hover:border-rose/40 hover:bg-rose/10 hover:text-rose-soft active:scale-95 disabled:cursor-not-allowed disabled:opacity-30"
+              className="grid h-[62px] w-[62px] place-items-center rounded-full border border-gold/25 bg-ink-800/70 text-cream/70 shadow-[0_14px_30px_-18px_rgba(0,0,0,0.9)] transition hover:border-rose/60 hover:bg-rose/15 hover:text-rose-soft active:scale-95 disabled:cursor-not-allowed disabled:opacity-30"
             >
               <XIcon className="h-6 w-6" />
             </button>
@@ -448,7 +448,7 @@ export function SwipeScreen({
               disabled={!canUndo || undoBusy}
               aria-label="Annuler le dernier swipe"
               title="Annuler le dernier swipe (Z)"
-              className="grid h-11 w-11 place-items-center rounded-full border border-white/10 bg-white/[0.03] text-cream/45 transition hover:border-white/20 hover:text-cream disabled:cursor-not-allowed disabled:opacity-25"
+              className="grid h-11 w-11 place-items-center rounded-full border border-gold/15 bg-ink-800/60 text-ash transition hover:border-gold/35 hover:text-cream disabled:cursor-not-allowed disabled:opacity-25"
             >
               <UndoIcon
                 className={`h-4 w-4 ${undoBusy ? "animate-spin" : ""}`}
@@ -460,13 +460,13 @@ export function SwipeScreen({
               onClick={() => decide("like")}
               disabled={!top}
               aria-label="Garder cette idée"
-              className="grid h-[62px] w-[62px] place-items-center rounded-full bg-gradient-to-br from-rose to-[#ff8f6b] text-ink-950 shadow-[0_16px_36px_-14px_rgba(255,107,149,0.85)] transition hover:brightness-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-30"
+              className="grid h-[62px] w-[62px] place-items-center rounded-full border border-gold/50 bg-gradient-to-br from-ember via-rose to-[#4a0d14] text-cream shadow-[0_16px_38px_-14px_rgba(158,25,45,0.9)] transition hover:border-gold/75 hover:brightness-110 active:scale-95 disabled:cursor-not-allowed disabled:opacity-30"
             >
               <HeartIcon className="h-6 w-6" />
             </button>
           </div>
 
-          <p className="flex items-center gap-1.5 text-center text-[10px] text-cream/25">
+          <p className="flex items-center gap-1.5 text-center text-[10px] text-ash">
             <SparklesIcon className="h-3 w-3" />
             <span className="hidden sm:inline">
               Glissez la carte · ← passer · → garder · Z annuler

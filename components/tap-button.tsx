@@ -66,12 +66,12 @@ export function TapButton({
           ? `Encore ${remaining} s`
           : "Envoyer une pensée (halo et son chez votre partenaire)"
       }
-      className={`relative grid h-9 w-9 place-items-center rounded-full border text-[11px] font-semibold tabular-nums transition ${
+      className={`relative grid h-11 w-11 place-items-center rounded-full border text-[11px] font-semibold tabular-nums transition ${
         disabled
-          ? "cursor-not-allowed border-white/10 bg-white/[0.02] text-cream/20"
+          ? "cursor-not-allowed border-white/10 bg-white/[0.02] text-ash"
           : cooling
-            ? "border-white/10 bg-white/[0.03] text-cream/35"
-            : "border-rose/30 bg-rose/[0.08] text-rose-soft hover:border-rose/50 hover:bg-rose/15 active:scale-95"
+            ? "border-white/10 bg-white/[0.03] text-ash"
+            : "animate-heartbeat border-gold/45 bg-gradient-to-br from-ember via-rose to-[#4a0d14] text-cream shadow-[0_0_0_1px_rgba(197,160,89,0.12),0_10px_26px_-12px_rgba(158,25,45,0.95)] hover:border-gold/70 active:scale-95"
       }`}
     >
       {cooling ? (
@@ -82,7 +82,7 @@ export function TapButton({
       {!cooling && !disabled ? (
         <span
           aria-hidden
-          className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-rose"
+          className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-gold shadow-[0_0_8px_2px_rgba(197,160,89,0.55)]"
         />
       ) : null}
     </button>

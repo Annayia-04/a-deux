@@ -603,7 +603,7 @@ export const CHOICE_CATEGORY_META: Readonly<
     label: "Nourriture",
     plural: "Les plats",
     kicker: "À table",
-    gradient: ["#ff9f68", "#ff5f6d"],
+    gradient: ["#8c3a2e", "#4a0d14"],
     emptyTitle: "Tout est passé à table",
     emptyText:
       "Vous avez swipé toutes les cartes de cette catégorie. Les matchs restent visibles ci-dessus.",
@@ -612,7 +612,7 @@ export const CHOICE_CATEGORY_META: Readonly<
     label: "Films",
     plural: "Les films",
     kicker: "À l'écran",
-    gradient: ["#7c5cff", "#4ea1ff"],
+    gradient: ["#4b3560", "#221a2f"],
     emptyTitle: "Générique de fin",
     emptyText:
       "Vous avez swipé toutes les cartes de cette catégorie. Les matchs restent visibles ci-dessus.",

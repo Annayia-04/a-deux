@@ -29,13 +29,13 @@ export function TapPulse({ onDone }: { onDone: () => void }) {
         initial={{ opacity: 0 }}
         animate={{ opacity: [0, 0.28, 0] }}
         transition={{ duration: 0.9, ease: "easeOut" }}
-        className="absolute inset-0 bg-rose/20"
+        className="absolute inset-0 bg-ember/30"
       />
       <motion.span
         initial={{ scale: 0.6, opacity: 0.6 }}
         animate={{ scale: 2.4, opacity: 0 }}
         transition={{ duration: 1.4, ease: "easeOut" }}
-        className="absolute h-52 w-52 rounded-full bg-gradient-to-br from-rose/45 via-rose/15 to-transparent blur-2xl"
+        className="absolute h-52 w-52 rounded-full bg-gradient-to-br from-rose/50 via-ember/25 to-transparent blur-2xl"
       />
       <motion.span
         initial={{ scale: 0.4, opacity: 0 }}
@@ -45,7 +45,7 @@ export function TapPulse({ onDone }: { onDone: () => void }) {
           rotate: [0, -7, 7, -4, 4, 0],
         }}
         transition={{ duration: 1.5, ease: "easeOut" }}
-        className="relative grid h-24 w-24 place-items-center rounded-full border border-rose/40 bg-ink-900/70 text-rose shadow-[0_0_60px_-10px_rgba(255,107,149,0.8)] backdrop-blur-md"
+        className="relative grid h-24 w-24 place-items-center rounded-full border border-gold/50 bg-ink-900/80 text-gold shadow-[0_0_70px_-8px_rgba(158,25,45,0.95)] backdrop-blur-md"
       >
         <HeartIcon className="h-10 w-10" />
       </motion.span>
@@ -54,7 +54,7 @@ export function TapPulse({ onDone }: { onDone: () => void }) {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: [0, 1, 0], y: -8 }}
         transition={{ duration: 1.6, ease: "easeOut" }}
-        className="absolute inset-x-0 top-[60%] text-center font-display text-[15px] text-rose-soft"
+        className="absolute inset-x-0 top-[60%] text-center font-display text-[17px] tracking-[0.02em] text-cream"
       >
         Pensée reçue
       </motion.p>
@@ -65,9 +65,9 @@ export function TapPulse({ onDone }: { onDone: () => void }) {
           initial={{ opacity: 0, y: 10, x: (index - 1) * 34 }}
           animate={{ opacity: [0, 1, 0], y: -90 - index * 18 }}
           transition={{ duration: 1.6, delay: 0.1 * index, ease: "easeOut" }}
-          className="absolute text-[18px]"
+          className="absolute text-[18px] opacity-90"
         >
-          💗
+          🥀
         </motion.span>
       ))}
     </motion.div>

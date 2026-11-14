@@ -39,21 +39,21 @@ export function MatchCelebration({ data, onClose, onOpenDuo }: Props) {
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 16, scale: 0.97 }}
         transition={{ type: "spring", stiffness: 320, damping: 30 }}
-        className="relative w-full max-w-sm overflow-hidden rounded-[28px] border border-rose/25 bg-ink-900 p-6 text-center shadow-[0_40px_100px_-30px_rgba(255,107,149,0.35)]"
+        className="frame-gold relative w-full max-w-sm overflow-hidden rounded-[28px] border border-gold/30 bg-ink-900 p-6 text-center shadow-[0_40px_100px_-30px_rgba(122,17,32,0.55)]"
       >
         <button
           type="button"
           onClick={onClose}
           aria-label="Fermer la notification"
-          className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-cream/50 transition hover:text-cream"
+          className="absolute right-3 top-3 grid h-11 w-11 place-items-center rounded-full border border-gold/20 bg-ink-800/70 text-cream/55 transition hover:border-gold/40 hover:text-cream"
         >
           <XIcon className="h-4 w-4" />
         </button>
 
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-rose/15 to-transparent" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-rose/20 via-ember/10 to-transparent" />
 
         <div className="relative">
-          <div className="mx-auto flex w-fit items-center gap-1.5 rounded-full border border-rose/30 bg-rose/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-rose-soft">
+          <div className="mx-auto flex w-fit items-center gap-1.5 rounded-full border border-gold/35 bg-gold/[0.08] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-gold">
             <SparklesIcon className="h-3 w-3" />
             {data.kicker ?? "Match à deux"}
           </div>
@@ -67,7 +67,7 @@ export function MatchCelebration({ data, onClose, onOpenDuo }: Props) {
               }}
             />
             <div
-              className="relative grid h-24 w-24 place-items-center rounded-[26px] text-[46px] ring-1 ring-white/20"
+              className="relative grid h-24 w-24 place-items-center rounded-[26px] text-[46px] ring-1 ring-gold/30"
               style={{
                 backgroundImage: `linear-gradient(145deg, ${data.gradient[0]}, ${data.gradient[1]})`,
               }}
@@ -76,13 +76,13 @@ export function MatchCelebration({ data, onClose, onOpenDuo }: Props) {
             </div>
             <span
               aria-hidden
-              className="absolute -bottom-2 -right-2 grid h-9 w-9 place-items-center rounded-full bg-gradient-to-br from-rose to-[#ff8f6b] text-ink-950 shadow-lg"
+              className="absolute -bottom-2 -right-2 grid h-9 w-9 place-items-center rounded-full border border-gold/50 bg-gradient-to-br from-ember to-rose text-cream shadow-lg"
             >
               <HeartIcon className="h-5 w-5" />
             </span>
             <span
               aria-hidden
-              className="absolute -left-3 -top-2 grid h-7 w-7 place-items-center rounded-full bg-gradient-to-br from-rose to-[#7c5cff] text-ink-950 shadow-lg"
+              className="absolute -left-3 -top-2 grid h-7 w-7 place-items-center rounded-full border border-gold/50 bg-gradient-to-br from-rose to-[#3d0a12] text-gold shadow-lg"
             >
               <HeartIcon className="h-4 w-4" />
             </span>
@@ -94,7 +94,7 @@ export function MatchCelebration({ data, onClose, onOpenDuo }: Props) {
           <p className="mt-1 font-display text-[22px] leading-tight text-rose-soft">
             {data.title}
           </p>
-          <p className="mx-auto mt-1.5 max-w-[280px] text-[12px] leading-relaxed text-cream/50">
+          <p className="mx-auto mt-1.5 max-w-[280px] text-[12px] leading-relaxed text-cream/55">
             {data.subtitle}
           </p>
 
@@ -102,7 +102,7 @@ export function MatchCelebration({ data, onClose, onOpenDuo }: Props) {
             <button
               type="button"
               onClick={onOpenDuo}
-              className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-rose to-[#ff8f6b] px-4 py-2.5 text-[12.5px] font-semibold text-ink-950 transition hover:brightness-105"
+              className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl border border-gold/45 bg-gradient-to-r from-ember to-rose px-4 py-2.5 text-[12.5px] font-semibold text-cream transition hover:border-gold/70 hover:brightness-110"
             >
               {data.ctaLabel ?? "Voir notre duo"}
               <ArrowRightIcon className="h-4 w-4" />
@@ -110,7 +110,7 @@ export function MatchCelebration({ data, onClose, onOpenDuo }: Props) {
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl px-4 py-2 text-[11.5px] text-cream/50 transition hover:bg-white/5 hover:text-cream/80"
+              className="rounded-xl px-4 py-2 text-[11.5px] text-cream/55 transition hover:bg-white/5 hover:text-cream/80"
             >
               Continuer
             </button>
