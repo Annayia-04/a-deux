@@ -17,8 +17,8 @@ const TIMES: Exclude<TimeOfDay, "any">[] = ["day", "evening"];
 const ENERGIES: Energy[] = ["calm", "active"];
 
 describe("catalogue d'idées", () => {
-  it("contient au moins 120 idées", () => {
-    expect(IDEAS.length).toBeGreaterThanOrEqual(120);
+  it("contient au moins 240 idées", () => {
+    expect(IDEAS.length).toBeGreaterThanOrEqual(240);
   });
 
   it("respecte le schéma strict", () => {

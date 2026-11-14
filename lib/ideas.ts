@@ -1,10 +1,11 @@
 import type { Idea } from "@/lib/types";
+import { EXTRA_IDEAS } from "@/lib/ideas-extra";
 
 /**
  * Catalogue statique : aucune requête réseau, aucun asset distant.
  * Les identifiants sont stables (ils servent de clé de swipe en base).
  */
-export const IDEAS: Idea[] = [
+const CORE_IDEAS: Idea[] = [
   {
     id: "pique-nique-sunset",
     title: "Pique-nique au coucher du soleil",
@@ -1806,6 +1807,9 @@ export const IDEAS: Idea[] = [
     tip: "Choisissez un format court : les saynètes de deux minutes évitent les longueurs.",
   },
 ];
+
+/** Catalogue complet : base historique + extension thématique. */
+export const IDEAS: Idea[] = [...CORE_IDEAS, ...EXTRA_IDEAS];
 
 if (process.env.NODE_ENV !== "production" && IDEAS.length < 1) {
   throw new Error("Catalogue vide");
