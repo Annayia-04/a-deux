@@ -870,6 +870,94 @@ await check("tap : curseur borné et accès limité au duo", async () => {
   assert.equal(noSession.response.status, 401);
 });
 
+await check("widget natif : association, ping sans cookie, révocation", async () => {
+  // Corps strict : une clé inconnue est refusée.
+  const extra = await clientApi(clientB, "/api/widget/devices", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ label: "Smoke", token: "interdit" }),
+  });
+  assert.equal(extra.response.status, 400, extra.text);
+
+  const paired = await clientApi(clientB, "/api/widget/devices", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ label: "Smoke" }),
+  });
+  assert.equal(paired.response.status, 201, paired.text);
+  const token = paired.data.token;
+  assert.match(token, /^[A-Za-z0-9_-]{43}$/);
+
+  // Sans jeton : refus.
+  const anonymous = await fetch(`${BASE}/api/widget/ping`, {
+    method: "POST",
+    redirect: "manual",
+  });
+  assert.equal(anonymous.status, 401);
+
+  const forged = await fetch(`${BASE}/api/widget/ping`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${"A".repeat(43)}` },
+    redirect: "manual",
+  });
+  assert.equal(forged.status, 401);
+
+  // Requête purement native : ni cookie ni Origin.
+  const ping = await fetch(`${BASE}/api/widget/ping`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${token}` },
+    redirect: "manual",
+  });
+  assert.equal(ping.status, 201);
+  const pingBody = await ping.json();
+  assert.ok(pingBody.tap.id > 0);
+
+  const spam = await fetch(`${BASE}/api/widget/ping`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${token}` },
+    redirect: "manual",
+  });
+  assert.equal(spam.status, 429);
+  assert.ok(Number(spam.headers.get("retry-after")) >= 1);
+
+  // Le partenaire reçoit bien le ping du widget.
+  const byA = await clientApi(clientA, "/api/taps");
+  assert.equal(byA.data.tap.id, pingBody.tap.id);
+  await clientApi(clientA, "/api/taps/seen", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ tapId: pingBody.tap.id }),
+  });
+
+  // Un autre membre ne peut pas révoquer le jeton (réponse silencieuse).
+  await clientApi(clientA, "/api/widget/devices", {
+    method: "DELETE",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ token }),
+  });
+
+  // Révocation par le propriétaire : le jeton ne fonctionne plus.
+  const second = await clientApi(clientB, "/api/widget/devices", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ label: "Smoke 2" }),
+  });
+  assert.equal(second.response.status, 201, second.text);
+  const revoked = await clientApi(clientB, "/api/widget/devices", {
+    method: "DELETE",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ token: second.data.token }),
+  });
+  assert.equal(revoked.response.status, 200, revoked.text);
+
+  const afterRevoke = await fetch(`${BASE}/api/widget/ping`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${second.data.token}` },
+    redirect: "manual",
+  });
+  assert.equal(afterRevoke.status, 401);
+});
+
 await check("sortie du duo : matchs supprimés, partenaire conservé", async () => {
   const leave = await clientApi(clientA, "/api/couple", { method: "DELETE" });
   assert.equal(leave.response.status, 200, leave.text);

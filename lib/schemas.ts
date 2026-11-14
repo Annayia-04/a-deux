@@ -168,3 +168,23 @@ export const tapSeenSchema = z
     tapId: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
   })
   .strict();
+
+// ---------------------------------------------------------------------------
+// Widget natif « Petit ping »
+// ---------------------------------------------------------------------------
+
+export const widgetTokenSchema = z
+  .string()
+  .regex(/^[A-Za-z0-9_-]{43}$/, "Jeton d’appareil invalide.");
+
+export const widgetPairSchema = z
+  .object({
+    label: z.string().trim().min(1).max(40).optional(),
+  })
+  .strict();
+
+export const widgetRevokeSchema = z
+  .object({
+    token: widgetTokenSchema,
+  })
+  .strict();

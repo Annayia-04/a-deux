@@ -46,6 +46,7 @@ import {
 import { useCoupleSync } from "@/lib/use-couple-sync";
 import { useSwipeSync } from "@/lib/use-swipe-sync";
 import { useTaps } from "@/lib/use-taps";
+import { useWidgetPairing } from "@/lib/use-widget-pairing";
 
 type Mode = "setup" | "swiping" | "results";
 type LocalDecision = { ideaId: string; direction: SwipeDirection };
@@ -270,6 +271,10 @@ export function DateSwipeApp({
     onTap: handleIncomingTap,
     onSessionExpired: handleSessionExpired,
   });
+
+  // App native : associe le téléphone au widget « Petit ping » dès que le
+  // duo est complet. Sans effet dans un navigateur.
+  useWidgetPairing({ enabled: Boolean(session && couple?.complete) });
 
   const handleSendTap = useCallback(async () => {
     vibrateTap([12]);

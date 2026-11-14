@@ -1,0 +1,18 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">À deux</string>
+    <string name="title_activity_main">À deux</string>
+    <string name="package_name">fr.adeux.app</string>
+    <string name="custom_url_scheme">fr.adeux.app</string>
+
+    <string name="widget_ping_title">Petit ping</string>
+    <string name="widget_ping_hint">Toucher pour envoyer</string>
+    <string name="widget_ping_description">Envoie une pensée à votre partenaire sans ouvrir l’application.</string>
+    <string name="widget_ping_sent">Ping envoyé</string>
+    <string name="widget_ping_wait">Patientez un instant</string>
+    <string name="widget_ping_pair">Ouvrir l’app pour associer</string>
+    <string name="widget_ping_incomplete">Complétez votre duo</string>
+    <string name="widget_ping_offline">Hors ligne, réessayez</string>
+    <string name="widget_ping_error">Échec, réessayez</string>
+    <string name="widget_ping_unauthorized">Réassociez le widget</string>
+</resources>

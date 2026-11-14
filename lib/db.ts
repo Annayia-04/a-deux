@@ -202,6 +202,22 @@ function openDatabase(): Database.Database {
     CREATE INDEX IF NOT EXISTS session_aliases_user_idx
       ON session_aliases (user_id);
 
+    /* Appareils autorisés à envoyer un « petit ping » depuis un widget natif.
+       Seul le SHA-256 du jeton est stocké. Le jeton ne donne accès qu'à
+       l'envoi d'un tap, jamais à la lecture des données du duo. */
+    CREATE TABLE IF NOT EXISTS widget_devices (
+      token_hash TEXT PRIMARY KEY,
+      session_id TEXT NOT NULL,
+      label TEXT,
+      created_at INTEGER NOT NULL,
+      last_used_at INTEGER,
+      revoked_at INTEGER,
+      FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS widget_devices_session_idx
+      ON widget_devices (session_id);
+
     CREATE TABLE IF NOT EXISTS swipes (
       session_id TEXT NOT NULL,
       idea_id TEXT NOT NULL,
@@ -474,6 +490,72 @@ export function deleteSessionAlias(aliasId: string): void {
 
 export function deleteSessionAliasesForUser(userId: string): void {
   statement(`DELETE FROM session_aliases WHERE user_id = ?`).run(userId);
+}
+
+export type WidgetDeviceRecord = {
+  sessionId: string;
+  label: string | null;
+  createdAt: number;
+  lastUsedAt: number | null;
+};
+
+/**
+ * Enregistre un appareil widget. Le jeton n'est jamais stocké en clair :
+ * `tokenHash` est le SHA-256 du jeton remis une seule fois au téléphone.
+ */
+export function createWidgetDevice(
+  tokenHash: string,
+  sessionId: string,
+  label: string | null,
+  now: number = Date.now(),
+): void {
+  statement(
+    `INSERT INTO widget_devices (token_hash, session_id, label, created_at)
+     VALUES (?, ?, ?, ?)`,
+  ).run(tokenHash, sessionId, label, now);
+}
+
+export function getWidgetDevice(tokenHash: string): WidgetDeviceRecord | null {
+  const row = statement(
+    `SELECT session_id AS sessionId, label, created_at AS createdAt,
+            last_used_at AS lastUsedAt
+       FROM widget_devices
+      WHERE token_hash = ? AND revoked_at IS NULL`,
+  ).get(tokenHash) as WidgetDeviceRecord | undefined;
+  return row ?? null;
+}
+
+export function countActiveWidgetDevices(sessionId: string): number {
+  const row = statement(
+    `SELECT COUNT(*) AS total FROM widget_devices
+      WHERE session_id = ? AND revoked_at IS NULL`,
+  ).get(sessionId) as { total: number };
+  return row.total;
+}
+
+export function touchWidgetDevice(
+  tokenHash: string,
+  now: number = Date.now(),
+): void {
+  statement(
+    `UPDATE widget_devices SET last_used_at = ? WHERE token_hash = ?`,
+  ).run(now, tokenHash);
+}
+
+/** Révoque un appareil ; renvoie false s'il n'appartient pas à la session. */
+export function revokeWidgetDevice(
+  tokenHash: string,
+  sessionId: string,
+): boolean {
+  const result = statement(
+    `UPDATE widget_devices SET revoked_at = ?
+      WHERE token_hash = ? AND session_id = ? AND revoked_at IS NULL`,
+  ).run(Date.now(), tokenHash, sessionId);
+  return result.changes > 0;
+}
+
+export function deleteWidgetDevicesForSession(sessionId: string): void {
+  statement(`DELETE FROM widget_devices WHERE session_id = ?`).run(sessionId);
 }
 
 export function touchSession(id: string, now: number = Date.now()): void {

@@ -215,6 +215,21 @@ export const api = {
       body: { tapId },
     });
   },
+
+  /** Associe ce téléphone au widget natif « Petit ping ». */
+  pairWidget(label?: string): Promise<{ token: string }> {
+    return request<{ token: string }>("/api/widget/devices", {
+      method: "POST",
+      body: label ? { label } : {},
+    });
+  },
+
+  revokeWidget(token: string): Promise<{ ok: boolean }> {
+    return request<{ ok: boolean }>("/api/widget/devices", {
+      method: "DELETE",
+      body: { token },
+    });
+  },
 };
 
 export type SouvenirDraft = {
