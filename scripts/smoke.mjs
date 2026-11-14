@@ -9,6 +9,7 @@ import assert from "node:assert/strict";
 
 const BASE = process.argv[2] ?? "http://localhost:3000";
 const ORIGIN = BASE;
+const IS_HTTPS = BASE.startsWith("https://");
 
 let cookie = "";
 let failures = 0;
@@ -119,7 +120,11 @@ await check("création de session (201) + cookie HttpOnly", () => {
   const raw = setCookies.join("\n");
   assert.match(raw, /HttpOnly/i);
   assert.match(raw, /SameSite=lax/i);
-  assert.doesNotMatch(raw, /Secure/i, "cookie Secure en HTTP local");
+  if (IS_HTTPS) {
+    assert.match(raw, /Secure/i, "cookie non Secure en HTTPS");
+  } else {
+    assert.doesNotMatch(raw, /Secure/i, "cookie Secure en HTTP local");
+  }
   const match = raw.match(/date_swipe_session=([^;]+)/);
   assert.ok(match, "cookie de session absent");
   cookie = `date_swipe_session=${match[1]}`;
@@ -158,11 +163,13 @@ await check("la page rend le deck côté serveur avec CSP à nonce", async () =>
   const csp = response.headers.get("content-security-policy") ?? "";
   assert.match(csp, /script-src 'self' 'nonce-/);
   assert.match(csp, /frame-ancestors 'none'/);
-  assert.doesNotMatch(
-    csp,
-    /upgrade-insecure-requests/,
-    "les assets HTTP locale ne doivent pas être forcés en HTTPS",
-  );
+  if (!IS_HTTPS) {
+    assert.doesNotMatch(
+      csp,
+      /upgrade-insecure-requests/,
+      "les assets HTTP locale ne doivent pas être forcés en HTTPS",
+    );
+  }
   const nonce = csp.match(/'nonce-([^']+)'/)?.[1];
   assert.ok(nonce, "nonce CSP absent");
   assert.ok(
@@ -270,26 +277,6 @@ await check("aperçu du nombre d'idées", async () => {
   });
   assert.equal(result.response.status, 200);
   assert.ok(result.data.count > 0);
-});
-
-await check("rate limit sur la création de session", async () => {
-  const ip = "203.0.113.77";
-  const statuses = [];
-  for (let i = 0; i < 14; i += 1) {
-    const result = await api("/api/session", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "x-forwarded-for": ip,
-      },
-      body: JSON.stringify({ prefs: PREFS }),
-    });
-    statuses.push(result.response.status);
-  }
-  assert.ok(
-    statuses.includes(429),
-    `aucun 429 reçu : ${statuses.join(",")}`,
-  );
 });
 
 await check("effacement de session + cookie vidé", async () => {
@@ -1007,6 +994,26 @@ await check("le dernier membre ferme l'espace, le code expire", async () => {
     body: JSON.stringify({ code: duoCode }),
   });
   assert.equal(rejoin.response.status, 404, rejoin.text);
+});
+
+await check("rate limit sur la création de session", async () => {
+  const ip = "203.0.113.77";
+  const statuses = [];
+  for (let i = 0; i < 14; i += 1) {
+    const result = await api("/api/session", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-forwarded-for": ip,
+      },
+      body: JSON.stringify({ prefs: PREFS }),
+    });
+    statuses.push(result.response.status);
+  }
+  assert.ok(
+    statuses.includes(429),
+    `aucun 429 reçu : ${statuses.join(",")}`,
+  );
 });
 
 await check("manifeste PWA servi et complet", async () => {
