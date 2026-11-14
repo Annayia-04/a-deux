@@ -20,6 +20,40 @@ export default function manifest(): MetadataRoute.Manifest {
     lang: "fr",
     dir: "ltr",
     categories: ["lifestyle", "social"],
+    /*
+     * Raccourcis de l'icône installée (appui long sur l'icône).
+     * « Petit ping » ouvre l'app et envoie immédiatement la pensée ;
+     * « Mon duo » ouvre directement l'espace à deux.
+     */
+    shortcuts: [
+      {
+        name: "Petit ping",
+        short_name: "Ping",
+        description:
+          "Envoyer une pensée rapide à votre partenaire sans chercher le bouton.",
+        url: "/?ping=1",
+        icons: [
+          {
+            src: "/icons/icon-192.png",
+            sizes: "192x192",
+            type: "image/png",
+          },
+        ],
+      },
+      {
+        name: "Mon duo",
+        short_name: "Duo",
+        description: "Ouvrir votre espace à deux : matchs, souvenirs et envies.",
+        url: "/?duo=1",
+        icons: [
+          {
+            src: "/icons/icon-192.png",
+            sizes: "192x192",
+            type: "image/png",
+          },
+        ],
+      },
+    ],
     icons: [
       {
         src: "/icons/icon-192.png",

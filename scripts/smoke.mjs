@@ -923,6 +923,22 @@ await check("manifeste PWA servi et complet", async () => {
     manifest.icons.some((icon) => icon.purpose === "maskable"),
     "icône maskable absente",
   );
+
+  // Raccourcis de l'icône installée : petit ping et espace à deux.
+  assert.ok(Array.isArray(manifest.shortcuts), "raccourcis absents");
+  const ping = manifest.shortcuts.find((shortcut) =>
+    shortcut.url.includes("ping=1"),
+  );
+  assert.ok(ping, "raccourci petit ping absent");
+  assert.match(ping.name, /ping/i);
+  const duo = manifest.shortcuts.find((shortcut) =>
+    shortcut.url.includes("duo=1"),
+  );
+  assert.ok(duo, "raccourci duo absent");
+  for (const shortcut of manifest.shortcuts) {
+    assert.ok(shortcut.url.startsWith("/"), shortcut.url);
+    assert.ok(shortcut.icons?.length > 0, `icône absente : ${shortcut.name}`);
+  }
 });
 
 await check("service worker revalidé et autorisé sur toute l'origine", async () => {

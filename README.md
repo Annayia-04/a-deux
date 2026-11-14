@@ -79,8 +79,10 @@ L’application est une PWA complète : elle peut s’installer sur l’écran d
 - **Refus mémorisé** 14 jours pour ne pas harceler.
 - **Service worker** enregistré uniquement en production : il ne met en cache que `/_next/static/*`, `/icons/*`, le manifeste et la page hors ligne. Les pages SSR et les API ne sont **jamais** mises en cache, car elles dépendent de la session et du nonce CSP.
 - **HTTPS requis** hors `localhost` : c’est la condition posée par les navigateurs pour installer une PWA et enregistrer un service worker.
+- **Raccourcis de l’icône installée** : appui long sur l’icône → **Petit ping** (ouvre l’app et envoie aussitôt une pensée au partenaire) ou **Mon duo** (ouvre l’espace à deux). Le paramètre `?ping=1` / `?duo=1` est lu une seule fois puis retiré de l’URL, pour qu’un rechargement ne rejoue jamais l’envoi.
+  - Un vrai widget d’écran d’accueil, utilisable **sans ouvrir l’app**, n’est pas possible en PWA : il demande le wrapper natif Capacitor (App Widget Android, WidgetKit iOS). La conception est décrite dans `docs/architecture-comptes-postgres.md`.
 
-Fichiers concernés : `app/manifest.ts` (manifeste généré), `public/sw.js`, `public/offline.html`, `public/icons/` (192, 512, 1024, maskable, icône Apple), `components/service-worker-register.tsx` et `components/install-card.tsx`.
+Fichiers concernés : `app/manifest.ts` (manifeste généré), `lib/launch-action.ts` (raccourcis), `public/sw.js`, `public/offline.html`, `public/icons/` (192, 512, 1024, maskable, icône Apple), `components/service-worker-register.tsx` et `components/install-card.tsx`.
 
 Pour aller plus loin, un wrapper natif Capacitor (App Store / Play Store) est décrit dans `docs/architecture-comptes-postgres.md`.
 
@@ -213,6 +215,7 @@ lib/
   use-choices.ts          Deck optimiste et matchs de choix
   use-taps.ts             Polling des pensées et vibration
   share.ts                Texte de partage de la liste
+  launch-action.ts        Raccourcis de l’icône PWA (petit ping, duo)
   snapshot.ts             Chargement SSR de la session
   types.ts                Types partagés client/serveur
 middleware.ts             CSP à nonce par requête (worker-src, manifest-src)
@@ -434,7 +437,7 @@ npm run typecheck
 npm test
 ```
 
-95 tests unitaires couvrent le catalogue d’idées et de choix, le filtrage/classement, les schémas Zod (préférences, duo, souvenirs, choix, tap), le nettoyage du texte libre, les codes d’invitation, les jetons de session, le rate limiter, la configuration SSO, ainsi que la signature des cookies OAuth et la vérification complète des `id_token` Google (signature RSA, `iss`, `aud`, `exp`, `iat`, `nonce`, algorithme, `kid`).
+99 tests unitaires couvrent le catalogue d’idées et de choix, le filtrage/classement, les schémas Zod (préférences, duo, souvenirs, choix, tap), le nettoyage du texte libre, les codes d’invitation, les jetons de session, le rate limiter, la configuration SSO, les raccourcis de lancement PWA, ainsi que la signature des cookies OAuth et la vérification complète des `id_token` Google (signature RSA, `iss`, `aud`, `exp`, `iat`, `nonce`, algorithme, `kid`).
 
 Test de fumée complet (serveur de production requis) :
 
@@ -444,7 +447,7 @@ npm start -- -p 3100
 npm run smoke -- http://localhost:3100
 ```
 
-Il vérifie la création de session et le cookie, le respect des préférences, le SSR et la CSP à nonce, l’enregistrement d’un swipe, l’état rechargé, l’undo, le refus sans session, le CSRF, la validation, le type de contenu, l’aperçu, le rate limiting et l’effacement de session. Il couvre aussi le compte : état anonyme, fournisseurs réellement annoncés, redirection Google signée (ou 503 explicite sans configuration), refus d’un callback sans état valide et CSRF sur la déconnexion. Un second parcours couvre le duo avec deux sessions indépendantes : création, adhésion, refus d’un troisième membre, codes invalides, match mutuel, état non lu, marquage vu, annulation du match, conservation du duo lors d’un changement de sélection, match Nourriture et match Film, compteurs séparés, souvenirs écrits par A puis B, création idempotente d’un même souvenir par les deux membres, validation et accès refusé à une session tierce, tap reçu, anti-spam 429 avec `Retry-After`, curseur borné, puis sortie qui efface les contenus partagés.
+Il vérifie la création de session et le cookie, le respect des préférences, le SSR et la CSP à nonce, l’enregistrement d’un swipe, l’état rechargé, l’undo, le refus sans session, le CSRF, la validation, le type de contenu, l’aperçu, le rate limiting et l’effacement de session. Le manifeste est contrôlé jusqu’aux raccourcis « Petit ping » et « Mon duo ». Il couvre aussi le compte : état anonyme, fournisseurs réellement annoncés, redirection Google signée (ou 503 explicite sans configuration), refus d’un callback sans état valide et CSRF sur la déconnexion. Un second parcours couvre le duo avec deux sessions indépendantes : création, adhésion, refus d’un troisième membre, codes invalides, match mutuel, état non lu, marquage vu, annulation du match, conservation du duo lors d’un changement de sélection, match Nourriture et match Film, compteurs séparés, souvenirs écrits par A puis B, création idempotente d’un même souvenir par les deux membres, validation et accès refusé à une session tierce, tap reçu, anti-spam 429 avec `Retry-After`, curseur borné, puis sortie qui efface les contenus partagés.
 
 ## Limites connues et passage à l’échelle
 

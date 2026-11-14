@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, MotionConfig, motion } from "motion/react";
 import { DuoDialog, type DuoDialogTab } from "@/components/duo-dialog";
 import {
@@ -26,6 +26,11 @@ import {
   vibrateTap,
 } from "@/lib/feedback";
 import { summarizePrefs, THEME_META } from "@/lib/preferences";
+import {
+  readLaunchAction,
+  stripLaunchParams,
+  type LaunchAction,
+} from "@/lib/launch-action";
 import { buildShareText } from "@/lib/share";
 import { useTapSoundPreference } from "@/lib/use-feedback";
 import {
@@ -141,6 +146,13 @@ export function DateSwipeApp({
     useState<CelebrationData | null>(null);
   const [incomingTap, setIncomingTap] = useState<number | null>(null);
   const [tapSoundEnabled, setTapSoundEnabled] = useTapSoundPreference();
+  // Action demandée par un raccourci de l'icône installée (?ping=1, ?duo=1).
+  const [launchAction, setLaunchAction] = useState<LaunchAction>(() =>
+    typeof window === "undefined"
+      ? null
+      : readLaunchAction(window.location.search),
+  );
+  const launchHandled = useRef(false);
 
   // Débloque la vibration Android et l'audio iOS au premier geste.
   useEffect(() => installFeedbackUnlock(), []);
@@ -157,6 +169,19 @@ export function DateSwipeApp({
     const timer = window.setTimeout(() => setToast(null), 4500);
     return () => window.clearTimeout(timer);
   }, [toast]);
+
+  // Le paramètre de raccourci ne doit jamais rester dans l'URL : un
+  // rechargement ou un partage ne doit pas rejouer l'action.
+  useEffect(() => {
+    const search = window.location.search;
+    const cleaned = stripLaunchParams(search);
+    if (cleaned === new URLSearchParams(search).toString()) return;
+    window.history.replaceState(
+      null,
+      "",
+      `${window.location.pathname}${cleaned ? `?${cleaned}` : ""}${window.location.hash}`,
+    );
+  }, []);
 
   const handleSessionExpired = useCallback(() => {
     setSession(null);
@@ -250,6 +275,22 @@ export function DateSwipeApp({
     vibrateTap([12]);
     await sendTap();
     showToast("Pensée envoyée à votre partenaire.", "success");
+  }, [sendTap, showToast]);
+
+  /** Envoi déclenché par le raccourci « Petit ping » de l'écran d'accueil. */
+  const sendShortcutPing = useCallback(async () => {
+    try {
+      vibrateTap([12]);
+      await sendTap();
+      showToast("Petit ping envoyé à votre partenaire.", "success");
+    } catch (caught) {
+      showToast(
+        caught instanceof ApiError
+          ? caught.message
+          : "Impossible d’envoyer le petit ping.",
+        "error",
+      );
+    }
   }, [sendTap, showToast]);
 
   const handleSwipeMatch = useCallback(
@@ -550,6 +591,36 @@ export function DateSwipeApp({
     setDuoOpen(false);
     setDuoError(null);
   }, []);
+
+  // Exécute une seule fois l'action demandée par le raccourci installé.
+  useEffect(() => {
+    if (!launchAction || launchHandled.current) return;
+    launchHandled.current = true;
+    setLaunchAction(null);
+
+    if (launchAction === "duo") {
+      openDuo();
+      return;
+    }
+
+    if (!session) {
+      showToast(
+        "Créez votre sélection pour envoyer un petit ping à votre partenaire.",
+        "info",
+      );
+      return;
+    }
+    if (!couple?.complete) {
+      openDuo();
+      showToast(
+        "Votre duo doit être complet pour envoyer un petit ping.",
+        "info",
+      );
+      return;
+    }
+
+    void sendShortcutPing();
+  }, [launchAction, session, couple, openDuo, sendShortcutPing, showToast]);
 
   const handleCopy = useCallback(async () => {
     if (!session) return;

@@ -308,6 +308,33 @@ La PWA est la première étape ; le passage aux stores ne change pas le backend.
   fois), revue de quelques jours. La PWA reste installable en parallèle, sans
   store.
 
+### Widget « Petit ping »
+
+Objectif : un widget cliquable sur l’écran d’accueil qui envoie une pensée
+**sans ouvrir l’application**. Impossible en PWA pure : cela exige le wrapper
+natif. Étapes prévues :
+
+1. **Raccourci PWA (livré)** : appui long sur l’icône → « Petit ping » ; l’app
+   s’ouvre et envoie le tap immédiatement (`/?ping=1`).
+2. **Jeton d’appareil** : quand un duo est complet, l’app enregistre un appareil
+   (`POST /api/widget/devices`) et reçoit un jeton opaque, stocké haché côté
+   serveur (`widget_devices`, lié à `session_id`, révocable). Le jeton natif est
+   conservé dans le stockage sécurisé du téléphone, jamais dans le `localStorage`
+   du WebView.
+3. **Endpoint dédié** : `POST /api/widget/ping` avec `Authorization: Bearer`,
+   sans cookie ni CSRF (requête native), rate-limité par appareil (1 / 8 s,
+   20 / h) et limité aux duos complets.
+4. **Android** : `AppWidgetProvider` + `PendingIntent` qui déclenche l’appel
+   réseau en arrière-plan, puis met à jour le widget (envoyé / trop tôt /
+   hors ligne). Aucune ouverture d’activité.
+5. **iOS** : WidgetKit + App Intents (iOS 17+). Nécessite un compte Apple
+   Developer payant (capability App Groups) et une machine macOS pour compiler :
+   à reporter tant que ce compte n’existe pas.
+
+Le jeton ne donne accès qu’à l’envoi d’un tap : il ne permet ni de lire les
+matchs, ni de modifier les swipes, et il est révoqué à la déconnexion ou depuis
+l’écran Compte.
+
 ## 10. Ordre d’implémentation recommandé
 
 1. Extraire la couche de dépôts et faire passer les tests existants dessus.

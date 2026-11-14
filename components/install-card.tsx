@@ -156,6 +156,12 @@ export function InstallCard() {
                     </button>
                   ) : null}
                 </div>
+                {mode === "native" ? (
+                  <p className="mt-2 text-[10.5px] leading-relaxed text-cream/40">
+                    Astuce : après installation, appui long sur l’icône de
+                    l’app → « Petit ping ».
+                  </p>
+                ) : null}
               </div>
             </div>
           </motion.section>
