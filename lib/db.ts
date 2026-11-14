@@ -185,6 +185,23 @@ function openDatabase(): Database.Database {
       last_seen_at INTEGER NOT NULL
     );
 
+    /* Un compte peut accéder à sa session canonique depuis plusieurs
+       appareils : chaque appareil reçoit un alias opaque, jamais la session
+       elle-même. Supprimer la session supprime ses alias. */
+    CREATE TABLE IF NOT EXISTS session_aliases (
+      alias_id TEXT PRIMARY KEY,
+      session_id TEXT NOT NULL,
+      user_id TEXT,
+      created_at INTEGER NOT NULL,
+      FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS session_aliases_session_idx
+      ON session_aliases (session_id);
+
+    CREATE INDEX IF NOT EXISTS session_aliases_user_idx
+      ON session_aliases (user_id);
+
     CREATE TABLE IF NOT EXISTS swipes (
       session_id TEXT NOT NULL,
       idea_id TEXT NOT NULL,
@@ -406,6 +423,57 @@ export function getSessionRecord(id: string): SessionRecord | null {
      FROM sessions WHERE id = ?`,
   ).get(id) as SessionRecord | undefined;
   return row ?? null;
+}
+
+/**
+ * Résout un identifiant de cookie vers la session canonique.
+ * Un alias (appareil secondaire connecté à un compte) pointe vers la session
+ * détenue par le compte, sans dupliquer les swipes ni l'appartenance au duo.
+ */
+export function resolveSessionId(id: string): string | null {
+  const direct = statement(`SELECT id FROM sessions WHERE id = ?`).get(id) as
+    | { id: string }
+    | undefined;
+  if (direct) return id;
+
+  const alias = statement(
+    `SELECT session_id AS sessionId FROM session_aliases WHERE alias_id = ?`,
+  ).get(id) as { sessionId: string } | undefined;
+  if (!alias) return null;
+
+  const canonical = statement(`SELECT id FROM sessions WHERE id = ?`).get(
+    alias.sessionId,
+  ) as { id: string } | undefined;
+  return canonical ? alias.sessionId : null;
+}
+
+export function isSessionAlias(id: string): boolean {
+  const row = statement(
+    `SELECT 1 AS present FROM session_aliases WHERE alias_id = ?`,
+  ).get(id) as { present: number } | undefined;
+  return Boolean(row);
+}
+
+export function createSessionAlias(
+  aliasId: string,
+  sessionId: string,
+  userId: string,
+  now: number = Date.now(),
+): void {
+  statement(
+    `INSERT INTO session_aliases (alias_id, session_id, user_id, created_at)
+     VALUES (?, ?, ?, ?)
+     ON CONFLICT (alias_id)
+     DO UPDATE SET session_id = excluded.session_id, user_id = excluded.user_id`,
+  ).run(aliasId, sessionId, userId, now);
+}
+
+export function deleteSessionAlias(aliasId: string): void {
+  statement(`DELETE FROM session_aliases WHERE alias_id = ?`).run(aliasId);
+}
+
+export function deleteSessionAliasesForUser(userId: string): void {
+  statement(`DELETE FROM session_aliases WHERE user_id = ?`).run(userId);
 }
 
 export function touchSession(id: string, now: number = Date.now()): void {

@@ -162,4 +162,10 @@ export const DEFAULT_PREFS: Prefs = {
   themes: [],
 };
 
+/** Identité affichée quand un compte est connecté (jamais de jeton côté client). */
+export type AccountSnapshot = {
+  displayName: string | null;
+  email: string | null;
+};
+
 export const MAX_THEMES = 3;

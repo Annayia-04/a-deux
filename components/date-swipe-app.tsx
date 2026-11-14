@@ -18,6 +18,7 @@ import {
   XIcon,
 } from "@/components/icons";
 import { ApiError, api } from "@/lib/api-client";
+import type { AuthProvider } from "@/lib/auth/provider";
 import { CHOICES_BY_ID, CHOICE_CATEGORY_META } from "@/lib/choices";
 import {
   installFeedbackUnlock,
@@ -29,6 +30,7 @@ import { buildShareText } from "@/lib/share";
 import { useTapSoundPreference } from "@/lib/use-feedback";
 import {
   DEFAULT_PREFS,
+  type AccountSnapshot,
   type Choice,
   type ChoiceMatchSummary,
   type Idea,
@@ -105,8 +107,12 @@ function celebrationForChoice(choice: Choice): CelebrationData {
 
 export function DateSwipeApp({
   initialSession,
+  account,
+  authProviders,
 }: {
   initialSession: SessionSnapshot | null;
+  account: AccountSnapshot | null;
+  authProviders: AuthProvider[];
 }) {
   const [session, setSession] = useState<SessionSnapshot | null>(initialSession);
   const [mode, setMode] = useState<Mode>(() => initialMode(initialSession));
@@ -624,6 +630,8 @@ export function DateSwipeApp({
           couple={couple}
           duoBusy={duoBusy}
           duoError={duoError}
+          account={account}
+          authProviders={authProviders}
           onStart={handleStart}
           onResume={handleResume}
           onCancelEdit={cancelEdit}

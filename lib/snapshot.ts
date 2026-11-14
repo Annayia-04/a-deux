@@ -1,7 +1,7 @@
 import "server-only";
 
 import { getCoupleSnapshot } from "@/lib/couple";
-import { getSessionRecord, listSwipes } from "@/lib/db";
+import { getSessionRecord, listSwipes, resolveSessionId } from "@/lib/db";
 import { IDEAS_BY_ID } from "@/lib/ideas";
 import { rankIdeas } from "@/lib/recommend";
 import { prefsSchema } from "@/lib/schemas";
@@ -20,7 +20,10 @@ export type LoadedSession = SessionSnapshot & {
 export function loadSessionByToken(token: string | null): LoadedSession | null {
   if (!token || !isValidSessionToken(token)) return null;
 
-  const record = getSessionRecord(hashToken(token));
+  const sessionId = resolveSessionId(hashToken(token));
+  if (!sessionId) return null;
+
+  const record = getSessionRecord(sessionId);
   if (!record) return null;
 
   let rawPrefs: unknown;

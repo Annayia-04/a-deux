@@ -61,11 +61,19 @@ export function isProviderConfigured(provider: AuthProvider): boolean {
   return provider === "google" ? googleConfig() !== null : appleConfig() !== null;
 }
 
+/**
+ * Un fournisseur n'est proposé que si ses identifiants ET le secret de
+ * signature des cookies OAuth sont présents. Sinon le bouton est masqué.
+ */
+export function isLoginEnabled(provider: AuthProvider): boolean {
+  return isProviderConfigured(provider) && authCookieSecret() !== null;
+}
+
 /** Fournisseurs réellement configurés, dans l’ordre d’affichage des boutons. */
 export function enabledAuthProviders(): AuthProvider[] {
   const providers: AuthProvider[] = [];
-  if (googleConfig()) providers.push("google");
-  if (appleConfig()) providers.push("apple");
+  if (isLoginEnabled("google")) providers.push("google");
+  if (isLoginEnabled("apple")) providers.push("apple");
   return providers;
 }
 

@@ -112,7 +112,8 @@ Copier `.env.example` vers `.env.local` (ou définir les variables dans l’envi
 | `DATABASE_URL_DIRECT` | `DATABASE_URL` | Chaîne directe (sans pooler) utilisée par `npm run db:migrate`. |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | vide | OAuth Google. Le bouton est masqué tant que les deux manquent. Voir `docs/google-oauth-setup.md`. |
 | `APPLE_CLIENT_ID` / `APPLE_TEAM_ID` / `APPLE_KEY_ID` / `APPLE_PRIVATE_KEY` | vide | Sign in with Apple (Service ID + clé `.p8`). Bouton masqué si incomplet. |
-| `APP_SESSION_SECRET` | vide | Secret de signature des cookies OAuth (`state`, `nonce`). |
+| `APP_SESSION_SECRET` | vide | Secret de signature des cookies OAuth (`state`, `nonce`). Sans lui, les boutons de connexion sont masqués et `/api/auth/*` renvoie 503. Générer avec `node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"`. |
+| `APP_ORIGIN` | auto | Origine publique forcée pour construire l’URI de redirection OAuth (ex. `http://localhost:3000` si le serveur écoute ailleurs). Sinon `x-forwarded-proto`/`x-forwarded-host`, puis l’URL de la requête. |
 
 En production derrière un reverse proxy TLS, transmettre `X-Forwarded-Proto: https` (ou définir `COOKIE_SECURE=true`) pour que le cookie soit marqué `Secure`.
 
@@ -126,6 +127,17 @@ npm run db:status    # état des migrations, sans modification
 ```
 
 Les migrations sont transactionnelles, verrouillées par un advisory lock et protégées par un checksum : une migration déjà appliquée ne peut pas être réécrite.
+
+### Compte Google (facultatif)
+
+Le mode anonyme reste le défaut : aucun bouton n’apparaît tant que Google et `APP_SESSION_SECRET` ne sont pas configurés. Une fois configuré :
+
+1. la carte « Retrouvez votre duo partout » propose **Continuer avec Google** sur l’écran de préférences ;
+2. l’identité (nom, e-mail) est stockée dans Postgres (`users`, `auth_identities`), les données de jeu restent dans SQLite ;
+3. le compte est rattaché à une **session canonique** ; un autre appareil reçoit un alias opaque (`session_aliases`) qui pointe vers la même session, donc vers le même duo et les mêmes souvenirs ;
+4. **Se déconnecter** révoque le jeton de compte et, sur un appareil secondaire, supprime l’alias — la session d’origine et le duo sont conservés.
+
+L’URI de redirection déclarée dans Google Cloud doit correspondre exactement à l’origine utilisée : pour tester en local, lancer le serveur sur le port 3000 (`npm start -- -p 3000`) ou définir `APP_ORIGIN`. Procédure détaillée : `docs/google-oauth-setup.md`. Apple reste masqué tant qu’un compte Apple Developer payant n’est pas disponible.
 
 ## Architecture
 
@@ -170,7 +182,12 @@ components/
   brand.tsx, icons.tsx    Identité et icônes SVG inline
 lib/
   config.ts               Lecture des variables serveur, drapeaux SSO/Postgres
+  account-db.ts           Postgres : utilisateurs, identités Google, sessions de compte, session canonique
   auth/provider.ts        Fournisseurs d’identité (types partagés, sans secret)
+  auth/state.ts           Cookie d’état OAuth signé HMAC, nonce, PKCE S256
+  auth/google.ts          URL d’autorisation, échange du code, vérification JWKS de l’id_token
+  auth/account.ts         Cookie `adeux_account`, compte courant, instantané d’identité
+  auth/origin.ts          Origine publique (proxy, APP_ORIGIN) pour l’URI de redirection
   ideas.ts                Catalogue : base historique (120) + extension
   ideas-extra.ts          Extension thématique du catalogue (120 idées)
   choices.ts              Catalogue de 30 plats et 40 films, ordre du deck
@@ -179,7 +196,7 @@ lib/
   text.ts                 Nettoyage du texte libre (NFC, contrôles, espaces)
   seeded.ts               PRNG déterministe partagé
   schemas.ts              Schémas Zod stricts (préférences, swipes, duo, souvenirs, choix, tap)
-  db.ts                   SQLite : sessions, swipes, couples, matchs, souvenirs, choix, taps
+  db.ts                   SQLite : sessions, alias d’appareils, swipes, couples, matchs, souvenirs, choix, taps
   couple.ts               Helpers serveur du duo, autorisations et réconciliation
   souvenirs.ts            Création, timeline et notes de souvenirs
   choice-service.ts       Deck, swipe et matchs Nourriture / Films
@@ -205,6 +222,7 @@ public/
   icons/                  Icônes PWA locales (192, 512, 1024, maskable, Apple)
 db/
   migrations/001_accounts.sql  Comptes, identités, sessions, duos (Postgres)
+  migrations/002_account_app_session.sql  Session canonique et e-mail du compte
 scripts/
   smoke.mjs               Test de fumée HTTP de bout en bout
   db-migrate.mjs          Runner de migrations Postgres (verrou + checksum)
@@ -218,6 +236,7 @@ docs/google-oauth-setup.md             Procédure Google Cloud pas à pas
 SQLite, mode WAL, base locale dans `DATA_DIR/date-swipe.db` :
 
 - `sessions` : `id` (SHA-256 du jeton), préférences JSON, seed, `created_at`, `last_seen_at`.
+- `session_aliases` : `alias_id` (hash du jeton d’un appareil secondaire), `session_id` canonique, `user_id`, `created_at`. Supprimés avec la session.
 - `swipes` : `session_id`, `idea_id`, `direction`, `created_at`, clé primaire composite, suppression en cascade avec la session.
 - `couples` : `id`, `code` unique à 6 caractères, `created_at`.
 - `couple_members` : `couple_id`, `session_id` unique (une session dans au plus un duo), `joined_at`. Le maximum de deux membres est vérifié dans la transaction d’adhésion.
@@ -415,7 +434,7 @@ npm run typecheck
 npm test
 ```
 
-73 tests unitaires couvrent le catalogue d’idées et de choix, le filtrage/classement, les schémas Zod (préférences, duo, souvenirs, choix, tap), le nettoyage du texte libre, les codes d’invitation, les jetons de session et le rate limiter.
+95 tests unitaires couvrent le catalogue d’idées et de choix, le filtrage/classement, les schémas Zod (préférences, duo, souvenirs, choix, tap), le nettoyage du texte libre, les codes d’invitation, les jetons de session, le rate limiter, la configuration SSO, ainsi que la signature des cookies OAuth et la vérification complète des `id_token` Google (signature RSA, `iss`, `aud`, `exp`, `iat`, `nonce`, algorithme, `kid`).
 
 Test de fumée complet (serveur de production requis) :
 
@@ -425,7 +444,7 @@ npm start -- -p 3100
 npm run smoke -- http://localhost:3100
 ```
 
-Il vérifie la création de session et le cookie, le respect des préférences, le SSR et la CSP à nonce, l’enregistrement d’un swipe, l’état rechargé, l’undo, le refus sans session, le CSRF, la validation, le type de contenu, l’aperçu, le rate limiting et l’effacement de session. Un second parcours couvre le duo avec deux sessions indépendantes : création, adhésion, refus d’un troisième membre, codes invalides, match mutuel, état non lu, marquage vu, annulation du match, conservation du duo lors d’un changement de sélection, match Nourriture et match Film, compteurs séparés, souvenirs écrits par A puis B, création idempotente d’un même souvenir par les deux membres, validation et accès refusé à une session tierce, tap reçu, anti-spam 429 avec `Retry-After`, curseur borné, puis sortie qui efface les contenus partagés.
+Il vérifie la création de session et le cookie, le respect des préférences, le SSR et la CSP à nonce, l’enregistrement d’un swipe, l’état rechargé, l’undo, le refus sans session, le CSRF, la validation, le type de contenu, l’aperçu, le rate limiting et l’effacement de session. Il couvre aussi le compte : état anonyme, fournisseurs réellement annoncés, redirection Google signée (ou 503 explicite sans configuration), refus d’un callback sans état valide et CSRF sur la déconnexion. Un second parcours couvre le duo avec deux sessions indépendantes : création, adhésion, refus d’un troisième membre, codes invalides, match mutuel, état non lu, marquage vu, annulation du match, conservation du duo lors d’un changement de sélection, match Nourriture et match Film, compteurs séparés, souvenirs écrits par A puis B, création idempotente d’un même souvenir par les deux membres, validation et accès refusé à une session tierce, tap reçu, anti-spam 429 avec `Retry-After`, curseur borné, puis sortie qui efface les contenus partagés.
 
 ## Limites connues et passage à l’échelle
 
@@ -433,7 +452,7 @@ Il vérifie la création de session et le cookie, le respect des préférences, 
 - **SQLite** : adapté à une instance unique avec un volume persistant. Pour du multi-instances, migrer vers une base partagée (PostgreSQL) et un stockage de sessions distribué.
 - **Purge des sessions** : les sessions expirées sont supprimées lors de la création d’une nouvelle session. Ajouter un cron si le volume devient important.
 - **`X-Forwarded-For`** : doit être posé par un reverse proxy de confiance, sinon la clé de rate limiting peut être usurpée.
-- **Pas de compte** : la session et le duo reposent sur le cookie. Effacer les cookies ou la session perd la liste et l’appartenance au duo ; il n’y a pas de synchronisation multi-appareils pour une même personne. La trajectoire SSO Google/Apple et le stockage Postgres sont conçus dans `docs/architecture-comptes-postgres.md`, en attente des identifiants OAuth et de l’URL de base managée.
+- **Compte facultatif** : la session anonyme et le duo reposent sur le cookie, sans aucune configuration. Effacer les cookies perd l’accès à cet appareil ; une fois la connexion Google activée, un nouvel appareil retrouve le duo en se connectant au même compte. Apple n’est pas encore proposé (compte Apple Developer payant requis) et le déplacement complet des données vers Postgres reste la phase 2 décrite dans `docs/architecture-comptes-postgres.md`.
 - **Sélection modifiable** : changer ses envies réinitialise le deck en place (même session, même duo, matchs réconciliés). Le deck reste stable tant que la sélection ne change pas.
 - **Annulation** : une carte à la fois, uniquement lorsque la file de synchronisation est vide.
 - **Notifications in-app** : le match est visible quand l’app est ouverte (célébration, toast, badge). Pas de push ni de WebSocket ; le partenaire est prévenu au plus tard au polling suivant (8 s, 3 s pour les pensées).

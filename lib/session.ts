@@ -1,7 +1,7 @@
 import "server-only";
 
 import { cookies } from "next/headers";
-import { getSessionRecord, touchSession } from "@/lib/db";
+import { getSessionRecord, resolveSessionId, touchSession } from "@/lib/db";
 import { HttpError } from "@/lib/http";
 import { prefsSchema } from "@/lib/schemas";
 import {
@@ -79,7 +79,12 @@ export async function requireSession(): Promise<ActiveSession> {
     throw new HttpError(401, "Session introuvable. Relancez votre sélection.");
   }
 
-  const record = getSessionRecord(hashToken(token));
+  const sessionId = resolveSessionId(hashToken(token));
+  if (!sessionId) {
+    throw new HttpError(401, "Session expirée. Relancez votre sélection.");
+  }
+
+  const record = getSessionRecord(sessionId);
   if (!record) {
     throw new HttpError(401, "Session expirée. Relancez votre sélection.");
   }

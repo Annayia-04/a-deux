@@ -155,6 +155,26 @@ Règle de sécurité : une session anonyme déjà réclamée ne peut plus être
 réclamée par un autre compte. Le contrôle se fait sous verrou pour éviter deux
 connexions concurrentes sur le même cookie.
 
+### Mise en œuvre actuelle (phase 1, avant la migration complète)
+
+Tant que les données de jeu restent dans SQLite, la liaison est réalisée sans
+copie ni fusion :
+
+- `users.app_session_id` (Postgres) désigne la **session canonique** du compte,
+  c’est-à-dire le hash SHA-256 de la session SQLite d’origine. Un index unique
+  partiel garantit qu’une session n’appartient qu’à un compte.
+- Un second appareil qui se connecte reçoit un **alias** : la table SQLite
+  `session_aliases (alias_id, session_id, user_id)` associe un nouveau jeton
+  opaque à la session canonique. `resolveSessionId()` traduit l’alias avant
+  toute lecture, si bien que swipes, duo, matchs et souvenirs sont partagés
+  sans duplication.
+- La déconnexion révoque le jeton de compte ; si l’appareil utilisait un
+  alias, celui-ci est supprimé et le cookie de session effacé, sans toucher à
+  la session canonique ni aux données du duo.
+- La phase 2 (décrite en section 6) remplacera les alias d’appareils par des
+  sessions authentifiées complètes et déplacera les données métier dans
+  Postgres ; les identifiants exposés au client resteront opaques.
+
 ## 4. Flux OAuth
 
 ### Google
@@ -167,6 +187,11 @@ connexions concurrentes sur le même cookie.
 - Scopes minimaux : `openid email profile`. Aucun accès Gmail/Drive.
 - Le code et les jetons ne transitent jamais par le client : tout l’échange se
   fait dans une route serveur.
+- Implémenté dans `lib/auth/google.ts`, `lib/auth/state.ts` et
+  `app/api/auth/google/` : URL d’autorisation, cookie `adeux_oauth` signé
+  HMAC-SHA256 (10 min), PKCE S256, cache JWKS d’une heure, vérification
+  complète de l’`id_token`. Les tests unitaires couvrent signature, `kid`,
+  algorithme, `iss`, `aud`, `exp`, `iat` et `nonce`.
 
 ### Apple
 

@@ -1,13 +1,23 @@
 import { randomBytes } from "node:crypto";
 import { cookies } from "next/headers";
 import type { NextResponse } from "next/server";
+import {
+  claimAppSession,
+  setAppSession,
+} from "@/lib/account-db";
+import {
+  getAccountByToken,
+  readAccountToken,
+} from "@/lib/auth/account";
 import { reconcileMatchesForSession } from "@/lib/couple";
 import {
+  createSessionAlias,
   createSessionRecord,
   deleteExpiredSessions,
   deleteSessionRecord,
   getSessionRecord,
   resetSessionRecord,
+  resolveSessionId,
 } from "@/lib/db";
 import {
   apiError,
@@ -56,10 +66,11 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     const store = await cookies();
     const previousToken = readTokenFromCookieStore(store);
-    const previousRecord =
+    const previousId =
       previousToken && isValidSessionToken(previousToken)
-        ? getSessionRecord(hashToken(previousToken))
+        ? resolveSessionId(hashToken(previousToken))
         : null;
+    const previousRecord = previousId ? getSessionRecord(previousId) : null;
 
     // Une nouvelle sélection remplace les swipes mais conserve la session,
     // donc l'appartenance à un espace à deux et les matchs déjà obtenus.
@@ -81,9 +92,45 @@ export async function POST(request: Request): Promise<NextResponse> {
       return response;
     }
 
+    const account = await getAccountByToken(readAccountToken(store));
+
+    // Compte connecté dont la session canonique existe encore, mais dont le
+    // cookie de session a disparu (nettoyage partiel du navigateur) : on
+    // rattache cet appareil à la session du compte par un alias, et la
+    // nouvelle sélection s'applique à cette session partagée.
+    if (account?.appSessionId) {
+      const canonicalId = resolveSessionId(account.appSessionId);
+      if (canonicalId) {
+        resetSessionRecord(canonicalId, prefs, seed);
+        reconcileMatchesForSession(canonicalId);
+
+        const alias = generateSessionToken();
+        createSessionAlias(alias.hash, canonicalId, account.id);
+
+        const session = loadSessionByToken(alias.token);
+        if (!session) {
+          throw new HttpError(500, "Impossible de recharger votre sélection.");
+        }
+
+        const response = json(toPublicSnapshot(session), 201);
+        response.cookies.set(
+          SESSION_COOKIE,
+          alias.token,
+          sessionCookieOptions(request),
+        );
+        return response;
+      }
+    }
+
     const { token, hash } = generateSessionToken();
     createSessionRecord(hash, prefs, seed);
     deleteExpiredSessions(SESSION_TTL_MS);
+
+    // Connexion effectuée avant la création de la sélection : la session
+    // naissante devient la session canonique du compte.
+    if (account && !account.appSessionId) {
+      await claimAppSession(account.id, hash).catch(() => {});
+    }
 
     const snapshot: SessionSnapshot = {
       prefs,
@@ -108,7 +155,16 @@ export async function DELETE(request: Request): Promise<NextResponse> {
 
     const store = await cookies();
     const token = readTokenFromCookieStore(store);
-    if (token) deleteSessionRecord(hashToken(token));
+    if (token) {
+      const sessionId = resolveSessionId(hashToken(token));
+      if (sessionId) {
+        const account = await getAccountByToken(readAccountToken(store));
+        if (account?.appSessionId === sessionId) {
+          await setAppSession(account.id, null).catch(() => {});
+        }
+        deleteSessionRecord(sessionId);
+      }
+    }
 
     const response = json({ ok: true });
     response.cookies.set(SESSION_COOKIE, "", {

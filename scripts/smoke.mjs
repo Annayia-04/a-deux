@@ -975,6 +975,55 @@ await check("la page déclare le manifeste et la CSP PWA", async () => {
   assert.match(html, /theme-color/);
 });
 
+await check("compte : état anonyme et fournisseurs déclarés", async () => {
+  const { response, data } = await requestAs("", "/api/account");
+  assert.equal(response.status, 200);
+  assert.equal(data.account, null);
+  assert.ok(Array.isArray(data.providers), "liste de fournisseurs absente");
+  for (const provider of data.providers) {
+    assert.ok(["google", "apple"].includes(provider), provider);
+  }
+});
+
+await check("connexion Google : redirection signée ou 503 explicite", async () => {
+  const { response, text } = await requestAs("", "/api/auth/google");
+  if (response.status === 503) {
+    assert.match(text, /pas configurée/i);
+    return;
+  }
+  assert.equal(response.status, 302);
+  const location = response.headers.get("location") ?? "";
+  assert.match(location, /^https:\/\/accounts\.google\.com\/o\/oauth2\/v2\/auth\?/);
+  const url = new URL(location);
+  assert.equal(url.searchParams.get("code_challenge_method"), "S256");
+  assert.ok(url.searchParams.get("state"));
+  assert.ok(url.searchParams.get("nonce"));
+  assert.equal(url.searchParams.has("client_secret"), false);
+
+  const cookies = response.headers.getSetCookie().join("\n");
+  assert.match(cookies, /adeux_oauth=/);
+  assert.match(cookies, /HttpOnly/i);
+  assert.match(cookies, /Path=\/api\/auth/);
+});
+
+await check("callback Google : état absent ou forgé refusé", async () => {
+  const { response } = await requestAs(
+    "",
+    "/api/auth/google/callback?code=faux&state=faux",
+  );
+  if (response.status === 503) return;
+  assert.equal(response.status, 303);
+  assert.match(response.headers.get("location") ?? "", /\?compte=etat$/);
+});
+
+await check("déconnexion : origine externe refusée", async () => {
+  const { response } = await requestAs("", "/api/account", {
+    method: "DELETE",
+    headers: { origin: "https://evil.example" },
+  });
+  assert.equal(response.status, 403);
+});
+
 if (failures > 0) {
   console.error(`\n${failures} test(s) en échec.`);
   process.exit(1);

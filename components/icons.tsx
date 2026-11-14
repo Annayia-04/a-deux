@@ -209,3 +209,41 @@ export function ShareIcon({ className = "h-5 w-5" }: IconProps) {
     </svg>
   );
 }
+
+export function UserIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <circle cx="12" cy="8.5" r="3.8" />
+      <path d="M4.8 20.2c.7-3.4 3.6-5.6 7.2-5.6s6.5 2.2 7.2 5.6" />
+    </svg>
+  );
+}
+
+/** Logo Google en quatre couleurs (SVG inline, aucun asset distant). */
+export function GoogleIcon({ className = "h-4 w-4" }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 48 48"
+      className={className}
+      aria-hidden
+      focusable="false"
+    >
+      <path
+        fill="#EA4335"
+        d="M24 9.5c3.4 0 6.4 1.2 8.8 3.5l6.6-6.6C35.3 2.5 30.1 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.7 6c1.9-5.6 7.1-9.7 13.7-9.7Z"
+      />
+      <path
+        fill="#4285F4"
+        d="M46.1 24.5c0-1.6-.1-2.8-.4-4.1H24v8.5h12.5c-.3 2.1-1.7 5.3-4.9 7.4l7.5 5.8c4.4-4.1 7-10.1 7-17.6Z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M10.3 28.8A14.5 14.5 0 0 1 9.5 24c0-1.7.3-3.3.8-4.8l-7.7-6A24 24 0 0 0 0 24c0 3.9.9 7.5 2.6 10.8l7.7-6Z"
+      />
+      <path
+        fill="#34A853"
+        d="M24 48c6.5 0 11.9-2.1 15.9-5.9l-7.5-5.8c-2.1 1.4-4.9 2.4-8.4 2.4-6.6 0-11.8-4.1-13.7-9.7l-7.7 6C6.5 42.6 14.6 48 24 48Z"
+      />
+    </svg>
+  );
+}

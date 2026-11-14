@@ -58,6 +58,10 @@ describe("configuration serveur", () => {
     vi.stubEnv("GOOGLE_CLIENT_ID", "id");
     vi.stubEnv("GOOGLE_CLIENT_SECRET", "secret");
 
+    // Sans APP_SESSION_SECRET, aucun bouton n'est proposé.
+    expect(enabledAuthProviders()).toEqual([]);
+
+    vi.stubEnv("APP_SESSION_SECRET", "secret-de-signature");
     expect(enabledAuthProviders()).toEqual(["google", "apple"]);
   });
 

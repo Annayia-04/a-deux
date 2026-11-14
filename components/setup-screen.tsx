@@ -2,6 +2,7 @@
 
 import { PreferenceForm } from "@/components/preference-form";
 import { Brand } from "@/components/brand";
+import { AccountCard } from "@/components/account-card";
 import { InstallCard } from "@/components/install-card";
 import {
   ArrowRightIcon,
@@ -9,7 +10,8 @@ import {
   LockIcon,
   SparklesIcon,
 } from "@/components/icons";
-import type { CoupleSnapshot, Prefs } from "@/lib/types";
+import type { AuthProvider } from "@/lib/auth/provider";
+import type { AccountSnapshot, CoupleSnapshot, Prefs } from "@/lib/types";
 
 type ResumeInfo = { remaining: number; liked: number };
 
@@ -22,6 +24,8 @@ type Props = {
   couple: CoupleSnapshot | null;
   duoBusy: boolean;
   duoError: string | null;
+  account: AccountSnapshot | null;
+  authProviders: AuthProvider[];
   onStart: (prefs: Prefs) => Promise<void>;
   onResume: () => void;
   onCancelEdit: () => void;
@@ -58,6 +62,8 @@ export function SetupScreen({
   couple,
   duoBusy,
   duoError,
+  account,
+  authProviders,
   onStart,
   onResume,
   onCancelEdit,
@@ -72,7 +78,9 @@ export function SetupScreen({
         <Brand />
         <span className="hidden items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-[10.5px] text-cream/45 sm:inline-flex">
           <LockIcon className="h-3.5 w-3.5 text-mint/80" />
-          Sans compte · session anonyme
+          {account
+            ? `Connecté · ${account.displayName ?? account.email ?? "compte"}`
+            : "Sans compte · session anonyme"}
         </span>
       </header>
 
@@ -153,7 +161,8 @@ export function SetupScreen({
             jours. Aucune inscription, aucune revente de données.
           </p>
 
-          <div className="mt-4">
+          <div className="mt-4 space-y-3">
+            <AccountCard account={account} providers={authProviders} />
             <InstallCard />
           </div>
         </div>
