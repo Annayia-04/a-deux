@@ -2,6 +2,7 @@
 
 import { PreferenceForm } from "@/components/preference-form";
 import { Brand } from "@/components/brand";
+import { InstallCard } from "@/components/install-card";
 import {
   ArrowRightIcon,
   BoltIcon,
@@ -151,11 +152,15 @@ export function SetupScreen({
             Vos préférences sont liées à un cookie de session anonyme, valable 30
             jours. Aucune inscription, aucune revente de données.
           </p>
+
+          <div className="mt-4">
+            <InstallCard />
+          </div>
         </div>
       </div>
 
       <footer className="flex flex-col items-center justify-between gap-2 border-t border-white/[0.06] pt-4 text-[10.5px] text-cream/30 sm:flex-row">
-        <p>À deux — 120 idées et un espace à deux pour arrêter de scroller.</p>
+        <p>À deux — des centaines d’idées et un espace à deux pour arrêter de scroller.</p>
         <a
           href="#selection"
           className="inline-flex items-center gap-1 transition hover:text-cream/60"

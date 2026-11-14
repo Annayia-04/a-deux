@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { ServiceWorkerRegister } from "@/components/service-worker-register";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -6,7 +7,28 @@ export const metadata: Metadata = {
   description:
     "Choisissez votre budget, l'ambiance et le lieu, puis swipez pour trouver l'idée de rendez-vous qui vous ressemble. Sans compte, sans données personnelles.",
   applicationName: "À deux",
+  manifest: "/manifest.webmanifest",
   authors: [{ name: "À deux" }],
+  icons: {
+    icon: [
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+      { url: "/icon.svg", type: "image/svg+xml" },
+    ],
+    apple: [
+      {
+        url: "/icons/apple-touch-icon.png",
+        sizes: "180x180",
+        type: "image/png",
+      },
+    ],
+  },
+  appleWebApp: {
+    capable: true,
+    title: "À deux",
+    statusBarStyle: "black-translucent",
+  },
+  formatDetection: { telephone: false, email: false, address: false },
   openGraph: {
     title: "À deux — Trouvez votre prochain rendez-vous",
     description:
@@ -33,7 +55,10 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="fr">
-      <body>{children}</body>
+      <body>
+        <ServiceWorkerRegister />
+        {children}
+      </body>
     </html>
   );
 }

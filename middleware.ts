@@ -26,6 +26,9 @@ export function middleware(request: NextRequest): NextResponse {
     "img-src 'self' data: blob:",
     "font-src 'self'",
     "connect-src 'self'",
+    // PWA : le service worker et le manifeste sont servis depuis le même origine.
+    "worker-src 'self'",
+    "manifest-src 'self'",
     "object-src 'none'",
     "base-uri 'none'",
     "form-action 'self'",

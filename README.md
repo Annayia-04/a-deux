@@ -21,7 +21,8 @@ Une application fullstack de cartes à swiper : on choisit d’abord son budget,
 - **Journal de souvenirs** : après un date, chaque partenaire raconte son moment préféré. Les deux versions se retrouvent dans une timeline groupée par mois, avec un état « 2/2 » quand le souvenir est complet. Un seul souvenir existe par idée : le second membre rejoint automatiquement celui du premier.
 - **Choix Nourriture / Films** : un deck de 30 plats et 40 films, swipé séparément par chaque membre. Un match mutuel est signalé et conservé dans l’espace à deux. Un bouton dédié dans l’en-tête ouvre directement le deck.
 - **Pensée rapide (tap)** : un bouton dans l’en-tête envoie un halo, un petit carillon et une vibration au partenaire quand le navigateur le permet. Sur iOS, où la Vibration API n’existe pas, le halo et le son prennent le relais ; le son se coupe depuis le panneau duo.
-- **120 idées de rendez-vous** dans un catalogue typé, avec visuels CSS/emoji (aucune image distante), dont 44 gratuites.
+- **240 idées de rendez-vous** dans un catalogue typé, avec visuels CSS/emoji (aucune image distante), dont 81 gratuites.
+- **Installable sur mobile et desktop (PWA)** : manifeste, icônes locales, service worker limité aux assets statiques, page hors ligne et invitation contextuelle à installer depuis Safari ou Chrome.
 
 ## Stack
 
@@ -67,6 +68,20 @@ npm start -- -p 3100 # autre port
 | `npm run test:watch` | Tests en mode watch |
 | `npm run smoke` | Test de fumée HTTP contre un serveur déjà démarré |
 
+## Application installable (PWA)
+
+L’application est une PWA complète : elle peut s’installer sur l’écran d’accueil d’un téléphone ou dans un navigateur de bureau, s’ouvrir en plein écran et afficher une page de secours quand le réseau disparaît.
+
+- **Android / Chrome / Edge / desktop** : bouton « Installer » dans l’encart de l’écran de préférences, alimenté par `beforeinstallprompt`.
+- **iPhone / iPad** : Safari → bouton **Partager** → **Sur l’écran d’accueil**. L’encart explique les trois étapes.
+- **Refus mémorisé** 14 jours pour ne pas harceler.
+- **Service worker** enregistré uniquement en production : il ne met en cache que `/_next/static/*`, `/icons/*`, le manifeste et la page hors ligne. Les pages SSR et les API ne sont **jamais** mises en cache, car elles dépendent de la session et du nonce CSP.
+- **HTTPS requis** hors `localhost` : c’est la condition posée par les navigateurs pour installer une PWA et enregistrer un service worker.
+
+Fichiers concernés : `app/manifest.ts` (manifeste généré), `public/sw.js`, `public/offline.html`, `public/icons/` (192, 512, 1024, maskable, icône Apple), `components/service-worker-register.tsx` et `components/install-card.tsx`.
+
+Pour aller plus loin, un wrapper natif Capacitor (App Store / Play Store) est décrit dans `docs/architecture-comptes-postgres.md`.
+
 ### Branches et intégration continue
 
 | Branche | Usage |
@@ -98,7 +113,8 @@ En production derrière un reverse proxy TLS, transmettre `X-Forwarded-Proto: ht
 
 ```text
 app/
-  layout.tsx              Métadonnées, viewport, thème sombre
+  layout.tsx              Métadonnées, viewport, thème sombre, enregistrement du SW
+  manifest.ts             Manifeste PWA (nom, icônes, affichage plein écran)
   page.tsx                Page unique : charge la session côté serveur (SSR)
   globals.css             Thème Tailwind, dégradés, animations
   api/
@@ -118,8 +134,10 @@ app/
     taps/seen/route.ts      POST avancer le curseur de lecture
 components/
   date-swipe-app.tsx      Orchestration setup / swipe / résultats, toasts, duo
-  setup-screen.tsx        Introduction + écran de préférences
+  setup-screen.tsx        Introduction + écran de préférences + installation PWA
   preference-form.tsx     Formulaire de filtres, aperçu, invitation duo
+  install-card.tsx        Invitation à installer la PWA (Android, iOS, refus 14 j)
+  service-worker-register.tsx  Enregistrement du service worker en production
   swipe-screen.tsx        Pile de cartes, drag, clavier, progression, badge duo
   date-card.tsx           Carte d’une idée (présentation pure)
   results-view.tsx        Liste des envies, copie, reprise, résumé du duo
@@ -133,7 +151,8 @@ components/
   match-celebration.tsx   Célébration générique (idées, plats, films)
   brand.tsx, icons.tsx    Identité et icônes SVG inline
 lib/
-  ideas.ts                Catalogue des 120 idées
+  ideas.ts                Catalogue : base historique (120) + extension
+  ideas-extra.ts          Extension thématique du catalogue (120 idées)
   choices.ts              Catalogue de 30 plats et 40 films, ordre du deck
   preferences.ts          Métadonnées des filtres, résumés lisibles
   recommend.ts            Filtrage, score et ordre déterministe du deck
@@ -159,8 +178,13 @@ lib/
   share.ts                Texte de partage de la liste
   snapshot.ts             Chargement SSR de la session
   types.ts                Types partagés client/serveur
-middleware.ts             CSP à nonce par requête
+middleware.ts             CSP à nonce par requête (worker-src, manifest-src)
+public/
+  sw.js                   Service worker : assets statiques + page hors ligne
+  offline.html            Page de secours autonome, sans requête réseau
+  icons/                  Icônes PWA locales (192, 512, 1024, maskable, Apple)
 scripts/smoke.mjs         Test de fumée HTTP de bout en bout
+docs/architecture-comptes-postgres.md  Conception SSO, Postgres et wrapper natif
 ```
 
 ### Données
@@ -383,16 +407,16 @@ Il vérifie la création de session et le cookie, le respect des préférences, 
 - **SQLite** : adapté à une instance unique avec un volume persistant. Pour du multi-instances, migrer vers une base partagée (PostgreSQL) et un stockage de sessions distribué.
 - **Purge des sessions** : les sessions expirées sont supprimées lors de la création d’une nouvelle session. Ajouter un cron si le volume devient important.
 - **`X-Forwarded-For`** : doit être posé par un reverse proxy de confiance, sinon la clé de rate limiting peut être usurpée.
-- **Pas de compte** : la session et le duo reposent sur le cookie. Effacer les cookies ou la session perd la liste et l’appartenance au duo ; il n’y a pas de synchronisation multi-appareils pour une même personne.
+- **Pas de compte** : la session et le duo reposent sur le cookie. Effacer les cookies ou la session perd la liste et l’appartenance au duo ; il n’y a pas de synchronisation multi-appareils pour une même personne. La trajectoire SSO Google/Apple et le stockage Postgres sont conçus dans `docs/architecture-comptes-postgres.md`, en attente des identifiants OAuth et de l’URL de base managée.
 - **Sélection modifiable** : changer ses envies réinitialise le deck en place (même session, même duo, matchs réconciliés). Le deck reste stable tant que la sélection ne change pas.
 - **Annulation** : une carte à la fois, uniquement lorsque la file de synchronisation est vide.
 - **Notifications in-app** : le match est visible quand l’app est ouverte (célébration, toast, badge). Pas de push ni de WebSocket ; le partenaire est prévenu au plus tard au polling suivant (8 s, 3 s pour les pensées).
 - **Vibration** : `navigator.vibrate` n’existe pas sur iOS ni sur la plupart des desktop ; le halo visuel et le toast servent toujours de secours. `prefers-reduced-motion` est respecté.
 - **Souvenirs et choix après une sortie** : les deux membres perdent immédiatement les contenus partagés (souvenirs, matchs de choix, pensées). Les swipes de choix personnels restent liés à la session, comme les swipes d’idées, et ne sont jamais exposés au partenaire.
 - **Catalogue de choix** : 30 plats et 40 films statiques dans `lib/choices.ts`. Le deck s’épuise ; les matchs restent consultables dans le panneau duo.
-- **Catalogue** : 120 idées statiques dans `lib/ideas.ts`, dont 44 gratuites. Le budget par défaut (`80 €`) rend 118 idées compatibles ; passer à « Sans limite » les affiche toutes. Chaque combinaison budget / lieu / moment / ambiance propose au moins trois idées (y compris gratuit + intérieur).
+- **Catalogue** : 240 idées statiques réparties entre `lib/ideas.ts` (base historique) et `lib/ideas-extra.ts` (extension), dont 81 gratuites. Le budget par défaut (`80 €`) en rend 236 compatibles ; passer à « Sans limite » les affiche toutes. Chaque combinaison budget / lieu / moment / ambiance propose plusieurs idées (y compris gratuit + intérieur).
 - **HTTPS** : indispensable en production pour un cookie `Secure`. Derrière un proxy TLS, transmettre `X-Forwarded-Proto: https` ou définir `COOKIE_SECURE=true`.
 
 ## Personnaliser le catalogue
 
-Ajouter ou modifier une idée dans `lib/ideas.ts` en respectant le type `Idea`. Les tests `lib/catalog.test.ts` valident l’unicité des identifiants, les thèmes, les budgets et la cohérence des textes. Aucun autre fichier n’est à toucher : filtres, classement, carte et partage s’adaptent automatiquement.
+Ajouter ou modifier une idée dans `lib/ideas.ts` (base historique) ou `lib/ideas-extra.ts` (extension) en respectant le type `Idea`. Les tests `lib/catalog.test.ts` valident l’unicité des identifiants, les thèmes, les budgets et la cohérence des textes. Aucun autre fichier n’est à toucher : filtres, classement, carte et partage s’adaptent automatiquement.

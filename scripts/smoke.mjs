@@ -908,6 +908,73 @@ await check("le dernier membre ferme l'espace, le code expire", async () => {
   assert.equal(rejoin.response.status, 404, rejoin.text);
 });
 
+await check("manifeste PWA servi et complet", async () => {
+  const response = await fetch(`${BASE}/manifest.webmanifest`);
+  assert.equal(response.status, 200);
+  assert.match(
+    response.headers.get("content-type") ?? "",
+    /application\/manifest\+json/,
+  );
+  const manifest = await response.json();
+  assert.equal(manifest.start_url, "/");
+  assert.equal(manifest.display, "standalone");
+  assert.ok(Array.isArray(manifest.icons) && manifest.icons.length >= 3);
+  assert.ok(
+    manifest.icons.some((icon) => icon.purpose === "maskable"),
+    "icône maskable absente",
+  );
+});
+
+await check("service worker revalidé et autorisé sur toute l'origine", async () => {
+  const response = await fetch(`${BASE}/sw.js`);
+  assert.equal(response.status, 200);
+  assert.match(
+    response.headers.get("content-type") ?? "",
+    /javascript/,
+  );
+  assert.match(response.headers.get("cache-control") ?? "", /no-store/);
+  assert.equal(response.headers.get("service-worker-allowed"), "/");
+  const body = await response.text();
+  assert.match(body, /offline\.html/);
+});
+
+await check("page hors ligne et icônes locales disponibles", async () => {
+  const offline = await fetch(`${BASE}/offline.html`);
+  assert.equal(offline.status, 200);
+  assert.match(await offline.text(), /hors ligne/i);
+
+  for (const icon of [
+    "/icons/icon-192.png",
+    "/icons/icon-512.png",
+    "/icons/maskable-512.png",
+    "/icons/apple-touch-icon.png",
+  ]) {
+    const response = await fetch(`${BASE}${icon}`);
+    assert.equal(response.status, 200, icon);
+    assert.equal(response.headers.get("content-type"), "image/png", icon);
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    assert.deepEqual(
+      Array.from(bytes.slice(0, 4)),
+      [0x89, 0x50, 0x4e, 0x47],
+      `${icon} n'est pas un PNG`,
+    );
+  }
+});
+
+await check("la page déclare le manifeste et la CSP PWA", async () => {
+  const response = await fetch(`${BASE}/`, {
+    headers: { ...headers(), accept: "text/html" },
+  });
+  assert.equal(response.status, 200);
+  const csp = response.headers.get("content-security-policy") ?? "";
+  assert.match(csp, /worker-src 'self'/);
+  assert.match(csp, /manifest-src 'self'/);
+  const html = await response.text();
+  assert.match(html, /rel="manifest" href="\/manifest\.webmanifest"/);
+  assert.match(html, /apple-touch-icon/);
+  assert.match(html, /theme-color/);
+});
+
 if (failures > 0) {
   console.error(`\n${failures} test(s) en échec.`);
   process.exit(1);

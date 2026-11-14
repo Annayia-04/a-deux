@@ -189,3 +189,23 @@ export function CardsIcon({ className = "h-5 w-5" }: IconProps) {
     </svg>
   );
 }
+
+export function DownloadIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M12 3.5v11" />
+      <path d="m8.5 11 3.5 3.5L15.5 11" />
+      <path d="M4.5 16.5v2A2 2 0 0 0 6.5 20.5h11a2 2 0 0 0 2-2v-2" />
+    </svg>
+  );
+}
+
+export function ShareIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M12 3.5v10" />
+      <path d="m8.5 7 3.5-3.5L15.5 7" />
+      <path d="M6 11.5H4.5v7A2.5 2.5 0 0 0 7 21h10a2.5 2.5 0 0 0 2.5-2.5v-7H18" />
+    </svg>
+  );
+}
