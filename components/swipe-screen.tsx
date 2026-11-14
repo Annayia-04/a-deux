@@ -20,6 +20,7 @@ import { TapButton } from "@/components/tap-button";
 import {
   AlertIcon,
   ArrowRightIcon,
+  CardsIcon,
   HeartIcon,
   SlidersIcon,
   SparklesIcon,
@@ -42,6 +43,7 @@ type Props = {
   prefsSummary: string;
   duoActive: boolean;
   duoUnread: number;
+  choiceUnread: number;
   tapEnabled: boolean;
   canUndo: boolean;
   undoBusy: boolean;
@@ -54,6 +56,7 @@ type Props = {
   onOpenSettings: () => void;
   onOpenResults: () => void;
   onOpenDuo: () => void;
+  onOpenChoices: () => void;
   onSendTap: () => Promise<unknown>;
   onTapError: (message: string) => void;
 };
@@ -161,6 +164,7 @@ export function SwipeScreen({
   prefsSummary,
   duoActive,
   duoUnread,
+  choiceUnread,
   tapEnabled,
   canUndo,
   undoBusy,
@@ -173,6 +177,7 @@ export function SwipeScreen({
   onOpenSettings,
   onOpenResults,
   onOpenDuo,
+  onOpenChoices,
   onSendTap,
   onTapError,
 }: Props) {
@@ -224,17 +229,13 @@ export function SwipeScreen({
 
   return (
     <main className="flex h-dvh flex-col overflow-hidden [@media(max-height:520px)]:overflow-y-auto">
-      <header className="shrink-0 px-4 pt-4 sm:px-6">
-        <div className="mx-auto flex w-full max-w-4xl items-center justify-between gap-3">
+      <header className="shrink-0 px-3 pt-4 sm:px-6">
+        <div className="mx-auto flex w-full max-w-4xl items-center justify-between gap-2">
           <Brand />
 
-          <div className="flex items-center gap-1 sm:gap-1.5">
-            {duoActive ? (
-              <TapButton
-                onSend={onSendTap}
-                onError={onTapError}
-                disabled={!tapEnabled}
-              />
+          <div className="flex items-center gap-0.5 sm:gap-1.5">
+            {duoActive && tapEnabled ? (
+              <TapButton onSend={onSendTap} onError={onTapError} />
             ) : null}
             <button
               type="button"
@@ -244,7 +245,7 @@ export function SwipeScreen({
                   ? `Espace à deux, ${duoUnread} nouveau${duoUnread > 1 ? "x" : ""} match${duoUnread > 1 ? "s" : ""}`
                   : "Espace à deux"
               }
-              className={`relative inline-flex items-center gap-1.5 rounded-full border px-2.5 py-2 text-[12px] font-medium transition sm:px-3 ${
+              className={`relative inline-flex items-center gap-1.5 rounded-full border px-2 py-2 text-[12px] font-medium transition sm:px-3 ${
                 duoActive
                   ? "border-mint/30 bg-mint/[0.08] text-mint hover:bg-mint/15"
                   : "border-white/10 bg-white/[0.04] text-cream/60 hover:border-white/20 hover:text-cream"
@@ -263,11 +264,31 @@ export function SwipeScreen({
                 />
               ) : null}
             </button>
+            {duoActive ? (
+              <button
+                type="button"
+                onClick={onOpenChoices}
+                aria-label={
+                  choiceUnread > 0
+                    ? `Nourriture et Films, ${choiceUnread} nouveau${choiceUnread > 1 ? "x" : ""} match${choiceUnread > 1 ? "s" : ""}`
+                    : "Nourriture et Films"
+                }
+                className="relative inline-flex items-center gap-1.5 rounded-full border border-gold/25 bg-gold/[0.07] px-2 py-2 text-[12px] font-medium text-gold transition hover:border-gold/45 hover:bg-gold/15 sm:px-3"
+              >
+                <CardsIcon className="h-4 w-4" />
+                <span className="hidden sm:inline">Choix</span>
+                {choiceUnread > 0 ? (
+                  <span className="grid h-4 min-w-4 place-items-center rounded-full bg-rose px-1 text-[9.5px] font-bold leading-none text-ink-950">
+                    {choiceUnread > 9 ? "9+" : choiceUnread}
+                  </span>
+                ) : null}
+              </button>
+            ) : null}
             <button
               type="button"
               onClick={onOpenResults}
               aria-label={`Voir mes envies (${likedCount})`}
-              className="inline-flex items-center gap-1.5 rounded-full border border-rose/25 bg-rose/10 px-2.5 py-2 text-[12px] font-medium text-rose-soft transition hover:border-rose/40 hover:bg-rose/15 sm:px-3"
+              className="inline-flex items-center gap-1.5 rounded-full border border-rose/25 bg-rose/10 px-2 py-2 text-[12px] font-medium text-rose-soft transition hover:border-rose/40 hover:bg-rose/15 sm:px-3"
             >
               <HeartIcon className="h-4 w-4" />
               <span className="tabular-nums">{likedCount}</span>

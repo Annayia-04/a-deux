@@ -19,8 +19,14 @@ import {
 } from "@/components/icons";
 import { ApiError, api } from "@/lib/api-client";
 import { CHOICES_BY_ID, CHOICE_CATEGORY_META } from "@/lib/choices";
+import {
+  installFeedbackUnlock,
+  playTapChime,
+  vibrateTap,
+} from "@/lib/feedback";
 import { summarizePrefs, THEME_META } from "@/lib/preferences";
 import { buildShareText } from "@/lib/share";
+import { useTapSoundPreference } from "@/lib/use-feedback";
 import {
   DEFAULT_PREFS,
   type Choice,
@@ -121,12 +127,17 @@ export function DateSwipeApp({
   const [duoError, setDuoError] = useState<string | null>(null);
   const [duoInitialTab, setDuoInitialTab] =
     useState<DuoDialogTab>("matches");
+  const [duoLastTab, setDuoLastTab] = useState<DuoDialogTab>("matches");
   const [celebrationQueue, setCelebrationQueue] = useState<CelebrationData[]>(
     [],
   );
   const [activeCelebration, setActiveCelebration] =
     useState<CelebrationData | null>(null);
   const [incomingTap, setIncomingTap] = useState<number | null>(null);
+  const [tapSoundEnabled, setTapSoundEnabled] = useTapSoundPreference();
+
+  // Débloque la vibration Android et l'audio iOS au premier geste.
+  useEffect(() => installFeedbackUnlock(), []);
 
   const showToast = useCallback(
     (message: string, tone: ToastTone = "info") => {
@@ -214,6 +225,8 @@ export function DateSwipeApp({
   }, [session, resetCouple]);
 
   const handleIncomingTap = useCallback(() => {
+    vibrateTap();
+    playTapChime();
     setIncomingTap(Date.now());
     showToast("Une pensée de votre partenaire 💗", "success");
   }, [showToast]);
@@ -228,6 +241,7 @@ export function DateSwipeApp({
   });
 
   const handleSendTap = useCallback(async () => {
+    vibrateTap([12]);
     await sendTap();
     showToast("Pensée envoyée à votre partenaire.", "success");
   }, [sendTap, showToast]);
@@ -518,7 +532,13 @@ export function DateSwipeApp({
     [markSeen],
   );
 
-  const openDuo = useCallback(() => openDuoOn("matches"), [openDuoOn]);
+  const openDuo = useCallback(() => {
+    // Un nouveau match d'activité ramène sur l'onglet Matchs, sinon on rouvre
+    // le dernier onglet consulté pour éviter un tap supplémentaire.
+    const tab: DuoDialogTab =
+      couple && couple.unread > 0 ? "matches" : duoLastTab;
+    openDuoOn(tab);
+  }, [couple, duoLastTab, openDuoOn]);
 
   const closeDuo = useCallback(() => {
     setDuoOpen(false);
@@ -624,6 +644,7 @@ export function DateSwipeApp({
           prefsSummary={prefsSummary}
           duoActive={couple !== null}
           duoUnread={couple?.unread ?? 0}
+          choiceUnread={couple?.choiceUnread ?? 0}
           tapEnabled={couple?.complete === true}
           onSendTap={handleSendTap}
           onTapError={(message) => showToast(message, "error")}
@@ -640,6 +661,7 @@ export function DateSwipeApp({
           onOpenSettings={openSettings}
           onOpenResults={openResults}
           onOpenDuo={openDuo}
+          onOpenChoices={() => openDuoOn("choices")}
         />
       ) : null}
 
@@ -666,6 +688,9 @@ export function DateSwipeApp({
         error={duoError}
         initialTab={duoInitialTab}
         onChoiceMatch={handleChoiceMatch}
+        onTabChange={setDuoLastTab}
+        soundEnabled={tapSoundEnabled}
+        onToggleSound={() => setTapSoundEnabled(!tapSoundEnabled)}
         onClose={closeDuo}
         onCreate={async () => {
           if (!session) {

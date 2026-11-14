@@ -84,6 +84,89 @@ declare global {
   var __dateSwipeDb: Database.Database | undefined;
 }
 
+/**
+ * Fusionne les souvenirs créés en double pour une même idée (les deux
+ * partenaires pouvaient cliquer « Raconter ce date » avant le rafraîchissement).
+ * Les notes sont conservées une par membre, la plus récente gagnant en cas de
+ * conflit ; le plus ancien souvenir reste la référence.
+ */
+function mergeDuplicateSouvenirs(database: Database.Database): void {
+  const groups = database
+    .prepare(
+      `SELECT couple_id AS coupleId, idea_id AS ideaId
+       FROM souvenirs
+       WHERE idea_id IS NOT NULL
+       GROUP BY couple_id, idea_id
+       HAVING COUNT(*) > 1`,
+    )
+    .all() as { coupleId: string; ideaId: string }[];
+
+  if (groups.length === 0) return;
+
+  const merge = database.transaction(() => {
+    for (const group of groups) {
+      const rows = database
+        .prepare(
+          `SELECT id FROM souvenirs
+           WHERE couple_id = ? AND idea_id = ?
+           ORDER BY created_at ASC, rowid ASC`,
+        )
+        .all(group.coupleId, group.ideaId) as { id: string }[];
+      const [keeper, ...duplicates] = rows;
+      if (!keeper) continue;
+
+      for (const duplicate of duplicates) {
+        const notes = database
+          .prepare(
+            `SELECT session_id AS sessionId, body, updated_at AS updatedAt
+             FROM souvenir_notes WHERE souvenir_id = ?`,
+          )
+          .all(duplicate.id) as {
+          sessionId: string;
+          body: string;
+          updatedAt: number;
+        }[];
+
+        for (const note of notes) {
+          const existing = database
+            .prepare(
+              `SELECT updated_at AS updatedAt FROM souvenir_notes
+               WHERE souvenir_id = ? AND session_id = ?`,
+            )
+            .get(keeper.id, note.sessionId) as { updatedAt: number } | undefined;
+
+          if (!existing) {
+            database
+              .prepare(
+                `INSERT INTO souvenir_notes
+                   (souvenir_id, session_id, body, created_at, updated_at)
+                 VALUES (?, ?, ?, ?, ?)`,
+              )
+              .run(
+                keeper.id,
+                note.sessionId,
+                note.body,
+                note.updatedAt,
+                note.updatedAt,
+              );
+          } else if (existing.updatedAt < note.updatedAt) {
+            database
+              .prepare(
+                `UPDATE souvenir_notes SET body = ?, updated_at = ?
+                 WHERE souvenir_id = ? AND session_id = ?`,
+              )
+              .run(note.body, note.updatedAt, keeper.id, note.sessionId);
+          }
+        }
+
+        database.prepare(`DELETE FROM souvenirs WHERE id = ?`).run(duplicate.id);
+      }
+    }
+  });
+
+  merge();
+}
+
 function openDatabase(): Database.Database {
   mkdirSync(DATA_DIR, { recursive: true });
 
@@ -250,6 +333,14 @@ function openDatabase(): Database.Database {
       FOREIGN KEY (couple_id) REFERENCES couples(id) ON DELETE CASCADE,
       FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
     );
+  `);
+
+  // Les doublons historiques doivent être fusionnés avant de poser la contrainte.
+  mergeDuplicateSouvenirs(database);
+  database.exec(`
+    CREATE UNIQUE INDEX IF NOT EXISTS souvenirs_couple_idea_uniq
+      ON souvenirs (couple_id, idea_id)
+      WHERE idea_id IS NOT NULL;
   `);
 
   return database;
@@ -678,6 +769,17 @@ export function getSouvenirCoupleId(souvenirId: string): string | null {
     `SELECT couple_id AS coupleId FROM souvenirs WHERE id = ?`,
   ).get(souvenirId) as { coupleId: string } | undefined;
   return row?.coupleId ?? null;
+}
+
+/** Retrouve le souvenir d'un duo pour une idée donnée (unicité garantie). */
+export function findSouvenirIdByIdea(
+  coupleId: string,
+  ideaId: string,
+): string | null {
+  const row = statement(
+    `SELECT id FROM souvenirs WHERE couple_id = ? AND idea_id = ?`,
+  ).get(coupleId, ideaId) as { id: string } | undefined;
+  return row?.id ?? null;
 }
 
 export function listSouvenirNotes(coupleId: string): SouvenirNoteRecord[] {

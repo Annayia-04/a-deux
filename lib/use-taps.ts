@@ -6,17 +6,6 @@ import type { TapSnapshot } from "@/lib/types";
 
 const TAP_POLL_MS = 3000;
 
-function vibrate(): void {
-  if (typeof navigator === "undefined" || typeof navigator.vibrate !== "function") {
-    return;
-  }
-  try {
-    navigator.vibrate([18, 50, 18]);
-  } catch {
-    // iOS et certains navigateurs refusent la vibration : le visuel suffit.
-  }
-}
-
 export function useTaps({
   enabled,
   coupleCode,
@@ -56,7 +45,6 @@ export function useTaps({
       if (!result.tap || knownRef.current.has(result.tap.id)) return;
 
       knownRef.current.add(result.tap.id);
-      vibrate();
       onTapRef.current(result.tap);
       // Le curseur serveur n'avance qu'après l'affichage effectif.
       void api.markTapSeen(result.tap.id).catch(() => undefined);

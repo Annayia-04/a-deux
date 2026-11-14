@@ -7,6 +7,7 @@ import {
 } from "@/lib/couple";
 import {
   createSouvenirRecord,
+  findSouvenirIdByIdea,
   getSouvenirCoupleId,
   listSouvenirNotes,
   listSouvenirRecords,
@@ -17,6 +18,22 @@ import { IDEAS_BY_ID } from "@/lib/ideas";
 import type { SouvenirSnapshot } from "@/lib/types";
 
 const MAX_FUTURE_MS = 24 * 60 * 60 * 1000;
+
+function isUniqueViolation(error: unknown): boolean {
+  return (
+    error instanceof Error && /UNIQUE constraint failed/i.test(error.message)
+  );
+}
+
+function findSnapshot(
+  coupleId: string,
+  sessionId: string,
+  souvenirId: string,
+): SouvenirSnapshot | undefined {
+  return toSnapshots(coupleId, sessionId).find(
+    (souvenir) => souvenir.id === souvenirId,
+  );
+}
 
 export type SouvenirCreateInput = {
   ideaId?: string;
@@ -95,26 +112,70 @@ export function createSouvenirForSession(
     throw new HttpError(400, "Un souvenir ne peut pas être dans le futur.");
   }
 
-  const id = randomBytes(12).toString("hex");
-  createSouvenirRecord({
-    id,
-    coupleId: membership.id,
-    ideaId: idea?.id ?? null,
-    title,
-    emoji: idea?.emoji ?? input.emoji ?? "✨",
-    happenedAt,
-    createdBy: sessionId,
-    body: input.body ?? null,
-    now,
-  });
+  // Un seul souvenir par idée et par duo : si le partenaire l'a déjà créé
+  // (même quelques millisecondes plus tôt), on y ajoute simplement son moment.
+  if (idea) {
+    const existingId = findSouvenirIdByIdea(membership.id, idea.id);
+    if (existingId) {
+      return saveBodyOnSouvenir(
+        membership.id,
+        sessionId,
+        existingId,
+        input.body,
+        now,
+      );
+    }
+  }
 
-  const created = toSnapshots(membership.id, sessionId).find(
-    (souvenir) => souvenir.id === id,
-  );
+  const id = randomBytes(12).toString("hex");
+  try {
+    createSouvenirRecord({
+      id,
+      coupleId: membership.id,
+      ideaId: idea?.id ?? null,
+      title,
+      emoji: idea?.emoji ?? input.emoji ?? "✨",
+      happenedAt,
+      createdBy: sessionId,
+      body: input.body ?? null,
+      now,
+    });
+  } catch (error) {
+    // Course entre les deux membres : l'index unique tranche, on rejoint
+    // le souvenir gagnant au lieu d'échouer.
+    if (!idea || !isUniqueViolation(error)) throw error;
+    const existingId = findSouvenirIdByIdea(membership.id, idea.id);
+    if (!existingId) throw error;
+    return saveBodyOnSouvenir(
+      membership.id,
+      sessionId,
+      existingId,
+      input.body,
+      now,
+    );
+  }
+
+  const created = findSnapshot(membership.id, sessionId, id);
   if (!created) {
     throw new HttpError(500, "Impossible d’enregistrer ce souvenir.");
   }
   return created;
+}
+
+function saveBodyOnSouvenir(
+  coupleId: string,
+  sessionId: string,
+  souvenirId: string,
+  body: string | undefined,
+  now: number,
+): SouvenirSnapshot {
+  if (body) upsertSouvenirNote(souvenirId, sessionId, body, now);
+
+  const snapshot = findSnapshot(coupleId, sessionId, souvenirId);
+  if (!snapshot) {
+    throw new HttpError(500, "Impossible d’enregistrer ce souvenir.");
+  }
+  return snapshot;
 }
 
 export function saveSouvenirNoteForSession(

@@ -1,10 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { motion, type PanInfo } from "motion/react";
 import { ChoiceDeck } from "@/components/choice-deck";
 import {
   AlertIcon,
   ArrowRightIcon,
+  BellIcon,
   BookIcon,
   CardsIcon,
   CheckIcon,
@@ -44,6 +46,9 @@ type Props = {
   onCopyCode: () => void;
   onMarkSeen: () => void | Promise<void>;
   onChoiceMatch: (choice: Choice) => void;
+  onTabChange?: (tab: DuoDialogTab) => void;
+  soundEnabled?: boolean;
+  onToggleSound?: () => void;
 };
 
 type SouvenirState =
@@ -66,6 +71,20 @@ function errorMessage(error: unknown, fallback: string): string {
   return error instanceof Error && error.message ? error.message : fallback;
 }
 
+function useIsMobile(): boolean {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const query = window.matchMedia("(max-width: 639px)");
+    const update = () => setIsMobile(query.matches);
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
+
+  return isMobile;
+}
+
 export function DuoDialog({
   open,
   couple,
@@ -79,6 +98,9 @@ export function DuoDialog({
   onCopyCode,
   onMarkSeen,
   onChoiceMatch,
+  onTabChange,
+  soundEnabled = true,
+  onToggleSound,
 }: Props) {
   const [code, setCode] = useState("");
   const [confirmLeave, setConfirmLeave] = useState(false);
@@ -86,6 +108,9 @@ export function DuoDialog({
   const [souvenirState, setSouvenirState] = useState<SouvenirState>(null);
   const [souvenirBusy, setSouvenirBusy] = useState(false);
   const [souvenirError, setSouvenirError] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState(false);
+  const isMobile = useIsMobile();
+  const dragMovedRef = useRef(false);
 
   const complete = couple?.complete === true;
   const isOpen = open && couple !== null;
@@ -109,10 +134,53 @@ export function DuoDialog({
       setConfirmLeave(false);
       setSouvenirState(null);
       setSouvenirError(null);
+      setExpanded(false);
     } else {
       setTab(initialTab);
+      onTabChange?.(initialTab);
+      if (initialTab === "choices") setExpanded(true);
     }
-  }, [open, initialTab]);
+  }, [open, initialTab, onTabChange]);
+
+  const selectTab = useCallback(
+    (next: DuoDialogTab) => {
+      setTab(next);
+      onTabChange?.(next);
+      if (next === "choices") setExpanded(true);
+    },
+    [onTabChange],
+  );
+
+  const handleDragEnd = useCallback(
+    (_event: unknown, info: PanInfo) => {
+      if (!isMobile) return;
+      if (info.offset.y < -44 || info.velocity.y < -420) {
+        setExpanded(true);
+        return;
+      }
+      if (info.offset.y > 56 || info.velocity.y > 500) {
+        if (expanded) setExpanded(false);
+        else onClose();
+      }
+    },
+    [expanded, isMobile, onClose],
+  );
+
+  const sheetDragProps = isMobile
+    ? {
+        drag: "y" as const,
+        dragConstraints: { top: 0, bottom: 0 },
+        dragElastic: 0.14,
+        dragMomentum: false,
+        onDragStart: () => {
+          dragMovedRef.current = false;
+        },
+        onDrag: (_event: unknown, info: PanInfo) => {
+          if (Math.abs(info.offset.y) > 6) dragMovedRef.current = true;
+        },
+        onDragEnd: handleDragEnd,
+      }
+    : {};
 
   useEffect(() => {
     if (!open) return;
@@ -190,6 +258,7 @@ export function DuoDialog({
       try {
         await souvenirs.create(input);
         setSouvenirState(null);
+        selectTab("souvenirs");
       } catch (caught) {
         setSouvenirError(
           errorMessage(caught, "Impossible d’enregistrer ce souvenir."),
@@ -198,7 +267,7 @@ export function DuoDialog({
         setSouvenirBusy(false);
       }
     },
-    [souvenirs],
+    [souvenirs, selectTab],
   );
 
   const handleSaveNote = useCallback(
@@ -235,16 +304,61 @@ export function DuoDialog({
     <>
       <div
         className="fixed inset-0 z-50 flex items-end justify-center bg-ink-950/80 p-0 backdrop-blur-sm sm:items-center sm:p-4"
-        onClick={onClose}
+        onPointerDown={(event) => {
+          // Fermeture uniquement si le geste commence sur le fond : relâcher un
+          // glissement au-dessus de la feuille ne doit pas la refermer.
+          if (event.target === event.currentTarget) onClose();
+        }}
       >
         <div
           role="dialog"
           aria-modal="true"
           aria-label="Espace à deux"
-          onClick={(event) => event.stopPropagation()}
-          className="flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-[28px] border border-white/10 bg-ink-900 shadow-[0_30px_80px_-30px_rgba(0,0,0,0.95)] sm:max-h-[85dvh] sm:rounded-[28px]"
+          className={`flex w-full max-w-lg flex-col overflow-hidden rounded-t-[28px] border border-white/10 bg-ink-900 shadow-[0_30px_80px_-30px_rgba(0,0,0,0.95)] transition-[height] duration-300 ease-out sm:h-auto sm:max-h-[85dvh] sm:rounded-[28px] ${
+            isMobile
+              ? couple
+                ? expanded
+                  ? "h-[94dvh]"
+                  : "h-[78dvh]"
+                : "max-h-[85dvh]"
+              : "max-h-[85dvh]"
+          }`}
         >
-          <header className="flex items-start justify-between gap-3 border-b border-white/[0.07] px-5 py-4">
+          {isMobile ? (
+            <div className="flex shrink-0 justify-center pt-2">
+              <motion.button
+                {...sheetDragProps}
+                type="button"
+                onClick={() => {
+                  if (dragMovedRef.current) {
+                    dragMovedRef.current = false;
+                    return;
+                  }
+                  setExpanded((current) => !current);
+                }}
+                aria-label={
+                  expanded
+                    ? "Réduire l’espace à deux"
+                    : "Agrandir l’espace à deux en tirant vers le haut"
+                }
+                aria-expanded={expanded}
+                className="group flex h-7 w-full touch-none items-center justify-center"
+              >
+                <span
+                  className={`h-1.5 w-10 rounded-full transition ${
+                    expanded ? "bg-cream/45" : "bg-white/20 group-hover:bg-white/40"
+                  }`}
+                />
+              </motion.button>
+            </div>
+          ) : null}
+
+          <motion.header
+            {...sheetDragProps}
+            className={`flex shrink-0 items-start justify-between gap-3 border-b border-white/[0.07] px-5 pb-4 pt-2 sm:pt-4 ${
+              isMobile ? "touch-none" : ""
+            }`}
+          >
             <div className="flex items-start gap-3">
               <span className="mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-rose to-[#7c5cff] text-ink-950">
                 <UsersIcon className="h-5 w-5" />
@@ -258,15 +372,44 @@ export function DuoDialog({
                 </h2>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="Fermer l’espace à deux"
-              className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-cream/60 transition hover:border-white/20 hover:text-cream"
+            <div
+              className="flex shrink-0 items-center gap-1.5"
+              onPointerDown={(event) => event.stopPropagation()}
             >
-              <XIcon className="h-4 w-4" />
-            </button>
-          </header>
+              {onToggleSound ? (
+                <button
+                  type="button"
+                  onClick={onToggleSound}
+                  aria-pressed={soundEnabled}
+                  aria-label={
+                    soundEnabled
+                      ? "Couper le son des pensées"
+                      : "Activer le son des pensées"
+                  }
+                  title={
+                    soundEnabled
+                      ? "Son des pensées activé"
+                      : "Son des pensées coupé"
+                  }
+                  className={`grid h-9 w-9 place-items-center rounded-full border transition ${
+                    soundEnabled
+                      ? "border-rose/25 bg-rose/10 text-rose-soft"
+                      : "border-white/10 bg-white/[0.04] text-cream/35 hover:text-cream/65"
+                  }`}
+                >
+                  <BellIcon className="h-4 w-4" />
+                </button>
+              ) : null}
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="Fermer l’espace à deux"
+                className="grid h-9 w-9 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-cream/60 transition hover:border-white/20 hover:text-cream"
+              >
+                <XIcon className="h-4 w-4" />
+              </button>
+            </div>
+          </motion.header>
 
           {couple ? (
             <div className="flex gap-1 border-b border-white/[0.07] px-3 py-2">
@@ -282,7 +425,7 @@ export function DuoDialog({
                   <button
                     key={item.id}
                     type="button"
-                    onClick={() => setTab(item.id)}
+                    onClick={() => selectTab(item.id)}
                     aria-pressed={active}
                     className={`relative flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-[11.5px] font-medium transition ${
                       active
@@ -309,7 +452,7 @@ export function DuoDialog({
             </div>
           ) : null}
 
-          <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
             {error ? (
               <p
                 role="alert"
@@ -408,6 +551,16 @@ export function DuoDialog({
                           {couple.matches.map((match) => {
                             const theme =
                               THEME_META[match.idea.themes[0] ?? "detente"];
+                            const souvenir = souvenirs.souvenirs.find(
+                              (item) => item.ideaId === match.idea.id,
+                            );
+                            const souvenirLabel = !souvenir
+                              ? "Raconter ce date"
+                              : souvenir.complete
+                                ? "Voir le souvenir"
+                                : souvenir.mine
+                                  ? "Compléter le souvenir"
+                                  : "Écrire mon moment";
                             return (
                               <li
                                 key={match.idea.id}
@@ -451,7 +604,7 @@ export function DuoDialog({
                                       }
                                       className="inline-flex items-center gap-1 rounded-lg border border-mint/20 bg-mint/[0.06] px-2 py-1 text-[10px] font-medium text-mint transition hover:border-mint/40 hover:bg-mint/10"
                                     >
-                                      Raconter ce date
+                                      {souvenirLabel}
                                       <ArrowRightIcon className="h-3 w-3" />
                                     </button>
                                   </div>

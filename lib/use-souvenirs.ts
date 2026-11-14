@@ -75,7 +75,19 @@ export function useSouvenirs({
 
   const create = useCallback(async (input: SouvenirDraft) => {
     const result = await api.createSouvenir(input);
-    setSouvenirs((current) => sortSouvenirs([result.souvenir, ...current]));
+    setSouvenirs((current) => {
+      // Le serveur peut renvoyer un souvenir existant (même idée racontée
+      // par le partenaire) : on remplace alors au lieu de dupliquer.
+      const exists = current.some(
+        (souvenir) => souvenir.id === result.souvenir.id,
+      );
+      const next = exists
+        ? current.map((souvenir) =>
+            souvenir.id === result.souvenir.id ? result.souvenir : souvenir,
+          )
+        : [result.souvenir, ...current];
+      return sortSouvenirs(next);
+    });
     return result.souvenir;
   }, []);
 

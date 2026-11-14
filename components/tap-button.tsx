@@ -64,7 +64,7 @@ export function TapButton({
       title={
         cooling
           ? `Encore ${remaining} s`
-          : "Envoyer une pensée (vibration chez votre partenaire)"
+          : "Envoyer une pensée (halo et son chez votre partenaire)"
       }
       className={`relative grid h-9 w-9 place-items-center rounded-full border text-[11px] font-semibold tabular-nums transition ${
         disabled

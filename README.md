@@ -17,9 +17,10 @@ Une application fullstack de cartes à swiper : on choisit d’abord son budget,
 - **Responsive** : mobile, tablette et desktop ; animations désactivables via `prefers-reduced-motion`.
 - **Mode duo** : un espace à deux se crée en un clic, le partenaire rejoint avec un code à 6 caractères. Chacun swipe sur son propre téléphone ; les idées aimées en commun deviennent des matchs.
 - **Notification de match** : célébration plein écran pour celui qui vient de swiper, badge et panneau pour l’autre, rafraîchis par un polling léger (8 s) tant que l’app est ouverte.
-- **Journal de souvenirs** : après un date, chaque partenaire raconte son moment préféré. Les deux versions se retrouvent dans une timeline groupée par mois, avec un état « 2/2 » quand le souvenir est complet.
-- **Choix Nourriture / Films** : un deck de 30 plats et 40 films, swipé séparément par chaque membre. Un match mutuel est signalé et conservé dans l’espace à deux.
-- **Pensée rapide (tap)** : un bouton dans l’en-tête envoie une vibration discrète au partenaire, avec halo visuel et toast en secours sur iOS et desktop.
+- **Panneau duo en feuille** : un tiroir glissable, extensible vers le haut pour lire les souvenirs et swiper les cartes à l’aise ; l’onglet Choix s’ouvre agrandi et reste accessible en un tap depuis l’en-tête.
+- **Journal de souvenirs** : après un date, chaque partenaire raconte son moment préféré. Les deux versions se retrouvent dans une timeline groupée par mois, avec un état « 2/2 » quand le souvenir est complet. Un seul souvenir existe par idée : le second membre rejoint automatiquement celui du premier.
+- **Choix Nourriture / Films** : un deck de 30 plats et 40 films, swipé séparément par chaque membre. Un match mutuel est signalé et conservé dans l’espace à deux. Un bouton dédié dans l’en-tête ouvre directement le deck.
+- **Pensée rapide (tap)** : un bouton dans l’en-tête envoie un halo, un petit carillon et une vibration au partenaire quand le navigateur le permet. Sur iOS, où la Vibration API n’existe pas, le halo et le son prennent le relais ; le son se coupe depuis le panneau duo.
 - **120 idées de rendez-vous** dans un catalogue typé, avec visuels CSS/emoji (aucune image distante), dont 44 gratuites.
 
 ## Stack
@@ -166,7 +167,7 @@ SQLite, mode WAL, base locale dans `DATA_DIR/date-swipe.db` :
 - `couple_members` : `couple_id`, `session_id` unique (une session dans au plus un duo), `joined_at`. Le maximum de deux membres est vérifié dans la transaction d’adhésion.
 - `matches` : matchs mutuels matérialisés (`couple_id`, `idea_id`, `created_at`), pour conserver une date et un état de lecture.
 - `match_views` : état « vu » par membre (`couple_id`, `idea_id`, `session_id`, `viewed_at`).
-- `souvenirs` : date vécu (`id`, `couple_id`, `idea_id` facultatif, `title`, `emoji`, `happened_at`, `created_by`, `created_at`). Le titre et l’emoji sont figés à la création pour rester lisibles même si le catalogue change.
+- `souvenirs` : date vécu (`id`, `couple_id`, `idea_id` facultatif, `title`, `emoji`, `happened_at`, `created_by`, `created_at`). Le titre et l’emoji sont figés à la création pour rester lisibles même si le catalogue change. Un index unique partiel sur `(couple_id, idea_id)` garantit un seul souvenir par idée ; les doublons historiques sont fusionnés au démarrage en conservant les notes des deux membres.
 - `souvenir_notes` : un moment par membre et par souvenir (`souvenir_id`, `session_id`, `body`, `created_at`, `updated_at`), clé primaire composite.
 - `choice_swipes` : like/pass personnel sur une carte (`session_id`, `category`, `choice_id`, `direction`, `created_at`).
 - `choice_matches` : matchs mutuels Nourriture / Films (`couple_id`, `category`, `choice_id`, `created_at`).
@@ -261,7 +262,7 @@ Timeline du duo : `{ "souvenirs": SouvenirSnapshot[] }`, du plus récent au plus
 }
 ```
 
-Ou un souvenir manuel : `{ "title": "Dîner sur les toits", "emoji": "🌙", "happenedAt": 1776000000000, "body": "..." }`. Le corps est facultatif (1 à 500 caractères après nettoyage), `happenedAt` doit être une date valide et non future de plus de 24 h. Réponse `201` `{ "souvenir": ... }`, `400` données invalides, `409` tant que le partenaire n’a pas rejoint le duo.
+Ou un souvenir manuel : `{ "title": "Dîner sur les toits", "emoji": "🌙", "happenedAt": 1776000000000, "body": "..." }`. Le corps est facultatif (1 à 500 caractères après nettoyage), `happenedAt` doit être une date valide et non future de plus de 24 h. Réponse `201` `{ "souvenir": ... }`, `400` données invalides, `409` tant que le partenaire n’a pas rejoint le duo. Avec `ideaId`, l’opération est idempotente : si le partenaire a déjà créé le souvenir de cette idée, le corps est ajouté au même souvenir au lieu d’en créer un second.
 
 ### `PUT /api/souvenirs/[id]/note`
 
@@ -348,7 +349,7 @@ Les corps JSON sont limités à **8 Ko** et le `Content-Type` doit être `applic
 - Swipes optimistes côté client, file séquentielle et reprise réseau ; l’UI ne bloque jamais sur le réseau.
 - **Synchronisation du duo** : polling de 8 s uniquement quand un duo existe, suspendu quand l’onglet est en arrière-plan. Le membre qui swipe reçoit le match immédiatement dans la réponse du swipe ; l’autre le découvre au prochain polling.
 - **Journal et choix** : la timeline se rafraîchit silencieusement toutes les 10 s quand elle est ouverte ; les swipes de choix sont optimistes (la carte part immédiatement, retour arrière et toast si le serveur refuse).
-- **Pensées rapides** : polling dédié de 3 s, uniquement quand le duo est complet et l’onglet visible. Vibration via `navigator.vibrate` si disponible, sinon halo et toast (iOS, desktop).
+- **Pensées rapides** : polling dédié de 3 s, uniquement quand le duo est complet et l’onglet visible. Vibration via `navigator.vibrate` sur Android, halo visuel et carillon Web Audio ailleurs (iOS, desktop). Le carillon est débloqué au premier geste et se coupe depuis l’en-tête du panneau duo.
 - Première page : ~182 Ko de JS au premier chargement (build de production).
 
 ## Tests
@@ -368,7 +369,7 @@ npm start -- -p 3100
 npm run smoke -- http://localhost:3100
 ```
 
-Il vérifie la création de session et le cookie, le respect des préférences, le SSR et la CSP à nonce, l’enregistrement d’un swipe, l’état rechargé, l’undo, le refus sans session, le CSRF, la validation, le type de contenu, l’aperçu, le rate limiting et l’effacement de session. Un second parcours couvre le duo avec deux sessions indépendantes : création, adhésion, refus d’un troisième membre, codes invalides, match mutuel, état non lu, marquage vu, annulation du match, conservation du duo lors d’un changement de sélection, match Nourriture et match Film, compteurs séparés, souvenirs écrits par A puis B, validation et accès refusé à une session tierce, tap reçu, anti-spam 429 avec `Retry-After`, curseur borné, puis sortie qui efface les contenus partagés.
+Il vérifie la création de session et le cookie, le respect des préférences, le SSR et la CSP à nonce, l’enregistrement d’un swipe, l’état rechargé, l’undo, le refus sans session, le CSRF, la validation, le type de contenu, l’aperçu, le rate limiting et l’effacement de session. Un second parcours couvre le duo avec deux sessions indépendantes : création, adhésion, refus d’un troisième membre, codes invalides, match mutuel, état non lu, marquage vu, annulation du match, conservation du duo lors d’un changement de sélection, match Nourriture et match Film, compteurs séparés, souvenirs écrits par A puis B, création idempotente d’un même souvenir par les deux membres, validation et accès refusé à une session tierce, tap reçu, anti-spam 429 avec `Retry-After`, curseur borné, puis sortie qui efface les contenus partagés.
 
 ## Limites connues et passage à l’échelle
 

@@ -718,6 +718,50 @@ await check("souvenir manuel accepté et texte nettoyé", async () => {
   assert.equal(created.data.souvenir.partner, null);
 });
 
+await check("un seul souvenir par idée : le second membre rejoint le premier", async () => {
+  const before = (await clientApi(clientA, "/api/souvenirs")).data.souvenirs;
+
+  const first = await clientApi(clientA, "/api/souvenirs", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      ideaId: "concert-intimiste",
+      body: "La scène, tout près.",
+    }),
+  });
+  assert.equal(first.response.status, 201, first.text);
+
+  const second = await clientApi(clientB, "/api/souvenirs", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      ideaId: "concert-intimiste",
+      body: "La guitare à la fin.",
+    }),
+  });
+  assert.equal(second.response.status, 201, second.text);
+  assert.equal(
+    second.data.souvenir.id,
+    first.data.souvenir.id,
+    "le souvenir a été dupliqué",
+  );
+  assert.equal(second.data.souvenir.complete, true);
+
+  const after = (await clientApi(clientA, "/api/souvenirs")).data.souvenirs;
+  assert.equal(after.length, before.length + 1, "doublon dans la timeline");
+  const merged = after.find(
+    (souvenir) => souvenir.id === first.data.souvenir.id,
+  );
+  assert.equal(merged.mine, "La scène, tout près.");
+  assert.equal(merged.partner, "La guitare à la fin.");
+
+  const byB = (await clientApi(clientB, "/api/souvenirs")).data.souvenirs.find(
+    (souvenir) => souvenir.id === first.data.souvenir.id,
+  );
+  assert.equal(byB.mine, "La guitare à la fin.");
+  assert.equal(byB.partner, "La scène, tout près.");
+});
+
 await check("souvenirs : validation stricte et accès limité au duo", async () => {
   const empty = await clientApi(
     clientB,

@@ -195,9 +195,10 @@ export function SouvenirTimeline({
                       <button
                         type="button"
                         onClick={() => onEditMine(souvenir)}
-                        className="mt-1 text-left text-[11px] text-rose-soft/80 underline-offset-2 transition hover:text-rose-soft hover:underline"
+                        className="mt-1.5 inline-flex items-center gap-1 rounded-lg border border-dashed border-rose/35 bg-rose/[0.06] px-2 py-1 text-[10.5px] font-medium text-rose-soft transition hover:border-rose/55 hover:bg-rose/10"
                       >
-                        Écrire votre moment…
+                        <SparklesIcon className="h-3 w-3" />
+                        Écrire votre moment
                       </button>
                     )}
                   </div>
