@@ -71,11 +71,17 @@ npm start -- -p 3100 # autre port
 
 | Branche | Usage |
 | --- | --- |
-| `main` | Version stable, déployable |
-| `staging` | Pré-production, validation avant fusion dans `main` |
-| `dev` | Développement courant |
+| `main` | Production — mise à jour uniquement après feu vert |
+| `staging` | Pré-production — mise à jour uniquement après feu vert |
+| `dev` | Développement courant — branche par défaut des push |
 
 Le workflow `.github/workflows/ci.yml` s’exécute sur chaque push et pull request vers ces trois branches : installation reproductible (`npm ci`), vérification TypeScript, tests unitaires, build de production, puis test de fumée HTTP contre un serveur `next start` temporaire. Les exécutions obsolètes d’une même branche sont annulées automatiquement.
+
+### Flux de release
+
+- Le développement se fait sur `dev` : commits et push uniquement sur cette branche.
+- `staging` et `main` (production) ne sont mises à jour **qu’après validation explicite** (feu vert). Aucune fusion ni aucun push automatique vers ces branches.
+- Une release est un fast-forward de `dev` vers `staging`, puis de `staging` vers `main`, après accord ; la CI doit être verte sur chaque branche.
 
 ## Variables d’environnement
 
