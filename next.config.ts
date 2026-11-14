@@ -22,7 +22,7 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   // Évite que Next remonte jusqu'à un lockfile présent dans C:\Users\angel.
   outputFileTracingRoot: process.cwd(),
-  serverExternalPackages: ["better-sqlite3", "pg"],
+  serverExternalPackages: ["pg"],
   async headers() {
     return [
       {

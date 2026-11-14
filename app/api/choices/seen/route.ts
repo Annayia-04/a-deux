@@ -21,7 +21,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     enforceRateLimit(request, "choices:seen", 30, 60_000, session.id);
 
     const { category } = await readJson(request, choiceSeenSchema);
-    const unread = markChoiceMatchesSeenForSession(session.id, category);
+    const unread = await markChoiceMatchesSeenForSession(session.id, category);
     return json({ ok: true, unread });
   } catch (error) {
     return apiError(error);

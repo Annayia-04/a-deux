@@ -21,7 +21,7 @@ export async function GET(request: Request): Promise<NextResponse> {
   try {
     const session = await requireSession();
     enforceRateLimit(request, "souvenirs:get", 60, 60_000, session.id);
-    return json({ souvenirs: listSouvenirsForSession(session.id) });
+    return json({ souvenirs: await listSouvenirsForSession(session.id) });
   } catch (error) {
     return apiError(error);
   }
@@ -35,7 +35,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     enforceRateLimit(request, "souvenirs:create", 20, 60_000, session.id);
     const input = await readJson(request, souvenirCreateSchema);
 
-    const souvenir = createSouvenirForSession(session.id, input);
+    const souvenir = await createSouvenirForSession(session.id, input);
     return json({ souvenir }, 201);
   } catch (error) {
     return apiError(error);

@@ -2,10 +2,10 @@ import type { AuthProvider } from "@/lib/auth/provider";
 
 /**
  * Lecture centralisée de la configuration serveur.
- * Aucune variable n’est obligatoire : l’application reste pleinement
- * fonctionnelle en session anonyme + SQLite quand rien n’est défini.
- * Les modules qui dépendent d’un fournisseur doivent vérifier son drapeau
- * avant de s’en servir, pour ne jamais exposer un bouton mort.
+ * Seule `DATABASE_URL` est indispensable : sessions et données de jeu vivent
+ * dans PostgreSQL. Les fournisseurs d’identité restent facultatifs ; les
+ * modules qui en dépendent vérifient leur drapeau avant de s’en servir, pour
+ * ne jamais exposer un bouton mort.
  */
 
 function read(name: string): string | null {
@@ -15,7 +15,7 @@ function read(name: string): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
-/** URL Postgres. Absente → SQLite (développement et tests). */
+/** URL PostgreSQL (chaîne pooled en production). */
 export function databaseUrl(): string | null {
   return read("DATABASE_URL");
 }

@@ -20,11 +20,11 @@ export const MAX_WIDGET_DEVICES = 5;
  * Le jeton n'est renvoyé qu'une seule fois, en clair ; seul son hash est
  * stocké. Il ne permet que d'envoyer un petit ping.
  */
-export function pairWidgetForSession(
+export async function pairWidgetForSession(
   sessionId: string,
   label: string | null,
-): string {
-  if (countActiveWidgetDevices(sessionId) >= MAX_WIDGET_DEVICES) {
+): Promise<string> {
+  if ((await countActiveWidgetDevices(sessionId)) >= MAX_WIDGET_DEVICES) {
     throw new HttpError(
       409,
       "Trop d’appareils sont déjà associés. Retirez-en un avant d’en ajouter un autre.",
@@ -32,7 +32,7 @@ export function pairWidgetForSession(
   }
 
   const { token, hash } = generateSessionToken();
-  createWidgetDevice(hash, sessionId, label);
+  await createWidgetDevice(hash, sessionId, label);
   return token;
 }
 
@@ -43,13 +43,15 @@ export type WidgetDevice = { sessionId: string; tokenHash: string };
  * Vérifie le jeton avant toute limitation de débit : un jeton inconnu doit
  * toujours recevoir 401, jamais 429, et ne doit pas consommer de quota.
  */
-export function resolveWidgetDevice(token: string): WidgetDevice {
+export async function resolveWidgetDevice(
+  token: string,
+): Promise<WidgetDevice> {
   if (!isValidSessionToken(token)) {
     throw new HttpError(401, "Widget non reconnu. Réassociez-le depuis l’application.");
   }
 
   const tokenHash = hashToken(token);
-  const device = getWidgetDevice(tokenHash);
+  const device = await getWidgetDevice(tokenHash);
   if (!device) {
     throw new HttpError(401, "Widget non reconnu. Réassociez-le depuis l’application.");
   }
@@ -57,17 +59,19 @@ export function resolveWidgetDevice(token: string): WidgetDevice {
   return { sessionId: device.sessionId, tokenHash };
 }
 
-export function sendWidgetPingForDevice(device: WidgetDevice): TapSnapshot {
-  const tap = sendTapForSession(device.sessionId);
-  touchWidgetDevice(device.tokenHash);
+export async function sendWidgetPingForDevice(
+  device: WidgetDevice,
+): Promise<TapSnapshot> {
+  const tap = await sendTapForSession(device.sessionId);
+  await touchWidgetDevice(device.tokenHash);
   return tap;
 }
 
 /** Révoque un appareil ; la session et le duo restent intacts. */
-export function revokeWidgetForSession(
+export async function revokeWidgetForSession(
   sessionId: string,
   token: string,
-): boolean {
+): Promise<boolean> {
   if (!isValidSessionToken(token)) return false;
   return revokeWidgetDevice(hashToken(token), sessionId);
 }

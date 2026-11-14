@@ -6,7 +6,7 @@ node_modules/
 next-env.d.ts.bak
 tsconfig.tsbuildinfo
 
-# Données locales (SQLite)
+# Anciennes données locales SQLite (plus utilisées)
 .data/
 *.db
 *.db-wal

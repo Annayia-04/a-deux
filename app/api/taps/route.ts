@@ -16,7 +16,7 @@ export async function GET(request: Request): Promise<NextResponse> {
   try {
     const session = await requireSession();
     enforceRateLimit(request, "taps:get", 120, 60_000, session.id);
-    return json(getTapStateForSession(session.id));
+    return json(await getTapStateForSession(session.id));
   } catch (error) {
     return apiError(error);
   }
@@ -33,7 +33,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     enforceRateLimit(request, "taps:send", 1, 8_000, session.id);
     enforceRateLimit(request, "taps:hour", 20, 3_600_000, session.id);
 
-    const tap = sendTapForSession(session.id);
+    const tap = await sendTapForSession(session.id);
     return json({ tap }, 201);
   } catch (error) {
     return apiError(error);

@@ -1,17 +1,17 @@
 # Comptes, SSO et Postgres : architecture cible
 
-Document de conception. Rien de ce qui suit n’est encore branché : l’application
-fonctionne aujourd’hui en session anonyme sur SQLite. Les choix sont figés pour
-éviter une demi-migration, et le code sera ajouté dès que les identifiants
-Google/Apple et l’URL Postgres seront disponibles.
+> **État (novembre 2026)** : la migration est faite. La migration
+> `003_game_data.sql` a déplacé sessions, swipes, duos, matchs, souvenirs,
+> choix et taps dans PostgreSQL ; SQLite n’est plus utilisé. Ce document garde
+> les décisions de conception et le détail du modèle.
 
 ## 1. Décisions structurantes
 
 | Sujet | Décision | Raison |
 | --- | --- | --- |
 | Base en production | PostgreSQL managé (Neon ou Supabase) | Sauvegardes, montée en charge, connexions multiples, pas de volume à maintenir. |
-| Base en local | SQLite conservé pour le développement et les tests | Démarrage instantané, zéro dépendance externe, parité fonctionnelle via un port de schéma. |
-| Accès aux données | Une couche de dépôts (`lib/db/*`) avec deux implémentations | Le reste de l’application ne connaît que les fonctions métier ; pas de SQL éparpillé. |
+| Base en local | PostgreSQL 18 local (`a_deux`) | Même moteur qu’en production : les tests de fumée valident les vraies requêtes, sans divergence de dialecte. |
+| Accès aux données | Une couche de dépôts (`lib/db.ts`) asynchrone sur un pool partagé | Le reste de l’application ne connaît que les fonctions métier ; pas de SQL éparpillé. |
 | Identité | Google + Apple, boutons masqués si non configurés | Pas de dépendance dure à un fournisseur unique ; le mode anonyme reste disponible. |
 | Session | Jeton opaque 256 bits, haché en base, cookie `HttpOnly` | Aucun JWT côté client : révocation immédiate possible. |
 | Liaison anonyme | La session anonyme devient un compte, jamais l’inverse | On ne perd ni swipes, ni duo, ni souvenirs au moment de la connexion. |
@@ -125,9 +125,8 @@ reprennent leur structure actuelle, avec deux changements :
    `anon_id`. Les swipes personnels suivent la personne, plus l’appareil.
 2. `couple_id` reste la clé d’autorisation de tous les contenus partagés.
 
-La contrainte « deux membres maximum » reste vérifiée dans la transaction
-d’adhésion (verrou `SELECT … FOR UPDATE` sur la ligne `couples`), comme
-aujourd’hui en SQLite.
+La contrainte « deux membres maximum » est vérifiée dans la transaction
+d’adhésion (verrou `SELECT … FOR UPDATE` sur la ligne `couples`).
 
 ## 3. Liaison anonyme → compte
 
@@ -155,15 +154,14 @@ Règle de sécurité : une session anonyme déjà réclamée ne peut plus être
 réclamée par un autre compte. Le contrôle se fait sous verrou pour éviter deux
 connexions concurrentes sur le même cookie.
 
-### Mise en œuvre actuelle (phase 1, avant la migration complète)
+### Mise en œuvre retenue
 
-Tant que les données de jeu restent dans SQLite, la liaison est réalisée sans
-copie ni fusion :
+La liaison se fait sans copie ni fusion, en conservant la session comme clé :
 
-- `users.app_session_id` (Postgres) désigne la **session canonique** du compte,
-  c’est-à-dire le hash SHA-256 de la session SQLite d’origine. Un index unique
-  partiel garantit qu’une session n’appartient qu’à un compte.
-- Un second appareil qui se connecte reçoit un **alias** : la table SQLite
+- `users.app_session_id` désigne la **session canonique** du compte, c’est-à-dire
+  le hash SHA-256 de la session d’origine. Un index unique partiel garantit
+  qu’une session n’appartient qu’à un compte.
+- Un second appareil qui se connecte reçoit un **alias** : la table
   `session_aliases (alias_id, session_id, user_id)` associe un nouveau jeton
   opaque à la session canonique. `resolveSessionId()` traduit l’alias avant
   toute lecture, si bien que swipes, duo, matchs et souvenirs sont partagés
@@ -231,27 +229,35 @@ copie ni fusion :
 
 ## 6. Migration SQLite → Postgres
 
-Une instance PostgreSQL 18.1 portable tourne déjà en local sur ce poste
-(`C:\Users\angel\pgsql`, base `a_deux`, port 5432). Les commandes de démarrage,
-d’arrêt et de migration sont dans `docs/postgres-local.md`. Le schéma d’identité
-est déjà appliqué par `db/migrations/001_accounts.sql`.
+La bascule est terminée. `db/migrations/003_game_data.sql` crée les tables
+métier dans PostgreSQL, avec les mêmes identifiants et horodatages que
+l’ancien schéma SQLite :
 
-Pas de bascule à chaud : le passage se fait en trois étapes.
+- `sessions`, `session_aliases`, `widget_devices` ;
+- `swipes`, `couples`, `couple_members`, `matches`, `match_views` ;
+- `souvenirs`, `souvenir_notes` ;
+- `choice_swipes`, `choice_matches`, `choice_match_views` ;
+- `taps` (`bigserial`), `tap_reads`.
 
-1. **Double lecture contrôlée** (optionnelle) : un script `scripts/migrate-pg.ts`
-   copie les tables dans l’ordre des dépendances (`users`/anonymes → `couples`
-   → membres → swipes → matchs → souvenirs → choix → taps), en conservant les
-   identifiants stables (`idea_id`, `choice_id`, `code`).
-2. **Bascule** : `DATABASE_URL` défini → l’application utilise Postgres. SQLite
-   reste le défaut quand la variable est absente. Aucun `ALTER TABLE` sur
-   SQLite : les nouvelles structures Postgres vivent dans `db/migrations/`.
-3. **Vérification** : comptages par table, échantillon de duos, hash des codes
-   d’invitation, rejeu du smoke sur staging avant `main`.
+Les tables `couples`/`couple_members` créées par erreur en `001_accounts.sql`
+(uuid, jamais utilisées) sont supprimées par la migration. Les identifiants
+restent des `text` : hash de jeton pour les sessions, identifiant aléatoire pour
+les duos et souvenirs. Les horodatages restent des `bigint` en millisecondes.
 
-Types : `bigint` pour les horodatages (millisecondes) ou `timestamptz` pour les
-nouvelles colonnes, `jsonb` pour les préférences, `bytea` pour les hachages,
-`uuid` pour les identifiants générés côté serveur. Les montants et budgets
-restent des entiers (euros), jamais des flottants.
+Conséquences pour le code :
+
+- toutes les fonctions de `lib/db.ts` sont asynchrones et partagent le pool de
+  `lib/pg-pool.ts` avec l’identité ;
+- les transactions utilisent `BEGIN`/`COMMIT` explicites, avec verrou
+  `SELECT … FOR UPDATE` sur le duo lors d’une adhésion ;
+- `INSERT OR IGNORE` devient `ON CONFLICT DO NOTHING`, `changes` devient
+  `rowCount`, `lastInsertRowid` devient `RETURNING id` ;
+- l’ordre `created_at, rowid` est remplacé par un tri déterministe sur la clé
+  métier (`idea_id`, `choice_id`).
+
+Aucune reprise des données SQLite locales n’est nécessaire : il s’agissait de
+sessions de test. Pour un déploiement réel, appliquer les migrations sur une
+base vierge (`npm run db:migrate`) avant d’ouvrir le service.
 
 ## 7. Exploitation
 

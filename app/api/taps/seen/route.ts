@@ -21,7 +21,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     enforceRateLimit(request, "taps:seen", 60, 60_000, session.id);
 
     const { tapId } = await readJson(request, tapSeenSchema);
-    markTapSeenForSession(session.id, tapId);
+    await markTapSeenForSession(session.id, tapId);
     return json({ ok: true });
   } catch (error) {
     return apiError(error);

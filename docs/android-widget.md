@@ -8,7 +8,7 @@ d’appareil dédié, révocable.
 
 1. Dans l’app native, dès que le duo est complet, `useWidgetPairing` appelle
    `POST /api/widget/devices`. Le serveur renvoie un jeton opaque **une seule
-   fois** ; seul son SHA-256 est stocké dans SQLite (`widget_devices`).
+   fois** ; seul son SHA-256 est stocké dans PostgreSQL (`widget_devices`).
 2. La WebView transmet le jeton au stockage privé Android via le plugin
    `WidgetBridge` (`SharedPreferences`, fichier privé de l’application).
 3. Le widget appelle `POST /api/widget/ping` avec
@@ -16,8 +16,13 @@ d’appareil dédié, révocable.
 4. Le ping suit exactement le chemin d’un tap normal : duo complet requis,
    anti-spam 1 toutes les 8 secondes et 20 par heure, purge après 7 jours.
 
+Au démarrage, l’application vérifie le jeton stocké auprès de
+`GET /api/widget/devices/status` (sans envoyer de ping). S’il a été révoqué —
+ou si la base a été recréée — l’appareil est réassocié automatiquement au lieu
+de laisser un widget muet.
+
 Le jeton ne permet **que** d’envoyer un ping. Il ne lit ni les matchs, ni les
-swipes, ni les souvenirs, et il est supprimé avec la session (cascade SQLite).
+swipes, ni les souvenirs, et il est supprimé avec la session (cascade PostgreSQL).
 
 ## Apparence
 

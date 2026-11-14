@@ -68,17 +68,17 @@ export async function POST(request: Request): Promise<NextResponse> {
     const previousToken = readTokenFromCookieStore(store);
     const previousId =
       previousToken && isValidSessionToken(previousToken)
-        ? resolveSessionId(hashToken(previousToken))
+        ? await resolveSessionId(hashToken(previousToken))
         : null;
-    const previousRecord = previousId ? getSessionRecord(previousId) : null;
+    const previousRecord = previousId ? await getSessionRecord(previousId) : null;
 
     // Une nouvelle sélection remplace les swipes mais conserve la session,
     // donc l'appartenance à un espace à deux et les matchs déjà obtenus.
     if (previousToken && previousRecord) {
-      resetSessionRecord(previousRecord.id, prefs, seed);
-      reconcileMatchesForSession(previousRecord.id);
+      await resetSessionRecord(previousRecord.id, prefs, seed);
+      await reconcileMatchesForSession(previousRecord.id);
 
-      const session = loadSessionByToken(previousToken);
+      const session = await loadSessionByToken(previousToken);
       if (!session) {
         throw new HttpError(500, "Impossible de recharger votre sélection.");
       }
@@ -99,15 +99,15 @@ export async function POST(request: Request): Promise<NextResponse> {
     // rattache cet appareil à la session du compte par un alias, et la
     // nouvelle sélection s'applique à cette session partagée.
     if (account?.appSessionId) {
-      const canonicalId = resolveSessionId(account.appSessionId);
+      const canonicalId = await resolveSessionId(account.appSessionId);
       if (canonicalId) {
-        resetSessionRecord(canonicalId, prefs, seed);
-        reconcileMatchesForSession(canonicalId);
+        await resetSessionRecord(canonicalId, prefs, seed);
+        await reconcileMatchesForSession(canonicalId);
 
         const alias = generateSessionToken();
-        createSessionAlias(alias.hash, canonicalId, account.id);
+        await createSessionAlias(alias.hash, canonicalId, account.id);
 
-        const session = loadSessionByToken(alias.token);
+        const session = await loadSessionByToken(alias.token);
         if (!session) {
           throw new HttpError(500, "Impossible de recharger votre sélection.");
         }
@@ -123,8 +123,8 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
 
     const { token, hash } = generateSessionToken();
-    createSessionRecord(hash, prefs, seed);
-    deleteExpiredSessions(SESSION_TTL_MS);
+    await createSessionRecord(hash, prefs, seed);
+    await deleteExpiredSessions(SESSION_TTL_MS);
 
     // Connexion effectuée avant la création de la sélection : la session
     // naissante devient la session canonique du compte.
@@ -156,13 +156,13 @@ export async function DELETE(request: Request): Promise<NextResponse> {
     const store = await cookies();
     const token = readTokenFromCookieStore(store);
     if (token) {
-      const sessionId = resolveSessionId(hashToken(token));
+      const sessionId = await resolveSessionId(hashToken(token));
       if (sessionId) {
         const account = await getAccountByToken(readAccountToken(store));
         if (account?.appSessionId === sessionId) {
           await setAppSession(account.id, null).catch(() => {});
         }
-        deleteSessionRecord(sessionId);
+        await deleteSessionRecord(sessionId);
       }
     }
 

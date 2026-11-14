@@ -1,24 +1,12 @@
-import pg from "pg";
-import { databaseUrl } from "@/lib/config";
+import { getPool, hasDatabase } from "@/lib/pg-pool";
 
 /**
- * Accès PostgreSQL pour l'identité uniquement.
+ * Accès PostgreSQL pour l'identité.
  *
- * Les données de jeu (swipes, duos, souvenirs) restent dans SQLite pour
- * l'instant : la session applicative canonique est identifiée par son hash,
- * et Postgres ne stocke que le lien compte → session. La migration complète
- * des données est décrite dans `docs/architecture-comptes-postgres.md`.
- *
- * Le pool est créé paresseusement et mémorisé sur `globalThis` pour survivre
- * au rechargement à chaud de Next en développement.
+ * Depuis la migration 003, les données de jeu (sessions, swipes, duos,
+ * souvenirs) vivent dans la même base. Le pool partagé est défini dans
+ * `lib/pg-pool.ts`.
  */
-
-type PgPool = import("pg").Pool;
-
-declare global {
-  // eslint-disable-next-line no-var
-  var __adeuxPgPool: PgPool | undefined;
-}
 
 export type AccountUser = {
   id: string;
@@ -34,27 +22,8 @@ export type GoogleIdentityInput = {
   name: string | null;
 };
 
-function getPool(): PgPool {
-  const connectionString = databaseUrl();
-  if (!connectionString) {
-    throw new Error("DATABASE_URL absent : comptes indisponibles.");
-  }
-
-  if (!globalThis.__adeuxPgPool) {
-    // `serverExternalPackages` garde `pg` hors du bundle client.
-    globalThis.__adeuxPgPool = new pg.Pool({
-      connectionString,
-      max: 5,
-      idleTimeoutMillis: 30_000,
-      connectionTimeoutMillis: 8_000,
-    });
-  }
-
-  return globalThis.__adeuxPgPool;
-}
-
 export function isAccountStoreReady(): boolean {
-  return databaseUrl() !== null;
+  return hasDatabase();
 }
 
 function toUser(row: {

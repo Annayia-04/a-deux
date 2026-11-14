@@ -24,7 +24,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     enforceRateLimit(request, "couple:join:ip", 30, 60_000);
 
     const { code } = await readJson(request, coupleJoinSchema);
-    const couple = joinCoupleForSession(code, session.id);
+    const couple = await joinCoupleForSession(code, session.id);
 
     return json({ couple });
   } catch (error) {

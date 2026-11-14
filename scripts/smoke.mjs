@@ -888,6 +888,19 @@ await check("widget natif : association, ping sans cookie, révocation", async (
   const token = paired.data.token;
   assert.match(token, /^[A-Za-z0-9_-]{43}$/);
 
+  // Vérification silencieuse du jeton, sans envoyer de ping.
+  const status = await fetch(`${BASE}/api/widget/devices/status`, {
+    headers: { authorization: `Bearer ${token}` },
+    redirect: "manual",
+  });
+  assert.equal(status.status, 200);
+
+  const statusForged = await fetch(`${BASE}/api/widget/devices/status`, {
+    headers: { authorization: `Bearer ${"A".repeat(43)}` },
+    redirect: "manual",
+  });
+  assert.equal(statusForged.status, 401);
+
   // Sans jeton : refus.
   const anonymous = await fetch(`${BASE}/api/widget/ping`, {
     method: "POST",

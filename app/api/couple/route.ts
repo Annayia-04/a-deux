@@ -20,7 +20,7 @@ export async function GET(request: Request): Promise<NextResponse> {
   try {
     const session = await requireSession();
     enforceRateLimit(request, "couple:get", 120, 60_000, session.id);
-    return json({ couple: getCoupleSnapshot(session.id) });
+    return json({ couple: await getCoupleSnapshot(session.id) });
   } catch (error) {
     return apiError(error);
   }
@@ -33,7 +33,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     const session = await requireSession();
     enforceRateLimit(request, "couple:create", 8, 60_000, session.id);
 
-    const couple = createCoupleForSession(session.id);
+    const couple = await createCoupleForSession(session.id);
     return json({ couple }, 201);
   } catch (error) {
     return apiError(error);
@@ -47,7 +47,7 @@ export async function DELETE(request: Request): Promise<NextResponse> {
     const session = await requireSession();
     enforceRateLimit(request, "couple:leave", 20, 60_000, session.id);
 
-    leaveCoupleForSession(session.id);
+    await leaveCoupleForSession(session.id);
     return json({ ok: true });
   } catch (error) {
     return apiError(error);

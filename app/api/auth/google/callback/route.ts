@@ -118,15 +118,18 @@ export async function GET(request: Request): Promise<NextResponse> {
     const user = await upsertGoogleUser(identity);
 
     // ---------------------------------------------------------------------
-    // Liaison avec la session applicative (les données restent dans SQLite).
+    // Liaison avec la session applicative (données dans PostgreSQL).
     // ---------------------------------------------------------------------
     const sessionToken = readTokenFromCookieStore(store);
     const currentSessionId = sessionToken
-      ? resolveSessionId(hashToken(sessionToken))
+      ? await resolveSessionId(hashToken(sessionToken))
       : null;
 
     let canonicalSessionId = user.appSessionId;
-    if (canonicalSessionId && resolveSessionId(canonicalSessionId) === null) {
+    if (
+      canonicalSessionId &&
+      (await resolveSessionId(canonicalSessionId)) === null
+    ) {
       // La session liée a été effacée entre-temps : on repart proprement.
       canonicalSessionId = null;
       await setAppSession(user.id, null);
@@ -142,7 +145,7 @@ export async function GET(request: Request): Promise<NextResponse> {
       // Appareil secondaire : on émet un alias vers la session du compte,
       // sans copier ni déplacer les données.
       const alias = generateSessionToken();
-      createSessionAlias(alias.hash, canonicalSessionId, user.id);
+      await createSessionAlias(alias.hash, canonicalSessionId, user.id);
       aliasToken = alias.token;
     }
 

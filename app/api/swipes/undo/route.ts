@@ -18,12 +18,12 @@ export async function POST(request: Request): Promise<NextResponse> {
     const session = await requireSession();
     enforceRateLimit(request, "swipe:undo", 60, 60_000, session.id);
 
-    const ideaId = undoLastSwipe(session.id);
+    const ideaId = await undoLastSwipe(session.id);
     if (!ideaId) {
       return json({ ok: false, error: "Aucune carte à annuler." }, 409);
     }
 
-    reconcileMatchForSession(session.id, ideaId);
+    await reconcileMatchForSession(session.id, ideaId);
 
     return json({ ok: true, ideaId });
   } catch (error) {

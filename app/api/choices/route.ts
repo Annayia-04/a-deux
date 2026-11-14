@@ -24,7 +24,7 @@ export async function GET(request: Request): Promise<NextResponse> {
       throw new HttpError(400, "Catégorie de choix invalide.");
     }
 
-    return json(getChoiceSnapshot(session.id, category.data));
+    return json(await getChoiceSnapshot(session.id, category.data));
   } catch (error) {
     return apiError(error);
   }

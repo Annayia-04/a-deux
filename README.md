@@ -57,7 +57,7 @@ L’application suit une identité **gothique romantique et aristocratique** : n
 | Tailwind CSS | 4.3.5 |
 | motion | 12.43.0 |
 | Zod | 3.25.76 |
-| better-sqlite3 | 12.11.1 |
+| PostgreSQL (`pg`) | 8.16.3 |
 | Vitest | 3.2.7 |
 
 Node.js **≥ 20.9** est requis.
@@ -133,9 +133,8 @@ Copier `.env.example` vers `.env.local` (ou définir les variables dans l’envi
 
 | Variable | Défaut | Description |
 | --- | --- | --- |
-| `DATA_DIR` | `./.data` | Répertoire du fichier SQLite `date-swipe.db`. Créé automatiquement. |
 | `COOKIE_SECURE` | auto | `true` force le drapeau `Secure` du cookie, `false` le désactive. Absent, il est déduit de `X-Forwarded-Proto` puis de l’URL de la requête. |
-| `DATABASE_URL` | vide | URL PostgreSQL applicative. Absente → SQLite. Locale : `postgres://postgres@127.0.0.1:5432/a_deux`. En production : chaîne *pooled* Neon/Supabase. |
+| `DATABASE_URL` | **requis** | URL PostgreSQL applicative (sessions, swipes, duos, souvenirs, choix, taps). Locale : `postgres://postgres@127.0.0.1:5432/a_deux`. En production : chaîne *pooled* Neon/Supabase. |
 | `DATABASE_URL_DIRECT` | `DATABASE_URL` | Chaîne directe (sans pooler) utilisée par `npm run db:migrate`. |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | vide | OAuth Google. Le bouton est masqué tant que les deux manquent. Voir `docs/google-oauth-setup.md`. |
 | `APPLE_CLIENT_ID` / `APPLE_TEAM_ID` / `APPLE_KEY_ID` / `APPLE_PRIVATE_KEY` | vide | Sign in with Apple (Service ID + clé `.p8`). Bouton masqué si incomplet. |
@@ -146,7 +145,7 @@ En production derrière un reverse proxy TLS, transmettre `X-Forwarded-Proto: ht
 
 ### Base de données
 
-SQLite reste le moteur par défaut, sans configuration. Une instance PostgreSQL 18.1 portable est installée localement pour développer la couche de comptes : voir `docs/postgres-local.md` (démarrage, arrêt, migrations, passage à Neon/Supabase).
+Toutes les données vivent dans PostgreSQL, y compris les sessions anonymes : c’est ce qui permet d’héberger l’application sur Vercel, sans disque persistant. Une instance PostgreSQL 18.1 portable est installée localement : voir `docs/postgres-local.md`. En production, utiliser une base managée (Neon, Supabase) et la chaîne *pooled* pour l’application.
 
 ```bash
 npm run db:migrate   # applique db/migrations/*.sql
@@ -155,12 +154,27 @@ npm run db:status    # état des migrations, sans modification
 
 Les migrations sont transactionnelles, verrouillées par un advisory lock et protégées par un checksum : une migration déjà appliquée ne peut pas être réécrite.
 
+### Déploiement (Vercel)
+
+La procédure complète — base Neon/Supabase, variables, migrations, domaine et
+Google OAuth — est décrite dans `docs/deploy-vercel.md`. En résumé :
+
+```bash
+# 1. Appliquer le schéma sur la base managée (chaîne directe, sans pooler)
+DATABASE_URL_DIRECT="postgres://…" npm run db:migrate
+
+# 2. Importer le dépôt dans Vercel
+#    Production = main, préproduction = staging
+# 3. Variables : DATABASE_URL (pooled), APP_SESSION_SECRET, APP_ORIGIN,
+#    COOKIE_SECURE=true, GOOGLE_CLIENT_ID/SECRET
+```
+
 ### Compte Google (facultatif)
 
 Le mode anonyme reste le défaut : aucun bouton n’apparaît tant que Google et `APP_SESSION_SECRET` ne sont pas configurés. Une fois configuré :
 
 1. la carte « Retrouvez votre duo partout » propose **Continuer avec Google** sur l’écran de préférences ;
-2. l’identité (nom, e-mail) est stockée dans Postgres (`users`, `auth_identities`), les données de jeu restent dans SQLite ;
+2. l’identité (nom, e-mail) est stockée dans Postgres (`users`, `auth_identities`), toutes les données de jeu (sessions, swipes, duos, souvenirs) sont dans PostgreSQL ;
 3. le compte est rattaché à une **session canonique** ; un autre appareil reçoit un alias opaque (`session_aliases`) qui pointe vers la même session, donc vers le même duo et les mêmes souvenirs ;
 4. **Se déconnecter** révoque le jeton de compte et, sur un appareil secondaire, supprime l’alias — la session d’origine et le duo sont conservés.
 
@@ -223,7 +237,8 @@ lib/
   text.ts                 Nettoyage du texte libre (NFC, contrôles, espaces)
   seeded.ts               PRNG déterministe partagé
   schemas.ts              Schémas Zod stricts (préférences, swipes, duo, souvenirs, choix, tap)
-  db.ts                   SQLite : sessions, alias d’appareils, swipes, couples, matchs, souvenirs, choix, taps
+  db.ts                   PostgreSQL : sessions, alias d’appareils, swipes, couples, matchs, souvenirs, choix, taps
+  pg-pool.ts              Pool PostgreSQL partagé (identité + jeu), transactions
   couple.ts               Helpers serveur du duo, autorisations et réconciliation
   souvenirs.ts            Création, timeline et notes de souvenirs
   choice-service.ts       Deck, swipe et matchs Nourriture / Films
@@ -261,7 +276,7 @@ docs/google-oauth-setup.md             Procédure Google Cloud pas à pas
 
 ### Données
 
-SQLite, mode WAL, base locale dans `DATA_DIR/date-swipe.db` :
+PostgreSQL (`db/migrations/003_game_data.sql`) :
 
 - `sessions` : `id` (SHA-256 du jeton), préférences JSON, seed, `created_at`, `last_seen_at`.
 - `session_aliases` : `alias_id` (hash du jeton d’un appareil secondaire), `session_id` canonique, `user_id`, `created_at`. Supprimés avec la session.
@@ -278,7 +293,7 @@ SQLite, mode WAL, base locale dans `DATA_DIR/date-swipe.db` :
 - `taps` : pensées rapides (`id` auto-incrémenté, `couple_id`, `from_session`, `created_at`), purgées après 7 jours.
 - `tap_reads` : curseur de lecture par membre (`couple_id`, `session_id`, `last_tap_id`).
 
-Les requêtes utilisent des statements préparés mis en cache. L’annulation du dernier swipe, la création/adhésion/sortie d’un duo, la réconciliation des matchs, la création d’un souvenir et l’enregistrement d’un choix sont transactionnels. Les tables sont créées avec `CREATE TABLE IF NOT EXISTS` : une base existante est migrée au démarrage.
+Les requêtes passent par le pool partagé de `lib/pg-pool.ts`. L’annulation du dernier swipe, la création/adhésion/sortie d’un duo, la réconciliation des matchs, la création d’un souvenir et l’enregistrement d’un choix sont transactionnels ; une adhésion simultanée verrouille la ligne du duo (`SELECT … FOR UPDATE`). Le schéma est versionné par `db/migrations/` et appliqué avec `npm run db:migrate`, jamais au démarrage.
 
 ## API
 
@@ -447,7 +462,7 @@ Les corps JSON sont limités à **8 Ko** et le `Content-Type` doit être `applic
 - Deck filtré, scoré et ordonné **côté serveur**, avec un seed par session pour un ordre stable.
 - Snapshot rendu en SSR ; le client n’a pas à recharger le catalogue pour afficher la première carte.
 - Catalogue statique et visuels 100 % CSS/emoji : aucun asset réseau, pas de layout shift.
-- SQLite WAL, statements préparés en cache, une seule connexion par processus.
+- PostgreSQL avec pool partagé (5 connexions max par instance), requêtes paramétrées et index ciblés.
 - Aperçu des filtres débouncé (280 ms) et annulable via `AbortController`.
 - Swipes optimistes côté client, file séquentielle et reprise réseau ; l’UI ne bloque jamais sur le réseau.
 - **Synchronisation du duo** : polling de 8 s uniquement quand un duo existe, suspendu quand l’onglet est en arrière-plan. Le membre qui swipe reçoit le match immédiatement dans la réponse du swipe ; l’autre le découvre au prochain polling.
@@ -462,7 +477,7 @@ npm run typecheck
 npm test
 ```
 
-99 tests unitaires couvrent le catalogue d’idées et de choix, le filtrage/classement, les schémas Zod (préférences, duo, souvenirs, choix, tap), le nettoyage du texte libre, les codes d’invitation, les jetons de session, le rate limiter, la configuration SSO, les raccourcis de lancement PWA, ainsi que la signature des cookies OAuth et la vérification complète des `id_token` Google (signature RSA, `iss`, `aud`, `exp`, `iat`, `nonce`, algorithme, `kid`).
+103 tests unitaires couvrent le catalogue d’idées et de choix, le filtrage/classement, les schémas Zod (préférences, duo, souvenirs, choix, tap), le nettoyage du texte libre, les codes d’invitation, les jetons de session, le rate limiter, la configuration SSO, les raccourcis de lancement PWA, ainsi que la signature des cookies OAuth et la vérification complète des `id_token` Google (signature RSA, `iss`, `aud`, `exp`, `iat`, `nonce`, algorithme, `kid`).
 
 Test de fumée complet (serveur de production requis) :
 
@@ -477,10 +492,10 @@ Il vérifie la création de session et le cookie, le respect des préférences, 
 ## Limites connues et passage à l’échelle
 
 - **Rate limiting en mémoire** : propre à chaque processus, non partagé entre instances. Pour un déploiement multi-instances, remplacer `lib/rate-limit.ts` par Redis (même interface).
-- **SQLite** : adapté à une instance unique avec un volume persistant. Pour du multi-instances, migrer vers une base partagée (PostgreSQL) et un stockage de sessions distribué.
+- **PostgreSQL** : une seule base partagée par toutes les instances ; utiliser une chaîne *pooled* sur Vercel et surveiller le nombre de connexions. Les sessions expirées sont purgées à la création d’une nouvelle session.
 - **Purge des sessions** : les sessions expirées sont supprimées lors de la création d’une nouvelle session. Ajouter un cron si le volume devient important.
 - **`X-Forwarded-For`** : doit être posé par un reverse proxy de confiance, sinon la clé de rate limiting peut être usurpée.
-- **Compte facultatif** : la session anonyme et le duo reposent sur le cookie, sans aucune configuration. Effacer les cookies perd l’accès à cet appareil ; une fois la connexion Google activée, un nouvel appareil retrouve le duo en se connectant au même compte. Apple n’est pas encore proposé (compte Apple Developer payant requis) et le déplacement complet des données vers Postgres reste la phase 2 décrite dans `docs/architecture-comptes-postgres.md`.
+- **Compte facultatif** : la session anonyme et le duo reposent sur le cookie, sans aucune configuration. Effacer les cookies perd l’accès à cet appareil ; une fois la connexion Google activée, un nouvel appareil retrouve le duo en se connectant au même compte. Apple n’est pas encore proposé (compte Apple Developer payant requis).
 - **Sélection modifiable** : changer ses envies réinitialise le deck en place (même session, même duo, matchs réconciliés). Le deck reste stable tant que la sélection ne change pas.
 - **Annulation** : une carte à la fois, uniquement lorsque la file de synchronisation est vide.
 - **Notifications in-app** : le match est visible quand l’app est ouverte (célébration, toast, badge). Pas de push ni de WebSocket ; le partenaire est prévenu au plus tard au polling suivant (8 s, 3 s pour les pensées).

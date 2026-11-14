@@ -1,12 +1,15 @@
 import "server-only";
 
-import { mkdirSync } from "node:fs";
-import path from "node:path";
-import Database from "better-sqlite3";
+import { getPool, query, queryOne, withTransaction } from "@/lib/pg-pool";
 import type { ChoiceCategory, Prefs, SwipeDirection } from "@/lib/types";
 
-const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), ".data");
-const DB_PATH = path.join(DATA_DIR, "date-swipe.db");
+/**
+ * Accès aux données de jeu dans PostgreSQL.
+ *
+ * Toutes les fonctions sont asynchrones : un pool partagé sert l'identité et
+ * le jeu, et Vercel ne conserve aucun disque. Les identifiants restent des
+ * TEXT générés par l'application, les horodatages des BIGINT en millisecondes.
+ */
 
 export type SessionRecord = {
   id: string;
@@ -79,419 +82,6 @@ export type LeaveResult = {
   coupleDeleted: boolean;
 };
 
-declare global {
-  // eslint-disable-next-line no-var
-  var __dateSwipeDb: Database.Database | undefined;
-}
-
-/**
- * Fusionne les souvenirs créés en double pour une même idée (les deux
- * partenaires pouvaient cliquer « Raconter ce date » avant le rafraîchissement).
- * Les notes sont conservées une par membre, la plus récente gagnant en cas de
- * conflit ; le plus ancien souvenir reste la référence.
- */
-function mergeDuplicateSouvenirs(database: Database.Database): void {
-  const groups = database
-    .prepare(
-      `SELECT couple_id AS coupleId, idea_id AS ideaId
-       FROM souvenirs
-       WHERE idea_id IS NOT NULL
-       GROUP BY couple_id, idea_id
-       HAVING COUNT(*) > 1`,
-    )
-    .all() as { coupleId: string; ideaId: string }[];
-
-  if (groups.length === 0) return;
-
-  const merge = database.transaction(() => {
-    for (const group of groups) {
-      const rows = database
-        .prepare(
-          `SELECT id FROM souvenirs
-           WHERE couple_id = ? AND idea_id = ?
-           ORDER BY created_at ASC, rowid ASC`,
-        )
-        .all(group.coupleId, group.ideaId) as { id: string }[];
-      const [keeper, ...duplicates] = rows;
-      if (!keeper) continue;
-
-      for (const duplicate of duplicates) {
-        const notes = database
-          .prepare(
-            `SELECT session_id AS sessionId, body, updated_at AS updatedAt
-             FROM souvenir_notes WHERE souvenir_id = ?`,
-          )
-          .all(duplicate.id) as {
-          sessionId: string;
-          body: string;
-          updatedAt: number;
-        }[];
-
-        for (const note of notes) {
-          const existing = database
-            .prepare(
-              `SELECT updated_at AS updatedAt FROM souvenir_notes
-               WHERE souvenir_id = ? AND session_id = ?`,
-            )
-            .get(keeper.id, note.sessionId) as { updatedAt: number } | undefined;
-
-          if (!existing) {
-            database
-              .prepare(
-                `INSERT INTO souvenir_notes
-                   (souvenir_id, session_id, body, created_at, updated_at)
-                 VALUES (?, ?, ?, ?, ?)`,
-              )
-              .run(
-                keeper.id,
-                note.sessionId,
-                note.body,
-                note.updatedAt,
-                note.updatedAt,
-              );
-          } else if (existing.updatedAt < note.updatedAt) {
-            database
-              .prepare(
-                `UPDATE souvenir_notes SET body = ?, updated_at = ?
-                 WHERE souvenir_id = ? AND session_id = ?`,
-              )
-              .run(note.body, note.updatedAt, keeper.id, note.sessionId);
-          }
-        }
-
-        database.prepare(`DELETE FROM souvenirs WHERE id = ?`).run(duplicate.id);
-      }
-    }
-  });
-
-  merge();
-}
-
-function openDatabase(): Database.Database {
-  mkdirSync(DATA_DIR, { recursive: true });
-
-  const database = new Database(DB_PATH);
-  database.pragma("journal_mode = WAL");
-  database.pragma("foreign_keys = ON");
-  database.pragma("busy_timeout = 5000");
-  database.pragma("synchronous = NORMAL");
-
-  database.exec(`
-    CREATE TABLE IF NOT EXISTS sessions (
-      id TEXT PRIMARY KEY,
-      prefs TEXT NOT NULL,
-      seed TEXT NOT NULL,
-      created_at INTEGER NOT NULL,
-      last_seen_at INTEGER NOT NULL
-    );
-
-    /* Un compte peut accéder à sa session canonique depuis plusieurs
-       appareils : chaque appareil reçoit un alias opaque, jamais la session
-       elle-même. Supprimer la session supprime ses alias. */
-    CREATE TABLE IF NOT EXISTS session_aliases (
-      alias_id TEXT PRIMARY KEY,
-      session_id TEXT NOT NULL,
-      user_id TEXT,
-      created_at INTEGER NOT NULL,
-      FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
-    );
-
-    CREATE INDEX IF NOT EXISTS session_aliases_session_idx
-      ON session_aliases (session_id);
-
-    CREATE INDEX IF NOT EXISTS session_aliases_user_idx
-      ON session_aliases (user_id);
-
-    /* Appareils autorisés à envoyer un « petit ping » depuis un widget natif.
-       Seul le SHA-256 du jeton est stocké. Le jeton ne donne accès qu'à
-       l'envoi d'un tap, jamais à la lecture des données du duo. */
-    CREATE TABLE IF NOT EXISTS widget_devices (
-      token_hash TEXT PRIMARY KEY,
-      session_id TEXT NOT NULL,
-      label TEXT,
-      created_at INTEGER NOT NULL,
-      last_used_at INTEGER,
-      revoked_at INTEGER,
-      FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
-    );
-
-    CREATE INDEX IF NOT EXISTS widget_devices_session_idx
-      ON widget_devices (session_id);
-
-    CREATE TABLE IF NOT EXISTS swipes (
-      session_id TEXT NOT NULL,
-      idea_id TEXT NOT NULL,
-      direction TEXT NOT NULL CHECK (direction IN ('like', 'pass')),
-      created_at INTEGER NOT NULL,
-      PRIMARY KEY (session_id, idea_id),
-      FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
-    );
-
-    CREATE INDEX IF NOT EXISTS swipes_session_created_idx
-      ON swipes (session_id, created_at DESC);
-
-    CREATE INDEX IF NOT EXISTS swipes_idea_idx
-      ON swipes (idea_id, direction);
-
-    /* Un espace à deux, identifié par un code d'invitation à 6 caractères. */
-    CREATE TABLE IF NOT EXISTS couples (
-      id TEXT PRIMARY KEY,
-      code TEXT NOT NULL UNIQUE,
-      created_at INTEGER NOT NULL
-    );
-
-    /* Un membre = une session anonyme. Maximum deux par couple (contrôlé en code). */
-    CREATE TABLE IF NOT EXISTS couple_members (
-      couple_id TEXT NOT NULL,
-      session_id TEXT NOT NULL UNIQUE,
-      joined_at INTEGER NOT NULL,
-      PRIMARY KEY (couple_id, session_id),
-      FOREIGN KEY (couple_id) REFERENCES couples(id) ON DELETE CASCADE,
-      FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
-    );
-
-    CREATE INDEX IF NOT EXISTS couple_members_couple_idx
-      ON couple_members (couple_id);
-
-    /* Matchs mutuels matérialisés pour conserver une date et un état « vu ». */
-    CREATE TABLE IF NOT EXISTS matches (
-      couple_id TEXT NOT NULL,
-      idea_id TEXT NOT NULL,
-      created_at INTEGER NOT NULL,
-      PRIMARY KEY (couple_id, idea_id),
-      FOREIGN KEY (couple_id) REFERENCES couples(id) ON DELETE CASCADE
-    );
-
-    CREATE INDEX IF NOT EXISTS matches_couple_created_idx
-      ON matches (couple_id, created_at DESC);
-
-    CREATE TABLE IF NOT EXISTS match_views (
-      couple_id TEXT NOT NULL,
-      idea_id TEXT NOT NULL,
-      session_id TEXT NOT NULL,
-      viewed_at INTEGER NOT NULL,
-      PRIMARY KEY (couple_id, idea_id, session_id),
-      FOREIGN KEY (couple_id, idea_id)
-        REFERENCES matches(couple_id, idea_id) ON DELETE CASCADE,
-      FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
-    );
-
-    /* Journal de souvenirs : un date vécu, raconté par chaque membre. */
-    CREATE TABLE IF NOT EXISTS souvenirs (
-      id TEXT PRIMARY KEY,
-      couple_id TEXT NOT NULL,
-      idea_id TEXT,
-      title TEXT NOT NULL,
-      emoji TEXT NOT NULL,
-      happened_at INTEGER NOT NULL,
-      created_by TEXT,
-      created_at INTEGER NOT NULL,
-      FOREIGN KEY (couple_id) REFERENCES couples(id) ON DELETE CASCADE,
-      FOREIGN KEY (created_by) REFERENCES sessions(id) ON DELETE SET NULL
-    );
-
-    CREATE INDEX IF NOT EXISTS souvenirs_couple_idx
-      ON souvenirs (couple_id, happened_at DESC, created_at DESC);
-
-    CREATE TABLE IF NOT EXISTS souvenir_notes (
-      souvenir_id TEXT NOT NULL,
-      session_id TEXT NOT NULL,
-      body TEXT NOT NULL,
-      created_at INTEGER NOT NULL,
-      updated_at INTEGER NOT NULL,
-      PRIMARY KEY (souvenir_id, session_id),
-      FOREIGN KEY (souvenir_id) REFERENCES souvenirs(id) ON DELETE CASCADE,
-      FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
-    );
-
-    /* Choix Nourriture / Films : swipes personnels puis matchs de couple. */
-    CREATE TABLE IF NOT EXISTS choice_swipes (
-      session_id TEXT NOT NULL,
-      category TEXT NOT NULL CHECK (category IN ('food', 'movie')),
-      choice_id TEXT NOT NULL,
-      direction TEXT NOT NULL CHECK (direction IN ('like', 'pass')),
-      created_at INTEGER NOT NULL,
-      PRIMARY KEY (session_id, category, choice_id),
-      FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
-    );
-
-    CREATE INDEX IF NOT EXISTS choice_swipes_choice_idx
-      ON choice_swipes (category, choice_id, direction);
-
-    CREATE INDEX IF NOT EXISTS choice_swipes_session_idx
-      ON choice_swipes (session_id, category, created_at DESC);
-
-    CREATE TABLE IF NOT EXISTS choice_matches (
-      couple_id TEXT NOT NULL,
-      category TEXT NOT NULL CHECK (category IN ('food', 'movie')),
-      choice_id TEXT NOT NULL,
-      created_at INTEGER NOT NULL,
-      PRIMARY KEY (couple_id, category, choice_id),
-      FOREIGN KEY (couple_id) REFERENCES couples(id) ON DELETE CASCADE
-    );
-
-    CREATE INDEX IF NOT EXISTS choice_matches_couple_idx
-      ON choice_matches (couple_id, created_at DESC);
-
-    CREATE TABLE IF NOT EXISTS choice_match_views (
-      couple_id TEXT NOT NULL,
-      category TEXT NOT NULL,
-      choice_id TEXT NOT NULL,
-      session_id TEXT NOT NULL,
-      viewed_at INTEGER NOT NULL,
-      PRIMARY KEY (couple_id, category, choice_id, session_id),
-      FOREIGN KEY (couple_id, category, choice_id)
-        REFERENCES choice_matches(couple_id, category, choice_id) ON DELETE CASCADE,
-      FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
-    );
-
-    /* Pensées rapides : un tap est un petit événement de couple. */
-    CREATE TABLE IF NOT EXISTS taps (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      couple_id TEXT NOT NULL,
-      from_session TEXT NOT NULL,
-      created_at INTEGER NOT NULL,
-      FOREIGN KEY (couple_id) REFERENCES couples(id) ON DELETE CASCADE,
-      FOREIGN KEY (from_session) REFERENCES sessions(id) ON DELETE CASCADE
-    );
-
-    CREATE INDEX IF NOT EXISTS taps_couple_idx
-      ON taps (couple_id, id DESC);
-
-    CREATE TABLE IF NOT EXISTS tap_reads (
-      couple_id TEXT NOT NULL,
-      session_id TEXT NOT NULL,
-      last_tap_id INTEGER NOT NULL,
-      PRIMARY KEY (couple_id, session_id),
-      FOREIGN KEY (couple_id) REFERENCES couples(id) ON DELETE CASCADE,
-      FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
-    );
-  `);
-
-  // Les doublons historiques doivent être fusionnés avant de poser la contrainte.
-  mergeDuplicateSouvenirs(database);
-  database.exec(`
-    CREATE UNIQUE INDEX IF NOT EXISTS souvenirs_couple_idea_uniq
-      ON souvenirs (couple_id, idea_id)
-      WHERE idea_id IS NOT NULL;
-  `);
-
-  return database;
-}
-
-/** Singleton : une seule connexion par processus, y compris sous HMR. */
-export function getDb(): Database.Database {
-  if (!globalThis.__dateSwipeDb) {
-    globalThis.__dateSwipeDb = openDatabase();
-  }
-  return globalThis.__dateSwipeDb;
-}
-
-const statementCache = new Map<string, Database.Statement>();
-
-function statement(sql: string): Database.Statement {
-  let cached = statementCache.get(sql);
-  if (!cached) {
-    cached = getDb().prepare(sql);
-    statementCache.set(sql, cached);
-  }
-  return cached;
-}
-
-// ---------------------------------------------------------------------------
-// Sessions et swipes
-// ---------------------------------------------------------------------------
-
-export function createSessionRecord(
-  id: string,
-  prefs: Prefs,
-  seed: string,
-  now: number = Date.now(),
-): void {
-  statement(
-    `INSERT INTO sessions (id, prefs, seed, created_at, last_seen_at)
-     VALUES (?, ?, ?, ?, ?)`,
-  ).run(id, JSON.stringify(prefs), seed, now, now);
-}
-
-/**
- * Remplace la sélection d'une session existante sans changer son identifiant.
- * L'appartenance à un espace à deux et les matchs déjà obtenus sont conservés.
- */
-export function resetSessionRecord(
-  id: string,
-  prefs: Prefs,
-  seed: string,
-  now: number = Date.now(),
-): void {
-  const reset = getDb().transaction(() => {
-    statement(`DELETE FROM swipes WHERE session_id = ?`).run(id);
-    statement(
-      `UPDATE sessions SET prefs = ?, seed = ?, last_seen_at = ? WHERE id = ?`,
-    ).run(JSON.stringify(prefs), seed, now, id);
-  });
-  reset();
-}
-
-export function getSessionRecord(id: string): SessionRecord | null {
-  const row = statement(
-    `SELECT id, prefs, seed, created_at AS createdAt, last_seen_at AS lastSeenAt
-     FROM sessions WHERE id = ?`,
-  ).get(id) as SessionRecord | undefined;
-  return row ?? null;
-}
-
-/**
- * Résout un identifiant de cookie vers la session canonique.
- * Un alias (appareil secondaire connecté à un compte) pointe vers la session
- * détenue par le compte, sans dupliquer les swipes ni l'appartenance au duo.
- */
-export function resolveSessionId(id: string): string | null {
-  const direct = statement(`SELECT id FROM sessions WHERE id = ?`).get(id) as
-    | { id: string }
-    | undefined;
-  if (direct) return id;
-
-  const alias = statement(
-    `SELECT session_id AS sessionId FROM session_aliases WHERE alias_id = ?`,
-  ).get(id) as { sessionId: string } | undefined;
-  if (!alias) return null;
-
-  const canonical = statement(`SELECT id FROM sessions WHERE id = ?`).get(
-    alias.sessionId,
-  ) as { id: string } | undefined;
-  return canonical ? alias.sessionId : null;
-}
-
-export function isSessionAlias(id: string): boolean {
-  const row = statement(
-    `SELECT 1 AS present FROM session_aliases WHERE alias_id = ?`,
-  ).get(id) as { present: number } | undefined;
-  return Boolean(row);
-}
-
-export function createSessionAlias(
-  aliasId: string,
-  sessionId: string,
-  userId: string,
-  now: number = Date.now(),
-): void {
-  statement(
-    `INSERT INTO session_aliases (alias_id, session_id, user_id, created_at)
-     VALUES (?, ?, ?, ?)
-     ON CONFLICT (alias_id)
-     DO UPDATE SET session_id = excluded.session_id, user_id = excluded.user_id`,
-  ).run(aliasId, sessionId, userId, now);
-}
-
-export function deleteSessionAlias(aliasId: string): void {
-  statement(`DELETE FROM session_aliases WHERE alias_id = ?`).run(aliasId);
-}
-
-export function deleteSessionAliasesForUser(userId: string): void {
-  statement(`DELETE FROM session_aliases WHERE user_id = ?`).run(userId);
-}
-
 export type WidgetDeviceRecord = {
   sessionId: string;
   label: string | null;
@@ -499,364 +89,559 @@ export type WidgetDeviceRecord = {
   lastUsedAt: number | null;
 };
 
+// ---------------------------------------------------------------------------
+// Sessions et swipes
+// ---------------------------------------------------------------------------
+
+export async function createSessionRecord(
+  id: string,
+  prefs: Prefs,
+  seed: string,
+  now: number = Date.now(),
+): Promise<void> {
+  await query(
+    `INSERT INTO sessions (id, prefs, seed, created_at, last_seen_at)
+     VALUES ($1, $2, $3, $4, $4)`,
+    [id, JSON.stringify(prefs), seed, now],
+  );
+}
+
+/**
+ * Remplace la sélection d'une session existante sans changer son identifiant.
+ * L'appartenance à un espace à deux et les matchs déjà obtenus sont conservés.
+ */
+export async function resetSessionRecord(
+  id: string,
+  prefs: Prefs,
+  seed: string,
+  now: number = Date.now(),
+): Promise<void> {
+  await withTransaction(async (client) => {
+    await client.query("DELETE FROM swipes WHERE session_id = $1", [id]);
+    await client.query(
+      `UPDATE sessions SET prefs = $1, seed = $2, last_seen_at = $3 WHERE id = $4`,
+      [JSON.stringify(prefs), seed, now, id],
+    );
+  });
+}
+
+export async function getSessionRecord(
+  id: string,
+): Promise<SessionRecord | null> {
+  return queryOne<SessionRecord>(
+    `SELECT id, prefs, seed, created_at AS "createdAt",
+            last_seen_at AS "lastSeenAt"
+       FROM sessions WHERE id = $1`,
+    [id],
+  );
+}
+
+/**
+ * Résout un identifiant de cookie vers la session canonique.
+ * Un alias (appareil secondaire connecté à un compte) pointe vers la session
+ * détenue par le compte, sans dupliquer les swipes ni l'appartenance au duo.
+ */
+export async function resolveSessionId(id: string): Promise<string | null> {
+  const direct = await queryOne<{ id: string }>(
+    "SELECT id FROM sessions WHERE id = $1",
+    [id],
+  );
+  if (direct) return id;
+
+  const alias = await queryOne<{ sessionId: string }>(
+    `SELECT session_id AS "sessionId" FROM session_aliases WHERE alias_id = $1`,
+    [id],
+  );
+  if (!alias) return null;
+
+  const canonical = await queryOne<{ id: string }>(
+    "SELECT id FROM sessions WHERE id = $1",
+    [alias.sessionId],
+  );
+  return canonical ? alias.sessionId : null;
+}
+
+export async function isSessionAlias(id: string): Promise<boolean> {
+  const row = await queryOne<{ present: number }>(
+    "SELECT 1 AS present FROM session_aliases WHERE alias_id = $1",
+    [id],
+  );
+  return Boolean(row);
+}
+
+export async function createSessionAlias(
+  aliasId: string,
+  sessionId: string,
+  userId: string,
+  now: number = Date.now(),
+): Promise<void> {
+  await query(
+    `INSERT INTO session_aliases (alias_id, session_id, user_id, created_at)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT (alias_id)
+     DO UPDATE SET session_id = EXCLUDED.session_id, user_id = EXCLUDED.user_id`,
+    [aliasId, sessionId, userId, now],
+  );
+}
+
+export async function deleteSessionAlias(aliasId: string): Promise<void> {
+  await query("DELETE FROM session_aliases WHERE alias_id = $1", [aliasId]);
+}
+
+export async function deleteSessionAliasesForUser(
+  userId: string,
+): Promise<void> {
+  await query("DELETE FROM session_aliases WHERE user_id = $1", [userId]);
+}
+
 /**
  * Enregistre un appareil widget. Le jeton n'est jamais stocké en clair :
  * `tokenHash` est le SHA-256 du jeton remis une seule fois au téléphone.
  */
-export function createWidgetDevice(
+export async function createWidgetDevice(
   tokenHash: string,
   sessionId: string,
   label: string | null,
   now: number = Date.now(),
-): void {
-  statement(
+): Promise<void> {
+  await query(
     `INSERT INTO widget_devices (token_hash, session_id, label, created_at)
-     VALUES (?, ?, ?, ?)`,
-  ).run(tokenHash, sessionId, label, now);
+     VALUES ($1, $2, $3, $4)`,
+    [tokenHash, sessionId, label, now],
+  );
 }
 
-export function getWidgetDevice(tokenHash: string): WidgetDeviceRecord | null {
-  const row = statement(
-    `SELECT session_id AS sessionId, label, created_at AS createdAt,
-            last_used_at AS lastUsedAt
+export async function getWidgetDevice(
+  tokenHash: string,
+): Promise<WidgetDeviceRecord | null> {
+  return queryOne<WidgetDeviceRecord>(
+    `SELECT session_id AS "sessionId", label, created_at AS "createdAt",
+            last_used_at AS "lastUsedAt"
        FROM widget_devices
-      WHERE token_hash = ? AND revoked_at IS NULL`,
-  ).get(tokenHash) as WidgetDeviceRecord | undefined;
-  return row ?? null;
+      WHERE token_hash = $1 AND revoked_at IS NULL`,
+    [tokenHash],
+  );
 }
 
-export function countActiveWidgetDevices(sessionId: string): number {
-  const row = statement(
-    `SELECT COUNT(*) AS total FROM widget_devices
-      WHERE session_id = ? AND revoked_at IS NULL`,
-  ).get(sessionId) as { total: number };
-  return row.total;
+export async function countActiveWidgetDevices(
+  sessionId: string,
+): Promise<number> {
+  const row = await queryOne<{ total: number }>(
+    `SELECT COUNT(*)::int AS total FROM widget_devices
+      WHERE session_id = $1 AND revoked_at IS NULL`,
+    [sessionId],
+  );
+  return row?.total ?? 0;
 }
 
-export function touchWidgetDevice(
+export async function touchWidgetDevice(
   tokenHash: string,
   now: number = Date.now(),
-): void {
-  statement(
-    `UPDATE widget_devices SET last_used_at = ? WHERE token_hash = ?`,
-  ).run(now, tokenHash);
+): Promise<void> {
+  await query(
+    "UPDATE widget_devices SET last_used_at = $1 WHERE token_hash = $2",
+    [now, tokenHash],
+  );
 }
 
 /** Révoque un appareil ; renvoie false s'il n'appartient pas à la session. */
-export function revokeWidgetDevice(
+export async function revokeWidgetDevice(
   tokenHash: string,
   sessionId: string,
-): boolean {
-  const result = statement(
-    `UPDATE widget_devices SET revoked_at = ?
-      WHERE token_hash = ? AND session_id = ? AND revoked_at IS NULL`,
-  ).run(Date.now(), tokenHash, sessionId);
-  return result.changes > 0;
+): Promise<boolean> {
+  const result = await getPoolQuery(
+    `UPDATE widget_devices SET revoked_at = $1
+      WHERE token_hash = $2 AND session_id = $3 AND revoked_at IS NULL`,
+    [Date.now(), tokenHash, sessionId],
+  );
+  return result > 0;
 }
 
-export function deleteWidgetDevicesForSession(sessionId: string): void {
-  statement(`DELETE FROM widget_devices WHERE session_id = ?`).run(sessionId);
+export async function deleteWidgetDevicesForSession(
+  sessionId: string,
+): Promise<void> {
+  await query("DELETE FROM widget_devices WHERE session_id = $1", [sessionId]);
 }
 
-export function touchSession(id: string, now: number = Date.now()): void {
-  statement(`UPDATE sessions SET last_seen_at = ? WHERE id = ?`).run(now, id);
+export async function touchSession(
+  id: string,
+  now: number = Date.now(),
+): Promise<void> {
+  await query("UPDATE sessions SET last_seen_at = $1 WHERE id = $2", [now, id]);
 }
 
-export function deleteSessionRecord(id: string): void {
-  statement(`DELETE FROM sessions WHERE id = ?`).run(id);
-  cleanupOrphanCouples();
+export async function deleteSessionRecord(id: string): Promise<void> {
+  await query("DELETE FROM sessions WHERE id = $1", [id]);
+  await cleanupOrphanCouples();
 }
 
-export function deleteExpiredSessions(ttlMs: number, now: number = Date.now()): void {
-  statement(`DELETE FROM sessions WHERE created_at < ?`).run(now - ttlMs);
-  cleanupOrphanCouples();
+export async function deleteExpiredSessions(
+  ttlMs: number,
+  now: number = Date.now(),
+): Promise<void> {
+  await query("DELETE FROM sessions WHERE created_at < $1", [now - ttlMs]);
+  await cleanupOrphanCouples();
 }
 
-export function addSwipe(
+export async function addSwipe(
   sessionId: string,
   ideaId: string,
   direction: SwipeDirection,
   now: number = Date.now(),
-): void {
-  statement(
+): Promise<void> {
+  await query(
     `INSERT INTO swipes (session_id, idea_id, direction, created_at)
-     VALUES (?, ?, ?, ?)
+     VALUES ($1, $2, $3, $4)
      ON CONFLICT (session_id, idea_id)
-     DO UPDATE SET direction = excluded.direction, created_at = excluded.created_at`,
-  ).run(sessionId, ideaId, direction, now);
+     DO UPDATE SET direction = EXCLUDED.direction,
+                   created_at = EXCLUDED.created_at`,
+    [sessionId, ideaId, direction, now],
+  );
 }
 
-export function listSwipes(sessionId: string): SwipeRecord[] {
-  return statement(
-    `SELECT idea_id AS ideaId, direction, created_at AS createdAt
-     FROM swipes
-     WHERE session_id = ?
-     ORDER BY created_at DESC, rowid DESC`,
-  ).all(sessionId) as SwipeRecord[];
+export async function listSwipes(sessionId: string): Promise<SwipeRecord[]> {
+  return query<SwipeRecord>(
+    `SELECT idea_id AS "ideaId", direction, created_at AS "createdAt"
+       FROM swipes
+      WHERE session_id = $1
+      ORDER BY created_at DESC, idea_id DESC`,
+    [sessionId],
+  );
 }
 
-export function countSwipes(sessionId: string): number {
-  const row = statement(
-    `SELECT COUNT(*) AS total FROM swipes WHERE session_id = ?`,
-  ).get(sessionId) as { total: number };
-  return row.total;
+export async function countSwipes(sessionId: string): Promise<number> {
+  const row = await queryOne<{ total: number }>(
+    "SELECT COUNT(*)::int AS total FROM swipes WHERE session_id = $1",
+    [sessionId],
+  );
+  return row?.total ?? 0;
 }
 
 /** Annule le dernier swipe et renvoie l'idée restaurée (transactionnel). */
-export function undoLastSwipe(sessionId: string): string | null {
-  const undo = getDb().transaction((id: string): string | null => {
-    const row = statement(
-      `SELECT idea_id AS ideaId FROM swipes
-       WHERE session_id = ?
-       ORDER BY created_at DESC, rowid DESC
-       LIMIT 1`,
-    ).get(id) as { ideaId: string } | undefined;
-
-    if (!row) return null;
-    statement(`DELETE FROM swipes WHERE session_id = ? AND idea_id = ?`).run(
-      id,
-      row.ideaId,
+export async function undoLastSwipe(sessionId: string): Promise<string | null> {
+  return withTransaction(async (client) => {
+    const row = await client.query<{ ideaId: string }>(
+      `SELECT idea_id AS "ideaId" FROM swipes
+        WHERE session_id = $1
+        ORDER BY created_at DESC, idea_id DESC
+        LIMIT 1`,
+      [sessionId],
     );
-    return row.ideaId;
-  });
 
-  return undo(sessionId);
+    const ideaId = row.rows[0]?.ideaId;
+    if (!ideaId) return null;
+
+    await client.query(
+      "DELETE FROM swipes WHERE session_id = $1 AND idea_id = $2",
+      [sessionId, ideaId],
+    );
+    return ideaId;
+  });
 }
 
 // ---------------------------------------------------------------------------
 // Espaces à deux
 // ---------------------------------------------------------------------------
 
-export function createCoupleRecord(
+export async function createCoupleRecord(
   id: string,
   code: string,
   sessionId: string,
   now: number = Date.now(),
-): void {
-  const create = getDb().transaction(() => {
-    statement(
-      `INSERT INTO couples (id, code, created_at) VALUES (?, ?, ?)`,
-    ).run(id, code, now);
-    statement(
+): Promise<void> {
+  await withTransaction(async (client) => {
+    await client.query(
+      "INSERT INTO couples (id, code, created_at) VALUES ($1, $2, $3)",
+      [id, code, now],
+    );
+    await client.query(
       `INSERT INTO couple_members (couple_id, session_id, joined_at)
-       VALUES (?, ?, ?)`,
-    ).run(id, sessionId, now);
+       VALUES ($1, $2, $3)`,
+      [id, sessionId, now],
+    );
   });
-  create();
 }
 
-export function getMembershipBySession(
+export async function getMembershipBySession(
   sessionId: string,
-): MembershipRecord | null {
-  const row = statement(
-    `SELECT c.id, c.code, c.created_at AS createdAt,
-            m.session_id AS sessionId, m.joined_at AS joinedAt
-     FROM couple_members m
-     JOIN couples c ON c.id = m.couple_id
-     WHERE m.session_id = ?`,
-  ).get(sessionId) as MembershipRecord | undefined;
-  return row ?? null;
+): Promise<MembershipRecord | null> {
+  return queryOne<MembershipRecord>(
+    `SELECT c.id, c.code, c.created_at AS "createdAt",
+            m.session_id AS "sessionId", m.joined_at AS "joinedAt"
+       FROM couple_members m
+       JOIN couples c ON c.id = m.couple_id
+      WHERE m.session_id = $1`,
+    [sessionId],
+  );
 }
 
-export function getCoupleByCode(code: string): CoupleRecord | null {
-  const row = statement(
-    `SELECT id, code, created_at AS createdAt FROM couples WHERE code = ?`,
-  ).get(code) as CoupleRecord | undefined;
-  return row ?? null;
+export async function getCoupleByCode(
+  code: string,
+): Promise<CoupleRecord | null> {
+  return queryOne<CoupleRecord>(
+    `SELECT id, code, created_at AS "createdAt" FROM couples WHERE code = $1`,
+    [code],
+  );
 }
 
-export function countCoupleMembers(coupleId: string): number {
-  const row = statement(
-    `SELECT COUNT(*) AS total FROM couple_members WHERE couple_id = ?`,
-  ).get(coupleId) as { total: number };
-  return row.total;
+export async function countCoupleMembers(coupleId: string): Promise<number> {
+  const row = await queryOne<{ total: number }>(
+    "SELECT COUNT(*)::int AS total FROM couple_members WHERE couple_id = $1",
+    [coupleId],
+  );
+  return row?.total ?? 0;
 }
 
-export function joinCoupleRecord(
+export async function joinCoupleRecord(
   coupleId: string,
   sessionId: string,
   now: number = Date.now(),
-): JoinResult {
-  const join = getDb().transaction((): JoinResult => {
-    const existing = getMembershipBySession(sessionId);
-    if (existing) {
-      return existing.id === coupleId ? "already-member" : "other-couple";
+): Promise<JoinResult> {
+  return withTransaction(async (client) => {
+    const existing = await client.query<{ id: string }>(
+      `SELECT c.id
+         FROM couple_members m
+         JOIN couples c ON c.id = m.couple_id
+        WHERE m.session_id = $1`,
+      [sessionId],
+    );
+    if (existing.rows[0]) {
+      return existing.rows[0].id === coupleId
+        ? "already-member"
+        : "other-couple";
     }
 
-    // Revérifié dans la transaction pour éviter deux arrivées simultanées.
-    if (countCoupleMembers(coupleId) >= 2) return "full";
+    // Verrouille le duo : deux arrivées simultanées ne peuvent pas dépasser 2.
+    await client.query("SELECT id FROM couples WHERE id = $1 FOR UPDATE", [
+      coupleId,
+    ]);
+    const count = await client.query<{ total: number }>(
+      "SELECT COUNT(*)::int AS total FROM couple_members WHERE couple_id = $1",
+      [coupleId],
+    );
+    if ((count.rows[0]?.total ?? 0) >= 2) return "full";
 
-    statement(
+    await client.query(
       `INSERT INTO couple_members (couple_id, session_id, joined_at)
-       VALUES (?, ?, ?)`,
-    ).run(coupleId, sessionId, now);
-
+       VALUES ($1, $2, $3)`,
+      [coupleId, sessionId, now],
+    );
     return "joined";
   });
-
-  return join();
 }
 
-export function leaveCoupleRecord(sessionId: string): LeaveResult | null {
-  const leave = getDb().transaction((): LeaveResult | null => {
-    const membership = getMembershipBySession(sessionId);
-    if (!membership) return null;
+export async function leaveCoupleRecord(
+  sessionId: string,
+): Promise<LeaveResult | null> {
+  return withTransaction(async (client) => {
+    const membership = await client.query<{ id: string }>(
+      `SELECT c.id
+         FROM couple_members m
+         JOIN couples c ON c.id = m.couple_id
+        WHERE m.session_id = $1`,
+      [sessionId],
+    );
+    const coupleId = membership.rows[0]?.id;
+    if (!coupleId) return null;
 
-    statement(`DELETE FROM couple_members WHERE session_id = ?`).run(sessionId);
+    await client.query("DELETE FROM couple_members WHERE session_id = $1", [
+      sessionId,
+    ]);
     // Le duo est rompu : les contenus partagés appartiennent aux deux membres.
-    statement(`DELETE FROM matches WHERE couple_id = ?`).run(membership.id);
-    statement(`DELETE FROM souvenir_notes WHERE souvenir_id IN (
-      SELECT id FROM souvenirs WHERE couple_id = ?
-    )`).run(membership.id);
-    statement(`DELETE FROM souvenirs WHERE couple_id = ?`).run(membership.id);
-    statement(`DELETE FROM choice_match_views WHERE couple_id = ?`).run(
-      membership.id,
+    await client.query("DELETE FROM matches WHERE couple_id = $1", [coupleId]);
+    await client.query(
+      `DELETE FROM souvenir_notes WHERE souvenir_id IN (
+         SELECT id FROM souvenirs WHERE couple_id = $1
+       )`,
+      [coupleId],
     );
-    statement(`DELETE FROM choice_matches WHERE couple_id = ?`).run(
-      membership.id,
-    );
-    statement(`DELETE FROM tap_reads WHERE couple_id = ?`).run(membership.id);
-    statement(`DELETE FROM taps WHERE couple_id = ?`).run(membership.id);
+    await client.query("DELETE FROM souvenirs WHERE couple_id = $1", [coupleId]);
+    await client.query("DELETE FROM choice_match_views WHERE couple_id = $1", [
+      coupleId,
+    ]);
+    await client.query("DELETE FROM choice_matches WHERE couple_id = $1", [
+      coupleId,
+    ]);
+    await client.query("DELETE FROM tap_reads WHERE couple_id = $1", [coupleId]);
+    await client.query("DELETE FROM taps WHERE couple_id = $1", [coupleId]);
 
-    const remaining = countCoupleMembers(membership.id);
-    if (remaining === 0) {
-      statement(`DELETE FROM couples WHERE id = ?`).run(membership.id);
+    const remaining = await client.query<{ total: number }>(
+      "SELECT COUNT(*)::int AS total FROM couple_members WHERE couple_id = $1",
+      [coupleId],
+    );
+    const empty = (remaining.rows[0]?.total ?? 0) === 0;
+    if (empty) {
+      await client.query("DELETE FROM couples WHERE id = $1", [coupleId]);
     }
 
-    return { coupleId: membership.id, coupleDeleted: remaining === 0 };
+    return { coupleId, coupleDeleted: empty };
   });
-
-  return leave();
 }
 
 /** Supprime les couples qui n'ont plus aucun membre (session expirée, etc.). */
-export function cleanupOrphanCouples(): void {
-  statement(
+export async function cleanupOrphanCouples(): Promise<void> {
+  await query(
     `DELETE FROM couples
-     WHERE id NOT IN (SELECT DISTINCT couple_id FROM couple_members)`,
-  ).run();
+      WHERE id NOT IN (SELECT DISTINCT couple_id FROM couple_members)`,
+  );
 }
 
 // ---------------------------------------------------------------------------
 // Matchs mutuels
 // ---------------------------------------------------------------------------
 
-export function hasMutualLike(coupleId: string, ideaId: string): boolean {
-  const row = statement(
-    `SELECT COUNT(DISTINCT s.session_id) AS total
-     FROM swipes s
-     JOIN couple_members m ON m.session_id = s.session_id
-     WHERE m.couple_id = ? AND s.idea_id = ? AND s.direction = 'like'`,
-  ).get(coupleId, ideaId) as { total: number };
-  return row.total >= 2;
+export async function hasMutualLike(
+  coupleId: string,
+  ideaId: string,
+): Promise<boolean> {
+  const row = await queryOne<{ total: number }>(
+    `SELECT COUNT(DISTINCT s.session_id)::int AS total
+       FROM swipes s
+       JOIN couple_members m ON m.session_id = s.session_id
+      WHERE m.couple_id = $1 AND s.idea_id = $2 AND s.direction = 'like'`,
+    [coupleId, ideaId],
+  );
+  return (row?.total ?? 0) >= 2;
 }
 
-export function listMutualLikeIdeaIds(coupleId: string): string[] {
-  return statement(
-    `SELECT s.idea_id AS ideaId
-     FROM swipes s
-     JOIN couple_members m ON m.session_id = s.session_id
-     WHERE m.couple_id = ? AND s.direction = 'like'
-     GROUP BY s.idea_id
+export async function listMutualLikeIdeaIds(
+  coupleId: string,
+): Promise<string[]> {
+  const rows = await query<{ ideaId: string }>(
+    `SELECT s.idea_id AS "ideaId"
+       FROM swipes s
+       JOIN couple_members m ON m.session_id = s.session_id
+      WHERE m.couple_id = $1 AND s.direction = 'like'
+      GROUP BY s.idea_id
      HAVING COUNT(DISTINCT s.session_id) >= 2`,
-  ).all(coupleId).map((row) => (row as { ideaId: string }).ideaId);
+    [coupleId],
+  );
+  return rows.map((row) => row.ideaId);
 }
 
 /** Insère un match s'il vient d'être créé. Renvoie true pour la nouveauté. */
-export function insertMatchRecord(
+export async function insertMatchRecord(
   coupleId: string,
   ideaId: string,
   now: number = Date.now(),
-): boolean {
-  const result = statement(
-    `INSERT OR IGNORE INTO matches (couple_id, idea_id, created_at)
-     VALUES (?, ?, ?)`,
-  ).run(coupleId, ideaId, now);
-  return result.changes > 0;
+): Promise<boolean> {
+  const changes = await getPoolQuery(
+    `INSERT INTO matches (couple_id, idea_id, created_at)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (couple_id, idea_id) DO NOTHING`,
+    [coupleId, ideaId, now],
+  );
+  return changes > 0;
 }
 
-export function deleteMatchRecord(coupleId: string, ideaId: string): void {
-  statement(`DELETE FROM matches WHERE couple_id = ? AND idea_id = ?`).run(
+export async function deleteMatchRecord(
+  coupleId: string,
+  ideaId: string,
+): Promise<void> {
+  await query("DELETE FROM matches WHERE couple_id = $1 AND idea_id = $2", [
     coupleId,
     ideaId,
+  ]);
+}
+
+export async function listMatchRecords(
+  coupleId: string,
+  sessionId: string,
+): Promise<MatchRecord[]> {
+  return query<MatchRecord>(
+    `SELECT m.idea_id AS "ideaId", m.created_at AS "createdAt",
+            CASE WHEN v.session_id IS NULL THEN 0 ELSE 1 END AS "seen"
+       FROM matches m
+       LEFT JOIN match_views v
+         ON v.couple_id = m.couple_id
+        AND v.idea_id = m.idea_id
+        AND v.session_id = $1
+      WHERE m.couple_id = $2
+      ORDER BY m.created_at DESC, m.idea_id DESC`,
+    [sessionId, coupleId],
   );
 }
 
-export function listMatchRecords(
-  coupleId: string,
-  sessionId: string,
-): MatchRecord[] {
-  return statement(
-    `SELECT m.idea_id AS ideaId, m.created_at AS createdAt,
-            CASE WHEN v.session_id IS NULL THEN 0 ELSE 1 END AS seen
-     FROM matches m
-     LEFT JOIN match_views v
-       ON v.couple_id = m.couple_id
-      AND v.idea_id = m.idea_id
-      AND v.session_id = ?
-     WHERE m.couple_id = ?
-     ORDER BY m.created_at DESC, m.rowid DESC`,
-  ).all(sessionId, coupleId) as MatchRecord[];
-}
-
-export function markMatchViewed(
+export async function markMatchViewed(
   coupleId: string,
   ideaId: string,
   sessionId: string,
   now: number = Date.now(),
-): void {
-  statement(
-    `INSERT OR IGNORE INTO match_views
-       (couple_id, idea_id, session_id, viewed_at)
-     VALUES (?, ?, ?, ?)`,
-  ).run(coupleId, ideaId, sessionId, now);
+): Promise<void> {
+  await query(
+    `INSERT INTO match_views (couple_id, idea_id, session_id, viewed_at)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT (couple_id, idea_id, session_id) DO NOTHING`,
+    [coupleId, ideaId, sessionId, now],
+  );
 }
 
-export function markAllMatchesViewed(
+export async function markAllMatchesViewed(
   coupleId: string,
   sessionId: string,
   now: number = Date.now(),
-): void {
-  statement(
-    `INSERT OR IGNORE INTO match_views
-       (couple_id, idea_id, session_id, viewed_at)
-     SELECT couple_id, idea_id, ?, ? FROM matches WHERE couple_id = ?`,
-  ).run(sessionId, now, coupleId);
+): Promise<void> {
+  await query(
+    `INSERT INTO match_views (couple_id, idea_id, session_id, viewed_at)
+     SELECT couple_id, idea_id, $1, $2 FROM matches WHERE couple_id = $3
+     ON CONFLICT (couple_id, idea_id, session_id) DO NOTHING`,
+    [sessionId, now, coupleId],
+  );
 }
 
 /**
  * Remet les matchs en phase avec les likes réellement présents.
  * Utilisé au démarrage d'un duo, après une annulation ou un changement de sélection.
  */
-export function reconcileCoupleMatches(
+export async function reconcileCoupleMatches(
   coupleId: string,
   now: number = Date.now(),
-): void {
-  const reconcile = getDb().transaction(() => {
-    const mutual = new Set(listMutualLikeIdeaIds(coupleId));
-    const existing = statement(
-      `SELECT idea_id AS ideaId FROM matches WHERE couple_id = ?`,
-    )
-      .all(coupleId)
-      .map((row) => (row as { ideaId: string }).ideaId);
+): Promise<void> {
+  await withTransaction(async (client) => {
+    const mutual = await client.query<{ ideaId: string }>(
+      `SELECT s.idea_id AS "ideaId"
+         FROM swipes s
+         JOIN couple_members m ON m.session_id = s.session_id
+        WHERE m.couple_id = $1 AND s.direction = 'like'
+        GROUP BY s.idea_id
+       HAVING COUNT(DISTINCT s.session_id) >= 2`,
+      [coupleId],
+    );
+    const mutualSet = new Set(mutual.rows.map((row) => row.ideaId));
 
-    const existingSet = new Set(existing);
-    for (const ideaId of existing) {
-      if (!mutual.has(ideaId)) deleteMatchRecord(coupleId, ideaId);
+    const existing = await client.query<{ ideaId: string }>(
+      `SELECT idea_id AS "ideaId" FROM matches WHERE couple_id = $1`,
+      [coupleId],
+    );
+    const existingSet = new Set(existing.rows.map((row) => row.ideaId));
+
+    for (const ideaId of existingSet) {
+      if (!mutualSet.has(ideaId)) {
+        await client.query(
+          "DELETE FROM matches WHERE couple_id = $1 AND idea_id = $2",
+          [coupleId, ideaId],
+        );
+      }
     }
-    for (const ideaId of mutual) {
-      if (!existingSet.has(ideaId)) insertMatchRecord(coupleId, ideaId, now);
+    for (const ideaId of mutualSet) {
+      if (!existingSet.has(ideaId)) {
+        await client.query(
+          `INSERT INTO matches (couple_id, idea_id, created_at)
+           VALUES ($1, $2, $3)
+           ON CONFLICT (couple_id, idea_id) DO NOTHING`,
+          [coupleId, ideaId, now],
+        );
+      }
     }
   });
-  reconcile();
 }
 
-export function deleteMatchIfNotMutual(
+export async function deleteMatchIfNotMutual(
   coupleId: string,
   ideaId: string,
-): void {
-  if (!hasMutualLike(coupleId, ideaId)) {
-    deleteMatchRecord(coupleId, ideaId);
+): Promise<void> {
+  if (!(await hasMutualLike(coupleId, ideaId))) {
+    await deleteMatchRecord(coupleId, ideaId);
   }
 }
 
@@ -864,7 +649,7 @@ export function deleteMatchIfNotMutual(
 // Souvenirs
 // ---------------------------------------------------------------------------
 
-export function createSouvenirRecord(input: {
+export async function createSouvenirRecord(input: {
   id: string;
   coupleId: string;
   ideaId: string | null;
@@ -874,259 +659,301 @@ export function createSouvenirRecord(input: {
   createdBy: string;
   body: string | null;
   now?: number;
-}): void {
+}): Promise<void> {
   const now = input.now ?? Date.now();
-  const create = getDb().transaction(() => {
-    statement(
+  await withTransaction(async (client) => {
+    await client.query(
       `INSERT INTO souvenirs
          (id, couple_id, idea_id, title, emoji, happened_at, created_by, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    ).run(
-      input.id,
-      input.coupleId,
-      input.ideaId,
-      input.title,
-      input.emoji,
-      input.happenedAt,
-      input.createdBy,
-      now,
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [
+        input.id,
+        input.coupleId,
+        input.ideaId,
+        input.title,
+        input.emoji,
+        input.happenedAt,
+        input.createdBy,
+        now,
+      ],
     );
 
     if (input.body) {
-      statement(
+      await client.query(
         `INSERT INTO souvenir_notes
            (souvenir_id, session_id, body, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?)`,
-      ).run(input.id, input.createdBy, input.body, now, now);
+         VALUES ($1, $2, $3, $4, $4)`,
+        [input.id, input.createdBy, input.body, now],
+      );
     }
   });
-  create();
 }
 
-export function listSouvenirRecords(coupleId: string): SouvenirRecord[] {
-  return statement(
-    `SELECT id, idea_id AS ideaId, title, emoji,
-            happened_at AS happenedAt, created_at AS createdAt,
-            created_by AS createdBy
-     FROM souvenirs
-     WHERE couple_id = ?
-     ORDER BY happened_at DESC, created_at DESC, rowid DESC`,
-  ).all(coupleId) as SouvenirRecord[];
+export async function listSouvenirRecords(
+  coupleId: string,
+): Promise<SouvenirRecord[]> {
+  return query<SouvenirRecord>(
+    `SELECT id, idea_id AS "ideaId", title, emoji,
+            happened_at AS "happenedAt", created_at AS "createdAt",
+            created_by AS "createdBy"
+       FROM souvenirs
+      WHERE couple_id = $1
+      ORDER BY happened_at DESC, created_at DESC, id DESC`,
+    [coupleId],
+  );
 }
 
-export function getSouvenirCoupleId(souvenirId: string): string | null {
-  const row = statement(
-    `SELECT couple_id AS coupleId FROM souvenirs WHERE id = ?`,
-  ).get(souvenirId) as { coupleId: string } | undefined;
+export async function getSouvenirCoupleId(
+  souvenirId: string,
+): Promise<string | null> {
+  const row = await queryOne<{ coupleId: string }>(
+    `SELECT couple_id AS "coupleId" FROM souvenirs WHERE id = $1`,
+    [souvenirId],
+  );
   return row?.coupleId ?? null;
 }
 
 /** Retrouve le souvenir d'un duo pour une idée donnée (unicité garantie). */
-export function findSouvenirIdByIdea(
+export async function findSouvenirIdByIdea(
   coupleId: string,
   ideaId: string,
-): string | null {
-  const row = statement(
-    `SELECT id FROM souvenirs WHERE couple_id = ? AND idea_id = ?`,
-  ).get(coupleId, ideaId) as { id: string } | undefined;
+): Promise<string | null> {
+  const row = await queryOne<{ id: string }>(
+    "SELECT id FROM souvenirs WHERE couple_id = $1 AND idea_id = $2",
+    [coupleId, ideaId],
+  );
   return row?.id ?? null;
 }
 
-export function listSouvenirNotes(coupleId: string): SouvenirNoteRecord[] {
-  return statement(
-    `SELECT n.souvenir_id AS souvenirId, n.session_id AS sessionId,
-            n.body, n.updated_at AS updatedAt
-     FROM souvenir_notes n
-     JOIN souvenirs s ON s.id = n.souvenir_id
-     WHERE s.couple_id = ?
-     ORDER BY n.updated_at ASC`,
-  ).all(coupleId) as SouvenirNoteRecord[];
+export async function listSouvenirNotes(
+  coupleId: string,
+): Promise<SouvenirNoteRecord[]> {
+  return query<SouvenirNoteRecord>(
+    `SELECT n.souvenir_id AS "souvenirId", n.session_id AS "sessionId",
+            n.body, n.updated_at AS "updatedAt"
+       FROM souvenir_notes n
+       JOIN souvenirs s ON s.id = n.souvenir_id
+      WHERE s.couple_id = $1
+      ORDER BY n.updated_at ASC`,
+    [coupleId],
+  );
 }
 
-export function upsertSouvenirNote(
+export async function upsertSouvenirNote(
   souvenirId: string,
   sessionId: string,
   body: string,
   now: number = Date.now(),
-): void {
-  statement(
+): Promise<void> {
+  await query(
     `INSERT INTO souvenir_notes
        (souvenir_id, session_id, body, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?)
+     VALUES ($1, $2, $3, $4, $4)
      ON CONFLICT (souvenir_id, session_id)
-     DO UPDATE SET body = excluded.body, updated_at = excluded.updated_at`,
-  ).run(souvenirId, sessionId, body, now, now);
+     DO UPDATE SET body = EXCLUDED.body, updated_at = EXCLUDED.updated_at`,
+    [souvenirId, sessionId, body, now],
+  );
 }
 
 // ---------------------------------------------------------------------------
 // Choix Nourriture / Films
 // ---------------------------------------------------------------------------
 
-export function addChoiceSwipe(
+export async function addChoiceSwipe(
   sessionId: string,
   category: ChoiceCategory,
   choiceId: string,
   direction: SwipeDirection,
   now: number = Date.now(),
-): void {
-  statement(
+): Promise<void> {
+  await query(
     `INSERT INTO choice_swipes
        (session_id, category, choice_id, direction, created_at)
-     VALUES (?, ?, ?, ?, ?)
+     VALUES ($1, $2, $3, $4, $5)
      ON CONFLICT (session_id, category, choice_id)
-     DO UPDATE SET direction = excluded.direction, created_at = excluded.created_at`,
-  ).run(sessionId, category, choiceId, direction, now);
+     DO UPDATE SET direction = EXCLUDED.direction,
+                   created_at = EXCLUDED.created_at`,
+    [sessionId, category, choiceId, direction, now],
+  );
 }
 
-export function listChoiceSwipes(
+export async function listChoiceSwipes(
   sessionId: string,
   category: ChoiceCategory,
-): { choiceId: string; direction: SwipeDirection }[] {
-  return statement(
-    `SELECT choice_id AS choiceId, direction
-     FROM choice_swipes
-     WHERE session_id = ? AND category = ?
-     ORDER BY created_at DESC, rowid DESC`,
-  ).all(sessionId, category) as {
-    choiceId: string;
-    direction: SwipeDirection;
-  }[];
+): Promise<{ choiceId: string; direction: SwipeDirection }[]> {
+  return query<{ choiceId: string; direction: SwipeDirection }>(
+    `SELECT choice_id AS "choiceId", direction
+       FROM choice_swipes
+      WHERE session_id = $1 AND category = $2
+      ORDER BY created_at DESC, choice_id DESC`,
+    [sessionId, category],
+  );
 }
 
-export function hasMutualChoiceLike(
+export async function hasMutualChoiceLike(
   coupleId: string,
   category: ChoiceCategory,
   choiceId: string,
-): boolean {
-  const row = statement(
-    `SELECT COUNT(DISTINCT s.session_id) AS total
-     FROM choice_swipes s
-     JOIN couple_members m ON m.session_id = s.session_id
-     WHERE m.couple_id = ? AND s.category = ? AND s.choice_id = ?
-       AND s.direction = 'like'`,
-  ).get(coupleId, category, choiceId) as { total: number };
-  return row.total >= 2;
+): Promise<boolean> {
+  const row = await queryOne<{ total: number }>(
+    `SELECT COUNT(DISTINCT s.session_id)::int AS total
+       FROM choice_swipes s
+       JOIN couple_members m ON m.session_id = s.session_id
+      WHERE m.couple_id = $1 AND s.category = $2 AND s.choice_id = $3
+        AND s.direction = 'like'`,
+    [coupleId, category, choiceId],
+  );
+  return (row?.total ?? 0) >= 2;
 }
 
-export function listMutualChoiceKeys(
+export async function listMutualChoiceKeys(
   coupleId: string,
-): { category: ChoiceCategory; choiceId: string }[] {
-  return statement(
-    `SELECT s.category, s.choice_id AS choiceId
-     FROM choice_swipes s
-     JOIN couple_members m ON m.session_id = s.session_id
-     WHERE m.couple_id = ? AND s.direction = 'like'
-     GROUP BY s.category, s.choice_id
+): Promise<{ category: ChoiceCategory; choiceId: string }[]> {
+  return query<{ category: ChoiceCategory; choiceId: string }>(
+    `SELECT s.category, s.choice_id AS "choiceId"
+       FROM choice_swipes s
+       JOIN couple_members m ON m.session_id = s.session_id
+      WHERE m.couple_id = $1 AND s.direction = 'like'
+      GROUP BY s.category, s.choice_id
      HAVING COUNT(DISTINCT s.session_id) >= 2`,
-  ).all(coupleId) as { category: ChoiceCategory; choiceId: string }[];
+    [coupleId],
+  );
 }
 
-export function insertChoiceMatchRecord(
+export async function insertChoiceMatchRecord(
   coupleId: string,
   category: ChoiceCategory,
   choiceId: string,
   now: number = Date.now(),
-): boolean {
-  const result = statement(
-    `INSERT OR IGNORE INTO choice_matches (couple_id, category, choice_id, created_at)
-     VALUES (?, ?, ?, ?)`,
-  ).run(coupleId, category, choiceId, now);
-  return result.changes > 0;
+): Promise<boolean> {
+  const changes = await getPoolQuery(
+    `INSERT INTO choice_matches (couple_id, category, choice_id, created_at)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT (couple_id, category, choice_id) DO NOTHING`,
+    [coupleId, category, choiceId, now],
+  );
+  return changes > 0;
 }
 
-export function deleteChoiceMatchRecord(
+export async function deleteChoiceMatchRecord(
   coupleId: string,
   category: ChoiceCategory,
   choiceId: string,
-): void {
-  statement(
+): Promise<void> {
+  await query(
     `DELETE FROM choice_matches
-     WHERE couple_id = ? AND category = ? AND choice_id = ?`,
-  ).run(coupleId, category, choiceId);
+      WHERE couple_id = $1 AND category = $2 AND choice_id = $3`,
+    [coupleId, category, choiceId],
+  );
 }
 
-export function listChoiceMatchRecords(
+export async function listChoiceMatchRecords(
   coupleId: string,
   sessionId: string,
   category: ChoiceCategory | null = null,
-): ChoiceMatchRecord[] {
-  return statement(
-    `SELECT m.category, m.choice_id AS choiceId, m.created_at AS createdAt,
-            CASE WHEN v.session_id IS NULL THEN 0 ELSE 1 END AS seen
-     FROM choice_matches m
-     LEFT JOIN choice_match_views v
-       ON v.couple_id = m.couple_id
-      AND v.category = m.category
-      AND v.choice_id = m.choice_id
-      AND v.session_id = ?
-     WHERE m.couple_id = ? AND (? IS NULL OR m.category = ?)
-     ORDER BY m.created_at DESC, m.rowid DESC`,
-  ).all(sessionId, coupleId, category, category) as ChoiceMatchRecord[];
+): Promise<ChoiceMatchRecord[]> {
+  return query<ChoiceMatchRecord>(
+    `SELECT m.category, m.choice_id AS "choiceId",
+            m.created_at AS "createdAt",
+            CASE WHEN v.session_id IS NULL THEN 0 ELSE 1 END AS "seen"
+       FROM choice_matches m
+       LEFT JOIN choice_match_views v
+         ON v.couple_id = m.couple_id
+        AND v.category = m.category
+        AND v.choice_id = m.choice_id
+        AND v.session_id = $1
+      WHERE m.couple_id = $2 AND ($3::text IS NULL OR m.category = $3)
+      ORDER BY m.created_at DESC, m.choice_id DESC`,
+    [sessionId, coupleId, category],
+  );
 }
 
-export function markChoiceMatchViewed(
+export async function markChoiceMatchViewed(
   coupleId: string,
   category: ChoiceCategory,
   choiceId: string,
   sessionId: string,
   now: number = Date.now(),
-): void {
-  statement(
-    `INSERT OR IGNORE INTO choice_match_views
+): Promise<void> {
+  await query(
+    `INSERT INTO choice_match_views
        (couple_id, category, choice_id, session_id, viewed_at)
-     VALUES (?, ?, ?, ?, ?)`,
-  ).run(coupleId, category, choiceId, sessionId, now);
+     VALUES ($1, $2, $3, $4, $5)
+     ON CONFLICT (couple_id, category, choice_id, session_id) DO NOTHING`,
+    [coupleId, category, choiceId, sessionId, now],
+  );
 }
 
-export function markAllChoiceMatchesViewed(
+export async function markAllChoiceMatchesViewed(
   coupleId: string,
   category: ChoiceCategory,
   sessionId: string,
   now: number = Date.now(),
-): void {
-  statement(
-    `INSERT OR IGNORE INTO choice_match_views
+): Promise<void> {
+  await query(
+    `INSERT INTO choice_match_views
        (couple_id, category, choice_id, session_id, viewed_at)
-     SELECT couple_id, category, choice_id, ?, ?
-     FROM choice_matches
-     WHERE couple_id = ? AND category = ?`,
-  ).run(sessionId, now, coupleId, category);
+     SELECT couple_id, category, choice_id, $1, $2
+       FROM choice_matches
+      WHERE couple_id = $3 AND category = $4
+     ON CONFLICT (couple_id, category, choice_id, session_id) DO NOTHING`,
+    [sessionId, now, coupleId, category],
+  );
 }
 
-export function deleteChoiceMatchIfNotMutual(
+export async function deleteChoiceMatchIfNotMutual(
   coupleId: string,
   category: ChoiceCategory,
   choiceId: string,
-): void {
-  if (!hasMutualChoiceLike(coupleId, category, choiceId)) {
-    deleteChoiceMatchRecord(coupleId, category, choiceId);
+): Promise<void> {
+  if (!(await hasMutualChoiceLike(coupleId, category, choiceId))) {
+    await deleteChoiceMatchRecord(coupleId, category, choiceId);
   }
 }
 
 /** Réaligne les matchs de choix après une arrivée ou un changement de duo. */
-export function reconcileChoiceMatches(
+export async function reconcileChoiceMatches(
   coupleId: string,
   now: number = Date.now(),
-): void {
-  const reconcile = getDb().transaction(() => {
-    const mutual = new Set(
-      listMutualChoiceKeys(coupleId).map(
-        (key) => `${key.category}:${key.choiceId}`,
-      ),
+): Promise<void> {
+  await withTransaction(async (client) => {
+    const mutualRows = await client.query<{
+      category: ChoiceCategory;
+      choiceId: string;
+    }>(
+      `SELECT s.category, s.choice_id AS "choiceId"
+         FROM choice_swipes s
+         JOIN couple_members m ON m.session_id = s.session_id
+        WHERE m.couple_id = $1 AND s.direction = 'like'
+        GROUP BY s.category, s.choice_id
+       HAVING COUNT(DISTINCT s.session_id) >= 2`,
+      [coupleId],
     );
-    const existing = statement(
-      `SELECT category, choice_id AS choiceId FROM choice_matches WHERE couple_id = ?`,
-    )
-      .all(coupleId)
-      .map((row) => {
-        const record = row as { category: ChoiceCategory; choiceId: string };
-        return { ...record, key: `${record.category}:${record.choiceId}` };
-      });
+    const mutual = new Set(
+      mutualRows.rows.map((row) => `${row.category}:${row.choiceId}`),
+    );
 
+    const existingRows = await client.query<{
+      category: ChoiceCategory;
+      choiceId: string;
+    }>(
+      `SELECT category, choice_id AS "choiceId"
+         FROM choice_matches WHERE couple_id = $1`,
+      [coupleId],
+    );
+    const existing = existingRows.rows.map((row) => ({
+      ...row,
+      key: `${row.category}:${row.choiceId}`,
+    }));
     const existingKeys = new Set(existing.map((row) => row.key));
+
     for (const row of existing) {
       if (!mutual.has(row.key)) {
-        deleteChoiceMatchRecord(coupleId, row.category, row.choiceId);
+        await client.query(
+          `DELETE FROM choice_matches
+            WHERE couple_id = $1 AND category = $2 AND choice_id = $3`,
+          [coupleId, row.category, row.choiceId],
+        );
       }
     }
     for (const key of mutual) {
@@ -1134,99 +961,129 @@ export function reconcileChoiceMatches(
       const separator = key.indexOf(":");
       const category = key.slice(0, separator) as ChoiceCategory;
       const choiceId = key.slice(separator + 1);
-      insertChoiceMatchRecord(coupleId, category, choiceId, now);
+      await client.query(
+        `INSERT INTO choice_matches (couple_id, category, choice_id, created_at)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (couple_id, category, choice_id) DO NOTHING`,
+        [coupleId, category, choiceId, now],
+      );
     }
   });
-  reconcile();
 }
 
-export function markAllChoiceMatchesSeen(
+export async function markAllChoiceMatchesSeen(
   coupleId: string,
   sessionId: string,
   now: number = Date.now(),
-): void {
-  statement(
-    `INSERT OR IGNORE INTO choice_match_views
+): Promise<void> {
+  await query(
+    `INSERT INTO choice_match_views
        (couple_id, category, choice_id, session_id, viewed_at)
-     SELECT couple_id, category, choice_id, ?, ?
-     FROM choice_matches WHERE couple_id = ?`,
-  ).run(sessionId, now, coupleId);
+     SELECT couple_id, category, choice_id, $1, $2
+       FROM choice_matches WHERE couple_id = $3
+     ON CONFLICT (couple_id, category, choice_id, session_id) DO NOTHING`,
+    [sessionId, now, coupleId],
+  );
 }
 
 // ---------------------------------------------------------------------------
 // Taps
 // ---------------------------------------------------------------------------
 
-export function insertTapRecord(
+export async function insertTapRecord(
   coupleId: string,
   fromSession: string,
   now: number = Date.now(),
-): number {
-  const result = statement(
-    `INSERT INTO taps (couple_id, from_session, created_at) VALUES (?, ?, ?)`,
-  ).run(coupleId, fromSession, now);
-  return Number(result.lastInsertRowid);
+): Promise<number> {
+  const row = await queryOne<{ id: number }>(
+    `INSERT INTO taps (couple_id, from_session, created_at)
+     VALUES ($1, $2, $3)
+     RETURNING id`,
+    [coupleId, fromSession, now],
+  );
+  return row?.id ?? 0;
 }
 
-export function getTapReadCursor(
+export async function getTapReadCursor(
   coupleId: string,
   sessionId: string,
-): number {
-  const row = statement(
-    `SELECT last_tap_id AS lastTapId FROM tap_reads
-     WHERE couple_id = ? AND session_id = ?`,
-  ).get(coupleId, sessionId) as { lastTapId: number } | undefined;
+): Promise<number> {
+  const row = await queryOne<{ lastTapId: number }>(
+    `SELECT last_tap_id AS "lastTapId" FROM tap_reads
+      WHERE couple_id = $1 AND session_id = $2`,
+    [coupleId, sessionId],
+  );
   return row?.lastTapId ?? 0;
 }
 
-export function listPartnerTapsAfter(
+export async function listPartnerTapsAfter(
   coupleId: string,
   sessionId: string,
   afterId: number,
-): TapRecord[] {
-  return statement(
-    `SELECT id, created_at AS createdAt
-     FROM taps
-     WHERE couple_id = ? AND from_session <> ? AND id > ?
-     ORDER BY id DESC
-     LIMIT 20`,
-  ).all(coupleId, sessionId, afterId) as TapRecord[];
+): Promise<TapRecord[]> {
+  return query<TapRecord>(
+    `SELECT id, created_at AS "createdAt"
+       FROM taps
+      WHERE couple_id = $1 AND from_session <> $2 AND id > $3
+      ORDER BY id DESC
+      LIMIT 20`,
+    [coupleId, sessionId, afterId],
+  );
 }
 
-export function getLatestPartnerTapId(
+export async function getLatestPartnerTapId(
   coupleId: string,
   sessionId: string,
-): number {
-  const row = statement(
-    `SELECT MAX(id) AS latest FROM taps
-     WHERE couple_id = ? AND from_session <> ?`,
-  ).get(coupleId, sessionId) as { latest: number | null };
-  return row.latest ?? 0;
+): Promise<number> {
+  const row = await queryOne<{ latest: number | null }>(
+    `SELECT MAX(id) AS latest
+       FROM taps
+      WHERE couple_id = $1 AND from_session <> $2`,
+    [coupleId, sessionId],
+  );
+  return row?.latest ?? 0;
 }
 
-export function setTapReadCursor(
+export async function setTapReadCursor(
   coupleId: string,
   sessionId: string,
   tapId: number,
-): void {
-  statement(
+): Promise<void> {
+  await query(
     `INSERT INTO tap_reads (couple_id, session_id, last_tap_id)
-     VALUES (?, ?, ?)
+     VALUES ($1, $2, $3)
      ON CONFLICT (couple_id, session_id)
-     DO UPDATE SET last_tap_id = MAX(last_tap_id, excluded.last_tap_id)`,
-  ).run(coupleId, sessionId, tapId);
+     DO UPDATE SET last_tap_id = GREATEST(tap_reads.last_tap_id, EXCLUDED.last_tap_id)`,
+    [coupleId, sessionId, tapId],
+  );
 }
 
 /** À l'arrivée dans un duo : ignore les anciens taps qui ne concernent pas ce membre. */
-export function initializeTapCursor(coupleId: string, sessionId: string): void {
-  statement(
+export async function initializeTapCursor(
+  coupleId: string,
+  sessionId: string,
+): Promise<void> {
+  await query(
     `INSERT INTO tap_reads (couple_id, session_id, last_tap_id)
-     VALUES (?, ?, COALESCE((SELECT MAX(id) FROM taps WHERE couple_id = ?), 0))
+     VALUES ($1, $2, COALESCE((SELECT MAX(id) FROM taps WHERE couple_id = $1), 0))
      ON CONFLICT (couple_id, session_id)
-     DO UPDATE SET last_tap_id = MAX(last_tap_id, excluded.last_tap_id)`,
-  ).run(coupleId, sessionId, coupleId);
+     DO UPDATE SET last_tap_id = GREATEST(tap_reads.last_tap_id, EXCLUDED.last_tap_id)`,
+    [coupleId, sessionId],
+  );
 }
 
-export function purgeOldTapRecords(cutoff: number): void {
-  statement(`DELETE FROM taps WHERE created_at < ?`).run(cutoff);
+export async function purgeOldTapRecords(cutoff: number): Promise<void> {
+  await query("DELETE FROM taps WHERE created_at < $1", [cutoff]);
+}
+
+/**
+ * Exécute une écriture et renvoie le nombre de lignes affectées.
+ * Utilisé par les insertions « ON CONFLICT DO NOTHING » et les révocations.
+ */
+async function getPoolQuery(
+  text: string,
+  params: readonly unknown[],
+): Promise<number> {
+  const result = await getPool().query(text, params as unknown[]);
+  return result.rowCount ?? 0;
 }

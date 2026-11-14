@@ -21,7 +21,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     enforceRateLimit(request, "choices:swipe", 60, 60_000, session.id);
 
     const input = await readJson(request, choiceSwipeSchema);
-    const match = swipeChoiceForSession(
+    const match = await swipeChoiceForSession(
       session.id,
       input.category,
       input.choiceId,

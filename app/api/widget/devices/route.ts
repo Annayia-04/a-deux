@@ -25,7 +25,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     enforceRateLimit(request, "widget:pair", 10, 60_000, session.id);
 
     const { label } = await readJson(request, widgetPairSchema);
-    const token = pairWidgetForSession(session.id, label ?? null);
+    const token = await pairWidgetForSession(session.id, label ?? null);
     return json({ token }, 201);
   } catch (error) {
     return apiError(error);
@@ -40,7 +40,7 @@ export async function DELETE(request: Request): Promise<NextResponse> {
     enforceRateLimit(request, "widget:revoke", 20, 60_000, session.id);
 
     const { token } = await readJson(request, widgetRevokeSchema);
-    revokeWidgetForSession(session.id, token);
+    await revokeWidgetForSession(session.id, token);
     // Réponse identique que l'appareil existe ou non : pas d'oracle.
     return json({ ok: true });
   } catch (error) {

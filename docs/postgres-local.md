@@ -1,5 +1,9 @@
 # PostgreSQL local (Windows, sans droits administrateur)
 
+Depuis la migration `003_game_data.sql`, PostgreSQL stocke **toutes** les
+données : identité, sessions anonymes, swipes, duos, souvenirs et choix.
+SQLite n’est plus utilisé.
+
 Une instance PostgreSQL **18.1** portable est installée dans
 `C:\Users\angel\pgsql`. Elle ne touche pas au système : ni service Windows,
 ni dossier `Program Files`, ni droits administrateur.
@@ -11,6 +15,7 @@ ni dossier `Program Files`, ni droits administrateur.
 | Port | `5432` (localhost uniquement) |
 | Utilisateur | `postgres` (authentification `trust` en local) |
 | Base applicative | `a_deux` |
+| Schéma | `db/migrations/001` → `003`, via `npm run db:migrate` |
 | Journal | `C:\Users\angel\pgsql\pg.log` |
 
 `trust` sur une instance liée à `127.0.0.1`/`::1` est acceptable pour du

@@ -21,16 +21,18 @@ const MAX_FUTURE_MS = 24 * 60 * 60 * 1000;
 
 function isUniqueViolation(error: unknown): boolean {
   return (
-    error instanceof Error && /UNIQUE constraint failed/i.test(error.message)
+    typeof error === "object" &&
+    error !== null &&
+    (error as { code?: string }).code === "23505"
   );
 }
 
-function findSnapshot(
+async function findSnapshot(
   coupleId: string,
   sessionId: string,
   souvenirId: string,
-): SouvenirSnapshot | undefined {
-  return toSnapshots(coupleId, sessionId).find(
+): Promise<SouvenirSnapshot | undefined> {
+  return (await toSnapshots(coupleId, sessionId)).find(
     (souvenir) => souvenir.id === souvenirId,
   );
 }
@@ -43,12 +45,12 @@ export type SouvenirCreateInput = {
   body?: string;
 };
 
-function toSnapshots(
+async function toSnapshots(
   coupleId: string,
   sessionId: string,
-): SouvenirSnapshot[] {
-  const records = listSouvenirRecords(coupleId);
-  const notes = listSouvenirNotes(coupleId);
+): Promise<SouvenirSnapshot[]> {
+  const records = await listSouvenirRecords(coupleId);
+  const notes = await listSouvenirNotes(coupleId);
 
   const bySouvenir = new Map<
     string,
@@ -83,19 +85,19 @@ function toSnapshots(
   });
 }
 
-export function listSouvenirsForSession(
+export async function listSouvenirsForSession(
   sessionId: string,
-): SouvenirSnapshot[] {
-  const membership = requireCoupleMembership(sessionId);
+): Promise<SouvenirSnapshot[]> {
+  const membership = await requireCoupleMembership(sessionId);
   return toSnapshots(membership.id, sessionId);
 }
 
-export function createSouvenirForSession(
+export async function createSouvenirForSession(
   sessionId: string,
   input: SouvenirCreateInput,
   now: number = Date.now(),
-): SouvenirSnapshot {
-  const membership = requireCompleteCouple(sessionId);
+): Promise<SouvenirSnapshot> {
+  const membership = await requireCompleteCouple(sessionId);
 
   const idea = input.ideaId ? IDEAS_BY_ID.get(input.ideaId) : undefined;
   if (input.ideaId && !idea) {
@@ -115,7 +117,7 @@ export function createSouvenirForSession(
   // Un seul souvenir par idée et par duo : si le partenaire l'a déjà créé
   // (même quelques millisecondes plus tôt), on y ajoute simplement son moment.
   if (idea) {
-    const existingId = findSouvenirIdByIdea(membership.id, idea.id);
+    const existingId = await findSouvenirIdByIdea(membership.id, idea.id);
     if (existingId) {
       return saveBodyOnSouvenir(
         membership.id,
@@ -129,7 +131,7 @@ export function createSouvenirForSession(
 
   const id = randomBytes(12).toString("hex");
   try {
-    createSouvenirRecord({
+    await createSouvenirRecord({
       id,
       coupleId: membership.id,
       ideaId: idea?.id ?? null,
@@ -144,7 +146,7 @@ export function createSouvenirForSession(
     // Course entre les deux membres : l'index unique tranche, on rejoint
     // le souvenir gagnant au lieu d'échouer.
     if (!idea || !isUniqueViolation(error)) throw error;
-    const existingId = findSouvenirIdByIdea(membership.id, idea.id);
+    const existingId = await findSouvenirIdByIdea(membership.id, idea.id);
     if (!existingId) throw error;
     return saveBodyOnSouvenir(
       membership.id,
@@ -155,46 +157,46 @@ export function createSouvenirForSession(
     );
   }
 
-  const created = findSnapshot(membership.id, sessionId, id);
+  const created = await findSnapshot(membership.id, sessionId, id);
   if (!created) {
     throw new HttpError(500, "Impossible d’enregistrer ce souvenir.");
   }
   return created;
 }
 
-function saveBodyOnSouvenir(
+async function saveBodyOnSouvenir(
   coupleId: string,
   sessionId: string,
   souvenirId: string,
   body: string | undefined,
   now: number,
-): SouvenirSnapshot {
-  if (body) upsertSouvenirNote(souvenirId, sessionId, body, now);
+): Promise<SouvenirSnapshot> {
+  if (body) await upsertSouvenirNote(souvenirId, sessionId, body, now);
 
-  const snapshot = findSnapshot(coupleId, sessionId, souvenirId);
+  const snapshot = await findSnapshot(coupleId, sessionId, souvenirId);
   if (!snapshot) {
     throw new HttpError(500, "Impossible d’enregistrer ce souvenir.");
   }
   return snapshot;
 }
 
-export function saveSouvenirNoteForSession(
+export async function saveSouvenirNoteForSession(
   sessionId: string,
   souvenirId: string,
   body: string,
   now: number = Date.now(),
-): SouvenirSnapshot {
-  const membership = requireCompleteCouple(sessionId);
+): Promise<SouvenirSnapshot> {
+  const membership = await requireCompleteCouple(sessionId);
 
   // L'appartenance est vérifiée côté serveur : un identifiant d'un autre duo
   // est traité comme inexistant, sans révéler son existence.
-  if (getSouvenirCoupleId(souvenirId) !== membership.id) {
+  if ((await getSouvenirCoupleId(souvenirId)) !== membership.id) {
     throw new HttpError(404, "Ce souvenir est introuvable.");
   }
 
-  upsertSouvenirNote(souvenirId, sessionId, body, now);
+  await upsertSouvenirNote(souvenirId, sessionId, body, now);
 
-  const updated = toSnapshots(membership.id, sessionId).find(
+  const updated = (await toSnapshots(membership.id, sessionId)).find(
     (souvenir) => souvenir.id === souvenirId,
   );
   if (!updated) {

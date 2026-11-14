@@ -79,12 +79,12 @@ export async function requireSession(): Promise<ActiveSession> {
     throw new HttpError(401, "Session introuvable. Relancez votre sélection.");
   }
 
-  const sessionId = resolveSessionId(hashToken(token));
+  const sessionId = await resolveSessionId(hashToken(token));
   if (!sessionId) {
     throw new HttpError(401, "Session expirée. Relancez votre sélection.");
   }
 
-  const record = getSessionRecord(sessionId);
+  const record = await getSessionRecord(sessionId);
   if (!record) {
     throw new HttpError(401, "Session expirée. Relancez votre sélection.");
   }
@@ -103,7 +103,7 @@ export async function requireSession(): Promise<ActiveSession> {
 
   // Mise à jour opportuniste, sans bloquer la réponse en cas d'échec.
   try {
-    touchSession(record.id);
+    await touchSession(record.id);
   } catch {
     // non critique
   }

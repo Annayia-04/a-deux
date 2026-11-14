@@ -28,12 +28,12 @@ import type {
   SwipeDirection,
 } from "@/lib/types";
 
-export function getChoiceSnapshot(
+export async function getChoiceSnapshot(
   sessionId: string,
   category: ChoiceCategory,
-): ChoiceSnapshot {
-  const membership = requireCoupleMembership(sessionId);
-  const swipes = listChoiceSwipes(sessionId, category);
+): Promise<ChoiceSnapshot> {
+  const membership = await requireCoupleMembership(sessionId);
+  const swipes = await listChoiceSwipes(sessionId, category);
   const swipedIds = new Set(swipes.map((swipe) => swipe.choiceId));
   const likedIds = swipes
     .filter((swipe) => swipe.direction === "like")
@@ -47,10 +47,8 @@ export function getChoiceSnapshot(
     .map((choiceId) => CHOICES_BY_ID.get(choiceId))
     .filter((choice): choice is Choice => choice !== undefined);
 
-  const matches = listChoiceMatchRecords(
-    membership.id,
-    sessionId,
-    category,
+  const matches = (
+    await listChoiceMatchRecords(membership.id, sessionId, category)
   )
     .map((record): ChoiceMatchSnapshot | null => {
       const choice = CHOICES_BY_ID.get(record.choiceId);
@@ -80,30 +78,30 @@ export function getChoiceSnapshot(
  * Enregistre un choix et renvoie la carte uniquement quand le match vient
  * d'être créé, pour déclencher une célébration une seule fois.
  */
-export function swipeChoiceForSession(
+export async function swipeChoiceForSession(
   sessionId: string,
   category: ChoiceCategory,
   choiceId: string,
   direction: SwipeDirection,
   now: number = Date.now(),
-): Choice | null {
-  const membership = requireCompleteCouple(sessionId);
+): Promise<Choice | null> {
+  const membership = await requireCompleteCouple(sessionId);
   const choice = CHOICES_BY_ID.get(choiceId);
 
   if (!choice || choice.category !== category) {
     throw new HttpError(400, "Cette carte n’existe pas dans ce catalogue.");
   }
 
-  addChoiceSwipe(sessionId, category, choiceId, direction, now);
+  await addChoiceSwipe(sessionId, category, choiceId, direction, now);
 
   if (direction === "pass") {
-    deleteChoiceMatchIfNotMutual(membership.id, category, choiceId);
+    await deleteChoiceMatchIfNotMutual(membership.id, category, choiceId);
     return null;
   }
 
-  if (!hasMutualChoiceLike(membership.id, category, choiceId)) return null;
+  if (!(await hasMutualChoiceLike(membership.id, category, choiceId))) return null;
 
-  const created = insertChoiceMatchRecord(
+  const created = await insertChoiceMatchRecord(
     membership.id,
     category,
     choiceId,
@@ -112,16 +110,16 @@ export function swipeChoiceForSession(
   if (!created) return null;
 
   // La personne qui vient de swiper voit son match immédiatement.
-  markChoiceMatchViewed(membership.id, category, choiceId, sessionId, now);
+  await markChoiceMatchViewed(membership.id, category, choiceId, sessionId, now);
   return choice;
 }
 
-export function markChoiceMatchesSeenForSession(
+export async function markChoiceMatchesSeenForSession(
   sessionId: string,
   category: ChoiceCategory,
   now: number = Date.now(),
-): number {
-  const membership = requireCompleteCouple(sessionId);
-  markAllChoiceMatchesViewed(membership.id, category, sessionId, now);
-  return getChoiceSnapshot(sessionId, category).unread;
+): Promise<number> {
+  const membership = await requireCompleteCouple(sessionId);
+  await markAllChoiceMatchesViewed(membership.id, category, sessionId, now);
+  return (await getChoiceSnapshot(sessionId, category)).unread;
 }

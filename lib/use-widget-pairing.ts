@@ -45,14 +45,21 @@ export function useWidgetPairing({ enabled }: { enabled: boolean }): void {
       try {
         const existing = await WidgetBridge.getPingToken();
         if (existing.token) {
-          // Le jeton existe déjà : on rafraîchit seulement l'URL du serveur,
-          // utile si l'app a été recompilée avec un autre domaine.
-          await WidgetBridge.savePingToken({
-            token: existing.token,
-            endpoint: window.location.origin,
-            label: deviceLabel(),
-          });
-          return;
+          // Le jeton peut avoir été révoqué, ou la base réinitialisée : on le
+          // vérifie avant de le conserver, sinon le widget resterait muet.
+          const state = await api.verifyWidgetToken(existing.token);
+          if (state === "valid") {
+            // On rafraîchit seulement l'URL du serveur, utile si l'app a été
+            // recompilée avec un autre domaine.
+            await WidgetBridge.savePingToken({
+              token: existing.token,
+              endpoint: window.location.origin,
+              label: deviceLabel(),
+            });
+            return;
+          }
+          if (state === "unknown") return;
+          await WidgetBridge.clearPingToken();
         }
 
         const { token } = await api.pairWidget(deviceLabel());

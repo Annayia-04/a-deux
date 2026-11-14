@@ -30,11 +30,11 @@ export async function POST(request: Request): Promise<NextResponse> {
       );
     }
 
-    const device = resolveWidgetDevice(token);
+    const device = await resolveWidgetDevice(token);
     enforceRateLimit(request, "widget:ping", 1, 8_000, device.tokenHash);
     enforceRateLimit(request, "widget:hour", 20, 3_600_000, device.tokenHash);
 
-    const tap = sendWidgetPingForDevice(device);
+    const tap = await sendWidgetPingForDevice(device);
     return json({ tap }, 201);
   } catch (error) {
     return apiError(error);

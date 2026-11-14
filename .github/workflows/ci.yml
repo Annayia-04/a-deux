@@ -17,12 +17,29 @@ permissions:
 env:
   NEXT_TELEMETRY_DISABLED: "1"
   CI: "1"
+  DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/a_deux
+  DATABASE_URL_DIRECT: postgres://postgres:postgres@127.0.0.1:5432/a_deux
 
 jobs:
   verify:
     name: Types, tests, build et smoke
     runs-on: ubuntu-latest
     timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: a_deux
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
 
     steps:
       - name: Récupérer le dépôt
@@ -42,6 +59,9 @@ jobs:
 
       - name: Lancer les tests unitaires
         run: npm test
+
+      - name: Appliquer les migrations PostgreSQL
+        run: npm run db:migrate
 
       - name: Construire l'application
         run: npm run build

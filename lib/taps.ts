@@ -17,24 +17,24 @@ import type { TapSnapshot } from "@/lib/types";
 
 const TAP_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 
-export function sendTapForSession(
+export async function sendTapForSession(
   sessionId: string,
   now: number = Date.now(),
-): TapSnapshot {
-  const membership = requireCompleteCouple(sessionId);
+): Promise<TapSnapshot> {
+  const membership = await requireCompleteCouple(sessionId);
 
-  purgeOldTapRecords(now - TAP_RETENTION_MS);
-  const id = insertTapRecord(membership.id, sessionId, now);
+  await purgeOldTapRecords(now - TAP_RETENTION_MS);
+  const id = await insertTapRecord(membership.id, sessionId, now);
   return { id, createdAt: now };
 }
 
-export function getTapStateForSession(sessionId: string): {
+export async function getTapStateForSession(sessionId: string): Promise<{
   tap: TapSnapshot | null;
   unread: number;
-} {
-  const membership = requireCoupleMembership(sessionId);
-  const cursor = getTapReadCursor(membership.id, sessionId);
-  const taps = listPartnerTapsAfter(membership.id, sessionId, cursor);
+}> {
+  const membership = await requireCoupleMembership(sessionId);
+  const cursor = await getTapReadCursor(membership.id, sessionId);
+  const taps = await listPartnerTapsAfter(membership.id, sessionId, cursor);
   const latest = taps[0] ?? null;
 
   return {
@@ -43,12 +43,15 @@ export function getTapStateForSession(sessionId: string): {
   };
 }
 
-export function markTapSeenForSession(
+export async function markTapSeenForSession(
   sessionId: string,
   tapId: number,
-): void {
-  const membership = requireCoupleMembership(sessionId);
-  const latestPartnerTapId = getLatestPartnerTapId(membership.id, sessionId);
+): Promise<void> {
+  const membership = await requireCoupleMembership(sessionId);
+  const latestPartnerTapId = await getLatestPartnerTapId(
+    membership.id,
+    sessionId,
+  );
 
   // Un client ne peut pas avancer son curseur au-delà des taps réellement reçus.
   if (latestPartnerTapId === 0) return;
@@ -57,5 +60,5 @@ export function markTapSeenForSession(
     throw new HttpError(400, "Tap invalide.");
   }
 
-  setTapReadCursor(membership.id, sessionId, safeTapId);
+  await setTapReadCursor(membership.id, sessionId, safeTapId);
 }

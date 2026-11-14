@@ -33,13 +33,15 @@ export async function POST(request: Request): Promise<NextResponse> {
       throw new HttpError(422, "Cette idée ne correspond pas à votre sélection.");
     }
 
-    addSwipe(session.id, ideaId, direction);
+    await addSwipe(session.id, ideaId, direction);
     const match =
-      direction === "like" ? recordMutualMatchForSession(session.id, idea) : null;
+      direction === "like"
+        ? await recordMutualMatchForSession(session.id, idea)
+        : null;
 
     return json({
       ok: true,
-      swiped: countSwipes(session.id),
+      swiped: await countSwipes(session.id),
       ...(match ? { match } : {}),
     });
   } catch (error) {

@@ -64,8 +64,8 @@ export async function DELETE(request: Request): Promise<NextResponse> {
     let clearSession = false;
     if (sessionToken) {
       const sessionId = hashToken(sessionToken);
-      if (isSessionAlias(sessionId)) {
-        deleteSessionAlias(sessionId);
+      if (await isSessionAlias(sessionId)) {
+        await deleteSessionAlias(sessionId);
         clearSession = true;
       }
     }

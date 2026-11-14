@@ -19,7 +19,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     const session = await requireSession();
     enforceRateLimit(request, "couple:seen", 60, 60_000, session.id);
 
-    const couple = markCoupleMatchesSeen(session.id);
+    const couple = await markCoupleMatchesSeen(session.id);
     if (!couple) {
       throw new HttpError(409, "Vous ne faites partie d’aucun duo.");
     }

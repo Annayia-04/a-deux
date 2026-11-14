@@ -230,6 +230,31 @@ export const api = {
       body: { token },
     });
   },
+
+  /**
+   * Vérifie un jeton d'appareil sans envoyer de ping.
+   * `"unknown"` couvre les pannes réseau : on conserve alors le jeton.
+   */
+  async verifyWidgetToken(
+    token: string,
+  ): Promise<"valid" | "invalid" | "unknown"> {
+    try {
+      const response = await fetch("/api/widget/devices/status", {
+        method: "GET",
+        headers: {
+          accept: "application/json",
+          authorization: `Bearer ${token}`,
+        },
+        credentials: "same-origin",
+        cache: "no-store",
+      });
+      if (response.ok) return "valid";
+      if (response.status === 401) return "invalid";
+      return "unknown";
+    } catch {
+      return "unknown";
+    }
+  },
 };
 
 export type SouvenirDraft = {

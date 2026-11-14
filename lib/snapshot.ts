@@ -17,13 +17,15 @@ export type LoadedSession = SessionSnapshot & {
  * Charge une session à partir du jeton du cookie (jamais du client).
  * Le deck est recalculé de façon déterministe : même seed = même ordre.
  */
-export function loadSessionByToken(token: string | null): LoadedSession | null {
+export async function loadSessionByToken(
+  token: string | null,
+): Promise<LoadedSession | null> {
   if (!token || !isValidSessionToken(token)) return null;
 
-  const sessionId = resolveSessionId(hashToken(token));
+  const sessionId = await resolveSessionId(hashToken(token));
   if (!sessionId) return null;
 
-  const record = getSessionRecord(sessionId);
+  const record = await getSessionRecord(sessionId);
   if (!record) return null;
 
   let rawPrefs: unknown;
@@ -38,7 +40,7 @@ export function loadSessionByToken(token: string | null): LoadedSession | null {
 
   const prefs = parsedPrefs.data;
   const ranked = rankIdeas(prefs, record.seed);
-  const swipes = listSwipes(record.id);
+  const swipes = await listSwipes(record.id);
   const swipedIds = new Set(swipes.map((swipe) => swipe.ideaId));
 
   const likedIdeas = swipes
@@ -54,7 +56,7 @@ export function loadSessionByToken(token: string | null): LoadedSession | null {
     likedIdeas,
     total: ranked.length,
     swiped: swipes.length,
-    couple: getCoupleSnapshot(record.id),
+    couple: await getCoupleSnapshot(record.id),
   };
 }
 
