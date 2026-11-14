@@ -105,11 +105,11 @@ CREATE TABLE IF NOT EXISTS couples (
 );
 
 CREATE TABLE IF NOT EXISTS couple_members (
+  id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   couple_id  uuid NOT NULL REFERENCES couples(id) ON DELETE CASCADE,
   user_id    uuid REFERENCES users(id) ON DELETE CASCADE,
   anon_id    text REFERENCES anonymous_sessions(id) ON DELETE CASCADE,
   joined_at  timestamptz NOT NULL DEFAULT now(),
-  PRIMARY KEY (couple_id, joined_at, user_id),
   CHECK ((user_id IS NULL) <> (anon_id IS NULL))
 );
 CREATE UNIQUE INDEX IF NOT EXISTS couple_members_user_uniq
@@ -205,6 +205,11 @@ connexions concurrentes sur le même cookie.
   les sessions existantes ; un changement d’e-mail vérifié, si.
 
 ## 6. Migration SQLite → Postgres
+
+Une instance PostgreSQL 18.1 portable tourne déjà en local sur ce poste
+(`C:\Users\angel\pgsql`, base `a_deux`, port 5432). Les commandes de démarrage,
+d’arrêt et de migration sont dans `docs/postgres-local.md`. Le schéma d’identité
+est déjà appliqué par `db/migrations/001_accounts.sql`.
 
 Pas de bascule à chaud : le passage se fait en trois étapes.
 

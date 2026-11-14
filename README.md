@@ -67,6 +67,8 @@ npm start -- -p 3100 # autre port
 | `npm test` | Tests unitaires Vitest |
 | `npm run test:watch` | Tests en mode watch |
 | `npm run smoke` | Test de fumée HTTP contre un serveur déjà démarré |
+| `npm run db:migrate` | Applique les migrations Postgres (nécessite `DATABASE_URL`) |
+| `npm run db:status` | État des migrations Postgres |
 
 ## Application installable (PWA)
 
@@ -106,8 +108,24 @@ Copier `.env.example` vers `.env.local` (ou définir les variables dans l’envi
 | --- | --- | --- |
 | `DATA_DIR` | `./.data` | Répertoire du fichier SQLite `date-swipe.db`. Créé automatiquement. |
 | `COOKIE_SECURE` | auto | `true` force le drapeau `Secure` du cookie, `false` le désactive. Absent, il est déduit de `X-Forwarded-Proto` puis de l’URL de la requête. |
+| `DATABASE_URL` | vide | URL PostgreSQL applicative. Absente → SQLite. Locale : `postgres://postgres@127.0.0.1:5432/a_deux`. En production : chaîne *pooled* Neon/Supabase. |
+| `DATABASE_URL_DIRECT` | `DATABASE_URL` | Chaîne directe (sans pooler) utilisée par `npm run db:migrate`. |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | vide | OAuth Google. Le bouton est masqué tant que les deux manquent. Voir `docs/google-oauth-setup.md`. |
+| `APPLE_CLIENT_ID` / `APPLE_TEAM_ID` / `APPLE_KEY_ID` / `APPLE_PRIVATE_KEY` | vide | Sign in with Apple (Service ID + clé `.p8`). Bouton masqué si incomplet. |
+| `APP_SESSION_SECRET` | vide | Secret de signature des cookies OAuth (`state`, `nonce`). |
 
 En production derrière un reverse proxy TLS, transmettre `X-Forwarded-Proto: https` (ou définir `COOKIE_SECURE=true`) pour que le cookie soit marqué `Secure`.
+
+### Base de données
+
+SQLite reste le moteur par défaut, sans configuration. Une instance PostgreSQL 18.1 portable est installée localement pour développer la couche de comptes : voir `docs/postgres-local.md` (démarrage, arrêt, migrations, passage à Neon/Supabase).
+
+```bash
+npm run db:migrate   # applique db/migrations/*.sql
+npm run db:status    # état des migrations, sans modification
+```
+
+Les migrations sont transactionnelles, verrouillées par un advisory lock et protégées par un checksum : une migration déjà appliquée ne peut pas être réécrite.
 
 ## Architecture
 
@@ -151,6 +169,8 @@ components/
   match-celebration.tsx   Célébration générique (idées, plats, films)
   brand.tsx, icons.tsx    Identité et icônes SVG inline
 lib/
+  config.ts               Lecture des variables serveur, drapeaux SSO/Postgres
+  auth/provider.ts        Fournisseurs d’identité (types partagés, sans secret)
   ideas.ts                Catalogue : base historique (120) + extension
   ideas-extra.ts          Extension thématique du catalogue (120 idées)
   choices.ts              Catalogue de 30 plats et 40 films, ordre du deck
@@ -183,8 +203,14 @@ public/
   sw.js                   Service worker : assets statiques + page hors ligne
   offline.html            Page de secours autonome, sans requête réseau
   icons/                  Icônes PWA locales (192, 512, 1024, maskable, Apple)
-scripts/smoke.mjs         Test de fumée HTTP de bout en bout
+db/
+  migrations/001_accounts.sql  Comptes, identités, sessions, duos (Postgres)
+scripts/
+  smoke.mjs               Test de fumée HTTP de bout en bout
+  db-migrate.mjs          Runner de migrations Postgres (verrou + checksum)
 docs/architecture-comptes-postgres.md  Conception SSO, Postgres et wrapper natif
+docs/postgres-local.md                 Instance locale, démarrage et migrations
+docs/google-oauth-setup.md             Procédure Google Cloud pas à pas
 ```
 
 ### Données
