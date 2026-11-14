@@ -1,0 +1,25 @@
+# Dépendances
+node_modules/
+
+# Build Next.js
+.next/
+next-env.d.ts.bak
+tsconfig.tsbuildinfo
+
+# Données locales (SQLite)
+.data/
+*.db
+*.db-wal
+*.db-shm
+
+# Environnement
+.env
+.env.*
+!.env.example
+
+# Tests
+coverage/
+
+# Système
+.DS_Store
+Thumbs.db

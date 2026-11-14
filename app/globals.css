@@ -1,0 +1,133 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink-950: #08050c;
+  --color-ink-900: #100a18;
+  --color-ink-850: #150e1f;
+  --color-ink-800: #1b1227;
+  --color-ink-700: #261933;
+  --color-cream: #fbf4ec;
+  --color-rose: #ff6b95;
+  --color-rose-soft: #ffb3c8;
+  --color-gold: #f5c98a;
+  --color-mint: #9be6c6;
+
+  --font-display: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua",
+    Georgia, ui-serif, serif;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    min-height: 100dvh;
+    background-color: var(--color-ink-950);
+    background-image:
+      radial-gradient(65rem 50rem at 8% -12%, rgba(255, 107, 149, 0.16), transparent 62%),
+      radial-gradient(55rem 45rem at 102% -4%, rgba(124, 92, 255, 0.14), transparent 60%),
+      radial-gradient(45rem 40rem at 50% 118%, rgba(245, 201, 138, 0.08), transparent 65%);
+    background-attachment: fixed;
+    color: var(--color-cream);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background: var(--color-rose);
+    color: #2a0a15;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-rose);
+    outline-offset: 3px;
+  }
+
+  button {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+@layer utilities {
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .balance {
+    text-wrap: balance;
+  }
+
+  .glass {
+    background: rgba(255, 255, 255, 0.045);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+  }
+
+  .safe-bottom {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+
+  .grain {
+    background-image: radial-gradient(
+      circle at 1px 1px,
+      rgba(255, 255, 255, 0.3) 1px,
+      transparent 0
+    );
+    background-size: 18px 18px;
+  }
+
+  .animate-drift {
+    animation: drift 8s ease-in-out infinite;
+  }
+
+  .animate-pulse-soft {
+    animation: pulse-soft 1.8s ease-in-out infinite;
+  }
+}
+
+@keyframes drift {
+  0%,
+  100% {
+    transform: translateY(0) rotate(var(--tilt, 0deg));
+  }
+  50% {
+    transform: translateY(-9px) rotate(var(--tilt, 0deg));
+  }
+}
+
+@keyframes pulse-soft {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Sur mobile, `fixed` est mal géré (zoom/bandes) : on laisse le fond défiler. */
+@media (max-width: 640px) {
+  body {
+    background-attachment: scroll;
+  }
+}
