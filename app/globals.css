@@ -34,6 +34,106 @@
   --radius-tarot: 1.75rem;
 }
 
+/*
+ * Jetons de thème complémentaires (fonds, verre, parchemin, ornements).
+ * Les couleurs `--color-*` sont surchargées par `html[data-theme=…]`.
+ */
+:root {
+  --glow-a: rgba(122, 17, 32, 0.3);
+  --glow-b: rgba(197, 160, 89, 0.09);
+  --glow-c: rgba(122, 17, 32, 0.14);
+  --glow-d: rgba(122, 17, 32, 0.16);
+  --dot-color: rgba(234, 228, 220, 0.028);
+  --glass-bg: rgba(20, 18, 24, 0.72);
+  --glass-border: rgba(197, 160, 89, 0.22);
+  --card-wash: rgba(197, 160, 89, 0.05);
+  --card-top: #1a161c;
+  --card-bottom: #100d12;
+  --card-border: rgba(197, 160, 89, 0.22);
+  --orn: rgba(197, 160, 89, 0.55);
+}
+
+html[data-theme="minuit"] {
+  --color-ink-950: #060a12;
+  --color-ink-900: #0b111c;
+  --color-ink-850: #101827;
+  --color-ink-800: #162033;
+  --color-ink-700: #1e2a40;
+  --color-cream: #e7edf6;
+  --color-ash: #94a0b4;
+  --color-rose: #7b3557;
+  --color-rose-soft: #d0a3b6;
+  --color-gold: #b9c4d4;
+  --color-mint: #afc0d0;
+  --color-ember: #3a1f33;
+  --glow-a: rgba(70, 45, 110, 0.32);
+  --glow-b: rgba(165, 185, 215, 0.08);
+  --glow-c: rgba(35, 60, 110, 0.18);
+  --glow-d: rgba(55, 35, 95, 0.18);
+  --dot-color: rgba(231, 237, 246, 0.026);
+  --glass-bg: rgba(16, 24, 39, 0.75);
+  --glass-border: rgba(185, 196, 212, 0.22);
+  --card-wash: rgba(185, 196, 212, 0.05);
+  --card-top: #162033;
+  --card-bottom: #0b111c;
+  --card-border: rgba(185, 196, 212, 0.22);
+  --orn: rgba(185, 196, 212, 0.55);
+}
+
+html[data-theme="rose"] {
+  --color-ink-950: #120a0e;
+  --color-ink-900: #1a1016;
+  --color-ink-850: #21151c;
+  --color-ink-800: #2a1b23;
+  --color-ink-700: #35242d;
+  --color-cream: #f4e7e4;
+  --color-ash: #a99494;
+  --color-rose: #a03a52;
+  --color-rose-soft: #d9a8a9;
+  --color-gold: #d8b48e;
+  --color-mint: #c9b6b3;
+  --color-ember: #6b1f30;
+  --glow-a: rgba(140, 40, 70, 0.3);
+  --glow-b: rgba(216, 180, 142, 0.08);
+  --glow-c: rgba(90, 20, 40, 0.16);
+  --glow-d: rgba(110, 30, 55, 0.16);
+  --dot-color: rgba(244, 231, 228, 0.026);
+  --glass-bg: rgba(33, 21, 28, 0.75);
+  --glass-border: rgba(216, 180, 142, 0.22);
+  --card-wash: rgba(216, 180, 142, 0.05);
+  --card-top: #2a1b23;
+  --card-bottom: #1a1016;
+  --card-border: rgba(216, 180, 142, 0.22);
+  --orn: rgba(216, 180, 142, 0.55);
+}
+
+html[data-theme="foret"] {
+  --color-ink-950: #070d09;
+  --color-ink-900: #0c1410;
+  --color-ink-850: #101a13;
+  --color-ink-800: #16231a;
+  --color-ink-700: #1e2e22;
+  --color-cream: #ece9da;
+  --color-ash: #9daa9b;
+  --color-rose: #8e2f3c;
+  --color-rose-soft: #d2a0a0;
+  --color-gold: #c8b27a;
+  --color-mint: #b7c4b1;
+  --color-ember: #4a1b24;
+  --glow-a: rgba(35, 80, 50, 0.32);
+  --glow-b: rgba(200, 178, 122, 0.08);
+  --glow-c: rgba(25, 55, 32, 0.18);
+  --glow-d: rgba(30, 65, 40, 0.18);
+  --dot-color: rgba(236, 233, 218, 0.026);
+  --glass-bg: rgba(16, 26, 19, 0.75);
+  --glass-border: rgba(200, 178, 122, 0.22);
+  --card-wash: rgba(200, 178, 122, 0.05);
+  --card-top: #16231a;
+  --card-bottom: #0c1410;
+  --card-border: rgba(200, 178, 122, 0.22);
+  --orn: rgba(200, 178, 122, 0.55);
+}
+
 @layer base {
   html {
     color-scheme: dark;
@@ -45,15 +145,11 @@
     background-color: var(--color-ink-950);
     background-image:
       /* Trame de papier ancien, très discrète (première couche = dessus). */
-      radial-gradient(
-        circle at 1px 1px,
-        rgba(234, 228, 220, 0.028) 1px,
-        transparent 0
-      ),
-      radial-gradient(65rem 48rem at 50% -14%, rgba(122, 17, 32, 0.3), transparent 64%),
-      radial-gradient(52rem 40rem at 104% 18%, rgba(197, 160, 89, 0.09), transparent 62%),
-      radial-gradient(48rem 40rem at -6% 46%, rgba(122, 17, 32, 0.14), transparent 60%),
-      radial-gradient(55rem 45rem at 50% 116%, rgba(122, 17, 32, 0.16), transparent 66%);
+      radial-gradient(circle at 1px 1px, var(--dot-color) 1px, transparent 0),
+      radial-gradient(65rem 48rem at 50% -14%, var(--glow-a), transparent 64%),
+      radial-gradient(52rem 40rem at 104% 18%, var(--glow-b), transparent 62%),
+      radial-gradient(48rem 40rem at -6% 46%, var(--glow-c), transparent 60%),
+      radial-gradient(55rem 45rem at 50% 116%, var(--glow-d), transparent 66%);
     background-size:
       9px 9px,
       auto,
@@ -97,8 +193,8 @@
   }
 
   .glass {
-    background: rgba(20, 18, 24, 0.72);
-    border: 1px solid rgba(197, 160, 89, 0.22);
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
     backdrop-filter: blur(18px);
     -webkit-backdrop-filter: blur(18px);
   }
@@ -130,7 +226,7 @@
 
   /* Coins ornementés : quatre équerres d'or, façon enluminure. */
   .ornament-corners {
-    --orn-color: rgba(197, 160, 89, 0.55);
+    --orn-color: var(--orn);
     background-image:
       linear-gradient(var(--orn-color), var(--orn-color)),
       linear-gradient(var(--orn-color), var(--orn-color)),
@@ -164,9 +260,9 @@
   /* Surface « grimoire » : parchemin fumé, filet d'or. */
   .grimoire {
     background-image:
-      linear-gradient(180deg, rgba(197, 160, 89, 0.05), transparent 40%),
-      linear-gradient(180deg, rgba(26, 22, 28, 0.96), rgba(16, 13, 18, 0.98));
-    border: 1px solid rgba(197, 160, 89, 0.22);
+      linear-gradient(180deg, var(--card-wash), transparent 40%),
+      linear-gradient(180deg, var(--card-top), var(--card-bottom));
+    border: 1px solid var(--card-border);
   }
 
   /* Filet ornemental horizontal, pour séparer deux sections. */

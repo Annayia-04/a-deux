@@ -4,6 +4,7 @@ import { PreferenceForm } from "@/components/preference-form";
 import { Brand } from "@/components/brand";
 import { AccountCard } from "@/components/account-card";
 import { InstallCard } from "@/components/install-card";
+import { ThemePicker } from "@/components/theme-picker";
 import {
   ArrowRightIcon,
   BoltIcon,
@@ -164,6 +165,7 @@ export function SetupScreen({
           <div className="mt-4 space-y-3">
             <AccountCard account={account} providers={authProviders} />
             <InstallCard />
+            <ThemePicker />
           </div>
         </div>
       </div>

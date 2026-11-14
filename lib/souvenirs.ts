@@ -6,13 +6,25 @@ import {
   requireCoupleMembership,
 } from "@/lib/couple";
 import {
+  countSouvenirPhotos,
+  countSouvenirPhotosForSouvenir,
+  createSouvenirPhotoRecord,
   createSouvenirRecord,
+  deleteSouvenirPhotoRecord,
   findSouvenirIdByIdea,
   getSouvenirCoupleId,
+  getSouvenirPhotoForCouple,
   listSouvenirNotes,
+  listSouvenirPhotos,
   listSouvenirRecords,
   upsertSouvenirNote,
 } from "@/lib/db";
+import {
+  detectImageMime,
+  isPhotoTooLarge,
+  MAX_PHOTOS_PER_COUPLE,
+  MAX_PHOTOS_PER_SOUVENIR,
+} from "@/lib/images";
 import { HttpError } from "@/lib/http";
 import { IDEAS_BY_ID } from "@/lib/ideas";
 import type { SouvenirSnapshot } from "@/lib/types";
@@ -51,6 +63,21 @@ async function toSnapshots(
 ): Promise<SouvenirSnapshot[]> {
   const records = await listSouvenirRecords(coupleId);
   const notes = await listSouvenirNotes(coupleId);
+  const photos = await listSouvenirPhotos(coupleId);
+
+  const photosBySouvenir = new Map<
+    string,
+    { id: string; createdAt: number; mine: boolean }[]
+  >();
+  for (const photo of photos) {
+    const list = photosBySouvenir.get(photo.souvenirId) ?? [];
+    list.push({
+      id: photo.id,
+      createdAt: photo.createdAt,
+      mine: photo.sessionId === sessionId,
+    });
+    photosBySouvenir.set(photo.souvenirId, list);
+  }
 
   const bySouvenir = new Map<
     string,
@@ -81,6 +108,7 @@ async function toSnapshots(
       mine: entry.mine,
       partner: entry.partner,
       complete: entry.mine !== null && entry.partner !== null,
+      photos: photosBySouvenir.get(record.id) ?? [],
     };
   });
 }
@@ -176,6 +204,112 @@ async function saveBodyOnSouvenir(
   const snapshot = await findSnapshot(coupleId, sessionId, souvenirId);
   if (!snapshot) {
     throw new HttpError(500, "Impossible d’enregistrer ce souvenir.");
+  }
+  return snapshot;
+}
+
+export type PhotoUpload = { bytes: Buffer };
+
+/**
+ * Ajoute des photos à un souvenir existant.
+ * Le type réel est détecté côté serveur ; les quotas protègent la base.
+ */
+export async function addSouvenirPhotosForSession(
+  sessionId: string,
+  souvenirId: string,
+  uploads: PhotoUpload[],
+): Promise<SouvenirSnapshot> {
+  const membership = await requireCompleteCouple(sessionId);
+
+  if ((await getSouvenirCoupleId(souvenirId)) !== membership.id) {
+    throw new HttpError(404, "Ce souvenir est introuvable.");
+  }
+  if (uploads.length === 0) {
+    throw new HttpError(400, "Aucune photo à ajouter.");
+  }
+
+  const alreadyThere = await countSouvenirPhotosForSouvenir(souvenirId);
+  if (alreadyThere + uploads.length > MAX_PHOTOS_PER_SOUVENIR) {
+    throw new HttpError(
+      409,
+      `Un souvenir peut contenir au maximum ${MAX_PHOTOS_PER_SOUVENIR} photos.`,
+    );
+  }
+  const coupleTotal = await countSouvenirPhotos(membership.id);
+  if (coupleTotal + uploads.length > MAX_PHOTOS_PER_COUPLE) {
+    throw new HttpError(
+      409,
+      `L’album est complet (${MAX_PHOTOS_PER_COUPLE} photos). Supprimez une photo pour en ajouter une autre.`,
+    );
+  }
+
+  const validated = uploads.map((upload) => {
+    if (upload.bytes.byteLength === 0) {
+      throw new HttpError(400, "Ce fichier est vide.");
+    }
+    if (isPhotoTooLarge(upload.bytes.byteLength)) {
+      throw new HttpError(413, "Cette photo est trop lourde (2,5 Mo maximum).");
+    }
+    const mime = detectImageMime(upload.bytes);
+    if (!mime) {
+      throw new HttpError(
+        415,
+        "Format d’image non reconnu. Utilisez JPEG, PNG ou WebP.",
+      );
+    }
+    return { mime, bytes: upload.bytes };
+  });
+
+  for (const photo of validated) {
+    await createSouvenirPhotoRecord({
+      id: randomBytes(12).toString("hex"),
+      souvenirId,
+      sessionId,
+      mime: photo.mime,
+      data: photo.bytes,
+    });
+  }
+
+  const snapshot = await findSnapshot(membership.id, sessionId, souvenirId);
+  if (!snapshot) {
+    throw new HttpError(500, "Impossible d’enregistrer ces photos.");
+  }
+  return snapshot;
+}
+
+/** Récupère les octets d'une photo, uniquement pour les membres du duo. */
+export async function getSouvenirPhotoForSession(
+  sessionId: string,
+  photoId: string,
+) {
+  const membership = await requireCoupleMembership(sessionId);
+  const photo = await getSouvenirPhotoForCouple(photoId, membership.id);
+  if (!photo) {
+    throw new HttpError(404, "Cette photo est introuvable.");
+  }
+  return photo;
+}
+
+/** Seul l'auteur de l'envoi peut supprimer sa photo. */
+export async function deleteSouvenirPhotoForSession(
+  sessionId: string,
+  photoId: string,
+): Promise<SouvenirSnapshot> {
+  const membership = await requireCoupleMembership(sessionId);
+  const photo = await getSouvenirPhotoForCouple(photoId, membership.id);
+  if (!photo) {
+    throw new HttpError(404, "Cette photo est introuvable.");
+  }
+  const deleted = await deleteSouvenirPhotoRecord(photoId, sessionId);
+  if (!deleted) {
+    throw new HttpError(
+      403,
+      "Seule la personne qui a envoyé cette photo peut la retirer.",
+    );
+  }
+  const snapshot = await findSnapshot(membership.id, sessionId, photo.souvenirId);
+  if (!snapshot) {
+    throw new HttpError(404, "Ce souvenir est introuvable.");
   }
   return snapshot;
 }

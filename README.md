@@ -19,6 +19,8 @@ Une application fullstack de cartes à swiper : on choisit d’abord son budget,
 - **Notification de match** : célébration plein écran pour celui qui vient de swiper, badge et panneau pour l’autre, rafraîchis par un polling léger (8 s) tant que l’app est ouverte.
 - **Panneau duo en feuille** : un tiroir glissable, extensible vers le haut pour lire les souvenirs et swiper les cartes à l’aise ; l’onglet Choix s’ouvre agrandi et reste accessible en un tap depuis l’en-tête.
 - **Journal de souvenirs** : après un date, chaque partenaire raconte son moment préféré. Les deux versions se retrouvent dans une timeline groupée par mois, avec un état « 2/2 » quand le souvenir est complet. Un seul souvenir existe par idée : le second membre rejoint automatiquement celui du premier.
+- **Album souvenir** : chaque date peut accueillir jusqu’à 8 photos, compressées côté client (JPEG 1600 px, métadonnées EXIF supprimées), revalidées côté serveur (type réel, taille, quotas) et stockées dans PostgreSQL. Elles ne sont servies qu’aux deux membres par une route authentifiée, sans URL publique. L’onglet **Album** regroupe toutes les photos du duo avec une visionneuse plein écran.
+- **Quatre thèmes visuels** : Gothique romantique, Minuit, Rose fanée et Forêt ancienne. Le choix se fait dans **Apparence**, s’applique instantanément et est mémorisé par un cookie lu côté serveur (aucun flash au chargement).
 - **Choix Nourriture / Films** : un deck de 30 plats et 40 films, swipé séparément par chaque membre. Un match mutuel est signalé et conservé dans l’espace à deux. Un bouton dédié dans l’en-tête ouvre directement le deck.
 - **Pensée rapide (tap)** : un bouton dans l’en-tête envoie un halo, un petit carillon et une vibration au partenaire quand le navigateur le permet. Sur iOS, où la Vibration API n’existe pas, le halo et le son prennent le relais ; le son se coupe depuis le panneau duo.
 - **240 idées de rendez-vous** dans un catalogue typé, avec visuels CSS/emoji (aucune image distante), dont 81 gratuites.
@@ -34,6 +36,8 @@ L’application suit une identité **gothique romantique et aristocratique** : n
 | `ink-850` | `#141218` | Cartes, panneaux |
 | `cream` | `#EAE4DC` | Texte courant (15,7:1 sur `ink-950`) |
 | `ash` | `#8E8894` | Métadonnées, légendes (5,8:1) |
+
+Quatre ambiances sont proposées dans **Apparence** : **Gothique romantique** (noir, bordeaux, or), **Minuit** (bleu nuit, prune, argent), **Rose fanée** (prune, rose poudré, or rose) et **Forêt ancienne** (vert profond, bordeaux, laiton). Les jetons `--color-*` et les fonds sont surchargés par `html[data-theme=…]`, donc tous les composants suivent sans modification.
 | `rose` | `#9E192D` | Actions clés, matchs, tap |
 | `ember` | `#7A1120` | Creux des dégradés bordeaux |
 | `rose-soft` | `#C98F93` | Accents textuels (7,4:1) |
@@ -287,6 +291,7 @@ PostgreSQL (`db/migrations/003_game_data.sql`) :
 - `match_views` : état « vu » par membre (`couple_id`, `idea_id`, `session_id`, `viewed_at`).
 - `souvenirs` : date vécu (`id`, `couple_id`, `idea_id` facultatif, `title`, `emoji`, `happened_at`, `created_by`, `created_at`). Le titre et l’emoji sont figés à la création pour rester lisibles même si le catalogue change. Un index unique partiel sur `(couple_id, idea_id)` garantit un seul souvenir par idée ; les doublons historiques sont fusionnés au démarrage en conservant les notes des deux membres.
 - `souvenir_notes` : un moment par membre et par souvenir (`souvenir_id`, `session_id`, `body`, `created_at`, `updated_at`), clé primaire composite.
+- `souvenir_photos` : photos d’un souvenir (`id`, `souvenir_id`, `session_id`, `mime`, `byte_size`, `data` en `bytea`, `created_at`). Huit photos maximum par souvenir, 80 par duo, 2,5 Mo maximum par image après compression.
 - `choice_swipes` : like/pass personnel sur une carte (`session_id`, `category`, `choice_id`, `direction`, `created_at`).
 - `choice_matches` : matchs mutuels Nourriture / Films (`couple_id`, `category`, `choice_id`, `created_at`).
 - `choice_match_views` : état « vu » par membre (`couple_id`, `category`, `choice_id`, `session_id`, `viewed_at`).
@@ -477,7 +482,7 @@ npm run typecheck
 npm test
 ```
 
-103 tests unitaires couvrent le catalogue d’idées et de choix, le filtrage/classement, les schémas Zod (préférences, duo, souvenirs, choix, tap), le nettoyage du texte libre, les codes d’invitation, les jetons de session, le rate limiter, la configuration SSO, les raccourcis de lancement PWA, ainsi que la signature des cookies OAuth et la vérification complète des `id_token` Google (signature RSA, `iss`, `aud`, `exp`, `iat`, `nonce`, algorithme, `kid`).
+112 tests unitaires couvrent le catalogue d’idées et de choix, le filtrage/classement, les schémas Zod (préférences, duo, souvenirs, choix, tap), le nettoyage du texte libre, les codes d’invitation, les jetons de session, le rate limiter, la configuration SSO, les raccourcis de lancement PWA, ainsi que la signature des cookies OAuth et la vérification complète des `id_token` Google (signature RSA, `iss`, `aud`, `exp`, `iat`, `nonce`, algorithme, `kid`).
 
 Test de fumée complet (serveur de production requis) :
 

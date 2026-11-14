@@ -247,3 +247,23 @@ export function GoogleIcon({ className = "h-4 w-4" }: IconProps) {
     </svg>
   );
 }
+
+export function CameraIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M4.5 8.5h3l1.4-2h6.2l1.4 2h3a1.5 1.5 0 0 1 1.5 1.5v7A1.5 1.5 0 0 1 19.5 18h-15A1.5 1.5 0 0 1 3 16.5v-7a1.5 1.5 0 0 1 1.5-1.5Z" />
+      <circle cx="12" cy="12.8" r="3.3" />
+    </svg>
+  );
+}
+
+export function PaletteIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M12 3a9 9 0 1 0 0 18c1.4 0 2.2-.9 2.2-2 0-.6-.2-1-.5-1.4-.3-.4-.5-.8-.5-1.2 0-1 .8-1.7 1.9-1.7H17a4 4 0 0 0 4-4C21 6.4 17 3 12 3Z" />
+      <circle cx="7.8" cy="10" r="1" />
+      <circle cx="10.5" cy="7" r="1" />
+      <circle cx="15" cy="7.4" r="1" />
+    </svg>
+  );
+}

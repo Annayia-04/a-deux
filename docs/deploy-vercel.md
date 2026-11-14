@@ -80,7 +80,10 @@ anonyme fonctionne normalement.
    un second navigateur, écrire un souvenir, envoyer un tap.
 3. Vérifier les cookies : `Secure`, `HttpOnly`, `SameSite=Lax` (onglet
    Application des DevTools).
-4. Installer la PWA depuis le téléphone (HTTPS requis) : l’icône « À deux »
+4. Tester l’album : ajouter une photo à un souvenir, vérifier qu’elle
+   n’est visible que depuis les deux sessions du duo, puis changer de thème
+   dans **Apparence** et recharger la page.
+5. Installer la PWA depuis le téléphone (HTTPS requis) : l’icône « À deux »
    apparaît, avec les raccourcis « Petit ping » et « Mon duo ».
 5. Widget Android : recompiler l’APK avec l’URL publique, puis
    `node scripts/render-android-assets.mjs` si les visuels changent.
@@ -102,6 +105,9 @@ par le couple.
 
 - Choisir la région Vercel la plus proche de la base (par défaut `iad1` pour
   Neon US). Pour l’Europe : base Neon `eu-central-1` + Vercel `cdg1`.
+- Les photos sont stockées en `bytea` dans PostgreSQL : pas besoin de Vercel
+  Blob, et aucune URL publique. La limite Neon free (0,5 Go) couvre largement
+  l’album d’un couple (80 photos × ~300 Ko).
 - Le pool est créé paresseusement et réutilisé par instance de fonction
   (`max: 5`). La chaîne pooled évite d’épuiser les connexions.
 - Les pages dépendant de la session sont dynamiques (`no-store`) : aucune

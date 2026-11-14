@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
+import { cookies } from "next/headers";
 import { ServiceWorkerRegister } from "@/components/service-worker-register";
+import { parseTheme, THEME_COOKIE } from "@/lib/themes";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -50,11 +52,14 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const store = await cookies();
+  const theme = parseTheme(store.get(THEME_COOKIE)?.value);
+
   return (
-    <html lang="fr">
+    <html lang="fr" data-theme={theme}>
       <body>
         <ServiceWorkerRegister />
         {children}

@@ -108,6 +108,8 @@ export function DuoDialog({
   const [souvenirState, setSouvenirState] = useState<SouvenirState>(null);
   const [souvenirBusy, setSouvenirBusy] = useState(false);
   const [souvenirError, setSouvenirError] = useState<string | null>(null);
+  // Évite de recréer un souvenir si seul l'envoi des photos a échoué.
+  const pendingSouvenirRef = useRef<string | null>(null);
   const [expanded, setExpanded] = useState(false);
   const isMobile = useIsMobile();
   const dragMovedRef = useRef(false);
@@ -242,21 +244,35 @@ export function DuoDialog({
   );
 
   const openSouvenirFromNote = useCallback((souvenir: SouvenirSnapshot) => {
+    pendingSouvenirRef.current = null;
     setSouvenirError(null);
     setSouvenirState({ mode: "note", souvenir });
   }, []);
 
   const openNewSouvenir = useCallback(() => {
+    pendingSouvenirRef.current = null;
     setSouvenirError(null);
     setSouvenirState({ mode: "create", prefill: null });
   }, []);
 
   const handleCreateSouvenir = useCallback(
-    async (input: Parameters<typeof souvenirs.create>[0]) => {
+    async (
+      input: Parameters<typeof souvenirs.create>[0],
+      photos: File[],
+    ) => {
       setSouvenirBusy(true);
       setSouvenirError(null);
       try {
-        await souvenirs.create(input);
+        let createdId = pendingSouvenirRef.current;
+        if (!createdId) {
+          const created = await souvenirs.create(input);
+          createdId = created.id;
+          pendingSouvenirRef.current = createdId;
+        }
+        if (photos.length > 0) {
+          await souvenirs.addPhotos(createdId, photos);
+        }
+        pendingSouvenirRef.current = null;
         setSouvenirState(null);
         selectTab("souvenirs");
       } catch (caught) {
@@ -271,11 +287,16 @@ export function DuoDialog({
   );
 
   const handleSaveNote = useCallback(
-    async (id: string, body: string) => {
+    async (id: string, body: string, photos: File[]) => {
       setSouvenirBusy(true);
       setSouvenirError(null);
       try {
-        await souvenirs.saveNote(id, body);
+        if (body.trim().length > 0) {
+          await souvenirs.saveNote(id, body);
+        }
+        if (photos.length > 0) {
+          await souvenirs.addPhotos(id, photos);
+        }
         setSouvenirState(null);
       } catch (caught) {
         setSouvenirError(
@@ -283,6 +304,26 @@ export function DuoDialog({
         );
       } finally {
         setSouvenirBusy(false);
+      }
+    },
+    [souvenirs],
+  );
+
+  const handleDeleteSouvenirPhoto = useCallback(
+    async (photoId: string) => {
+      setSouvenirError(null);
+      try {
+        const updated = await souvenirs.deletePhoto(photoId);
+        setSouvenirState((current) =>
+          current?.mode === "note" && current.souvenir.id === updated.id
+            ? { mode: "note", souvenir: updated }
+            : current,
+        );
+      } catch (caught) {
+        setSouvenirError(
+          errorMessage(caught, "Impossible de retirer cette photo."),
+        );
+        throw caught;
       }
     },
     [souvenirs],
@@ -663,6 +704,7 @@ export function DuoDialog({
                       error={souvenirs.error}
                       onAdd={openNewSouvenir}
                       onEditMine={openSouvenirFromNote}
+                      onDeletePhoto={handleDeleteSouvenirPhoto}
                     />
                   ) : (
                     <WaitingPartner
@@ -784,11 +826,13 @@ export function DuoDialog({
         error={souvenirError}
         onClose={() => {
           if (souvenirBusy) return;
+          pendingSouvenirRef.current = null;
           setSouvenirState(null);
           setSouvenirError(null);
         }}
         onCreate={handleCreateSouvenir}
         onSaveNote={handleSaveNote}
+        onDeletePhoto={handleDeleteSouvenirPhoto}
       />
     </>
   );

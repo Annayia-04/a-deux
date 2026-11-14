@@ -103,5 +103,41 @@ export function useSouvenirs({
     return result.souvenir;
   }, []);
 
-  return { souvenirs, loading, error, refresh, create, saveNote };
+  const addPhotos = useCallback(
+    async (id: string, files: File[]) => {
+      const updated = await api.uploadSouvenirPhotos(id, files);
+      setSouvenirs((current) =>
+        sortSouvenirs(
+          current.map((souvenir) =>
+            souvenir.id === updated.id ? updated : souvenir,
+          ),
+        ),
+      );
+      return updated;
+    },
+    [],
+  );
+
+  const deletePhoto = useCallback(async (photoId: string) => {
+    const result = await api.deleteSouvenirPhoto(photoId);
+    setSouvenirs((current) =>
+      sortSouvenirs(
+        current.map((souvenir) =>
+          souvenir.id === result.souvenir.id ? result.souvenir : souvenir,
+        ),
+      ),
+    );
+    return result.souvenir;
+  }, []);
+
+  return {
+    souvenirs,
+    loading,
+    error,
+    refresh,
+    create,
+    saveNote,
+    addPhotos,
+    deletePhoto,
+  };
 }

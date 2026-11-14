@@ -224,6 +224,49 @@ export const api = {
     });
   },
 
+  async uploadSouvenirPhotos(
+    souvenirId: string,
+    files: File[],
+  ): Promise<SouvenirSnapshot> {
+    const body = new FormData();
+    for (const file of files) body.append("photos", file);
+
+    let response: Response;
+    try {
+      response = await fetch(`/api/souvenirs/${souvenirId}/photos`, {
+        method: "POST",
+        body,
+        credentials: "same-origin",
+        cache: "no-store",
+      });
+    } catch {
+      throw new ApiError("Connexion impossible. Vérifiez votre réseau.", 0);
+    }
+
+    const payload: unknown = await response.json().catch(() => null);
+    if (!response.ok) {
+      const message =
+        payload !== null &&
+        typeof payload === "object" &&
+        "error" in payload &&
+        typeof (payload as { error: unknown }).error === "string"
+          ? (payload as { error: string }).error
+          : "Impossible d’ajouter ces photos.";
+      throw new ApiError(message, response.status);
+    }
+
+    return (payload as { souvenir: SouvenirSnapshot }).souvenir;
+  },
+
+  deleteSouvenirPhoto(
+    photoId: string,
+  ): Promise<{ souvenir: SouvenirSnapshot }> {
+    return request<{ souvenir: SouvenirSnapshot }>(
+      `/api/souvenirs/photos/${photoId}`,
+      { method: "DELETE" },
+    );
+  },
+
   revokeWidget(token: string): Promise<{ ok: boolean }> {
     return request<{ ok: boolean }>("/api/widget/devices", {
       method: "DELETE",

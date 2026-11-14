@@ -665,6 +665,71 @@ await check("souvenir créé par A, moment du partenaire encore vide", async () 
   );
 });
 
+await check("photos : envoi, lecture privée et suppression", async () => {
+  const png = Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl2n1cAAAAASUVORK5CYII=",
+    "base64",
+  );
+  const form = new FormData();
+  form.append("photos", new Blob([png], { type: "image/png" }), "souvenir.png");
+
+  const upload = await fetch(`${BASE}/api/souvenirs/${souvenirId}/photos`, {
+    method: "POST",
+    headers: { cookie: clientA.cookie, origin: ORIGIN },
+    body: form,
+    redirect: "manual",
+  });
+  assert.equal(upload.status, 201);
+  const uploaded = await upload.json();
+  assert.equal(uploaded.souvenir.photos.length, 1);
+  assert.equal(uploaded.souvenir.photos[0].mine, true);
+  const photoId = uploaded.souvenir.photos[0].id;
+  assert.match(photoId, /^[a-f0-9]{24}$/);
+
+  const image = await fetch(`${BASE}/api/souvenirs/photos/${photoId}`, {
+    headers: { cookie: clientA.cookie },
+    redirect: "manual",
+  });
+  assert.equal(image.status, 200);
+  assert.match(
+    image.headers.get("content-type") ?? "",
+    /image\/png/,
+    "type d’image inattendu",
+  );
+  assert.ok((await image.arrayBuffer()).byteLength > 0);
+
+  const anonymous = await fetch(`${BASE}/api/souvenirs/photos/${photoId}`, {
+    redirect: "manual",
+  });
+  assert.equal(anonymous.status, 401);
+
+  const byPartner = await fetch(`${BASE}/api/souvenirs/photos/${photoId}`, {
+    headers: { cookie: clientB.cookie },
+    redirect: "manual",
+  });
+  assert.equal(byPartner.status, 200);
+
+  const partnerDelete = await fetch(
+    `${BASE}/api/souvenirs/photos/${photoId}`,
+    {
+      method: "DELETE",
+      headers: { cookie: clientB.cookie, origin: ORIGIN },
+      redirect: "manual",
+    },
+  );
+  assert.equal(partnerDelete.status, 403);
+
+  const ownerDelete = await fetch(`${BASE}/api/souvenirs/photos/${photoId}`, {
+    method: "DELETE",
+    headers: { cookie: clientA.cookie, origin: ORIGIN },
+    redirect: "manual",
+  });
+  assert.equal(ownerDelete.status, 200);
+
+  const after = await clientApi(clientA, "/api/souvenirs");
+  assert.equal(after.data.souvenirs[0].photos.length, 0);
+});
+
 await check("chaque partenaire écrit son moment, le souvenir devient complet", async () => {
   const note = await clientApi(
     clientB,
@@ -1014,6 +1079,20 @@ await check("rate limit sur la création de session", async () => {
     statuses.includes(429),
     `aucun 429 reçu : ${statuses.join(",")}`,
   );
+});
+
+await check("thème : cookie appliqué côté serveur, valeur forgée ignorée", async () => {
+  const custom = await fetch(`${BASE}/`, {
+    headers: { cookie: "a_deux_theme=minuit" },
+  });
+  const customHtml = await custom.text();
+  assert.match(customHtml, /data-theme="minuit"/);
+
+  const forged = await fetch(`${BASE}/`, {
+    headers: { cookie: "a_deux_theme=inconnu" },
+  });
+  const forgedHtml = await forged.text();
+  assert.match(forgedHtml, /data-theme="gothique"/);
 });
 
 await check("manifeste PWA servi et complet", async () => {

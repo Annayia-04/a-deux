@@ -97,6 +97,13 @@ export type ChoiceSnapshot = {
   unread: number;
 };
 
+export type SouvenirPhotoSummary = {
+  id: string;
+  createdAt: number;
+  /** Vrai si la photo a été envoyée par la session courante. */
+  mine: boolean;
+};
+
 export type SouvenirSnapshot = {
   id: string;
   title: string;
@@ -110,6 +117,8 @@ export type SouvenirSnapshot = {
   partner: string | null;
   /** Vrai quand les deux membres ont raconté leur moment. */
   complete: boolean;
+  /** Photos de ce souvenir, dans l'ordre d'envoi. */
+  photos: SouvenirPhotoSummary[];
 };
 
 export type TapSnapshot = {

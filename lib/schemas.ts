@@ -105,6 +105,8 @@ const souvenirEmojiSchema = z
 /** Identifiant de souvenir : 12 octets aléatoires en hexadécimal. */
 export const souvenirIdSchema = z.string().regex(/^[a-f0-9]{24}$/);
 
+export const souvenirPhotoIdSchema = z.string().regex(/^[a-f0-9]{24}$/);
+
 const happenedAtSchema = z
   .number()
   .int()

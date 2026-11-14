@@ -52,6 +52,19 @@ export type SouvenirRecord = {
   createdBy: string | null;
 };
 
+export type SouvenirPhotoRecord = {
+  id: string;
+  souvenirId: string;
+  sessionId: string;
+  mime: string;
+  byteSize: number;
+  createdAt: number;
+};
+
+export type SouvenirPhotoBlob = SouvenirPhotoRecord & {
+  data: Buffer;
+};
+
 export type SouvenirNoteRecord = {
   souvenirId: string;
   sessionId: string;
@@ -753,6 +766,96 @@ export async function upsertSouvenirNote(
      DO UPDATE SET body = EXCLUDED.body, updated_at = EXCLUDED.updated_at`,
     [souvenirId, sessionId, body, now],
   );
+}
+
+// ---------------------------------------------------------------------------
+// Photos des souvenirs
+// ---------------------------------------------------------------------------
+
+export async function createSouvenirPhotoRecord(input: {
+  id: string;
+  souvenirId: string;
+  sessionId: string;
+  mime: string;
+  data: Buffer;
+  now?: number;
+}): Promise<void> {
+  await query(
+    `INSERT INTO souvenir_photos
+       (id, souvenir_id, session_id, mime, byte_size, data, created_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+    [
+      input.id,
+      input.souvenirId,
+      input.sessionId,
+      input.mime,
+      input.data.byteLength,
+      input.data,
+      input.now ?? Date.now(),
+    ],
+  );
+}
+
+export async function listSouvenirPhotos(
+  coupleId: string,
+): Promise<SouvenirPhotoRecord[]> {
+  return query<SouvenirPhotoRecord>(
+    `SELECT p.id, p.souvenir_id AS "souvenirId", p.session_id AS "sessionId",
+            p.mime, p.byte_size AS "byteSize", p.created_at AS "createdAt"
+       FROM souvenir_photos p
+       JOIN souvenirs s ON s.id = p.souvenir_id
+      WHERE s.couple_id = $1
+      ORDER BY p.created_at ASC`,
+    [coupleId],
+  );
+}
+
+export async function countSouvenirPhotos(coupleId: string): Promise<number> {
+  const row = await queryOne<{ total: number }>(
+    `SELECT COUNT(*)::int AS total
+       FROM souvenir_photos p
+       JOIN souvenirs s ON s.id = p.souvenir_id
+      WHERE s.couple_id = $1`,
+    [coupleId],
+  );
+  return row?.total ?? 0;
+}
+
+export async function countSouvenirPhotosForSouvenir(
+  souvenirId: string,
+): Promise<number> {
+  const row = await queryOne<{ total: number }>(
+    `SELECT COUNT(*)::int AS total FROM souvenir_photos WHERE souvenir_id = $1`,
+    [souvenirId],
+  );
+  return row?.total ?? 0;
+}
+
+export async function getSouvenirPhotoForCouple(
+  photoId: string,
+  coupleId: string,
+): Promise<SouvenirPhotoBlob | null> {
+  return queryOne<SouvenirPhotoBlob>(
+    `SELECT p.id, p.souvenir_id AS "souvenirId", p.session_id AS "sessionId",
+            p.mime, p.byte_size AS "byteSize", p.created_at AS "createdAt",
+            p.data
+       FROM souvenir_photos p
+       JOIN souvenirs s ON s.id = p.souvenir_id
+      WHERE p.id = $1 AND s.couple_id = $2`,
+    [photoId, coupleId],
+  );
+}
+
+/** Seul l'auteur de l'envoi peut retirer sa photo. */
+export async function deleteSouvenirPhotoRecord(
+  photoId: string,
+  sessionId: string,
+): Promise<boolean> {
+  const changes = await getPoolQuery(
+    "DELETE FROM souvenir_photos WHERE id = $1 AND session_id = $2",
+    [photoId, sessionId],
+  );
+  return changes > 0;
 }
 
 // ---------------------------------------------------------------------------

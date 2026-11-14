@@ -1,12 +1,19 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AlertIcon, SparklesIcon, XIcon } from "@/components/icons";
+import {
+  AlertIcon,
+  CameraIcon,
+  SparklesIcon,
+  XIcon,
+} from "@/components/icons";
 import type { SouvenirDraft } from "@/lib/api-client";
+import { compressPhotos } from "@/lib/images-client";
 import type { SouvenirSnapshot } from "@/lib/types";
 
 const EMOJIS = ["✨", "🕯️", "🥀", "🍽️", "🎬", "🌙"];
 const MAX_BODY = 500;
+const MAX_PHOTOS = 8;
 
 function toDateInput(timestamp: number): string {
   const date = new Date(timestamp);
@@ -46,9 +53,178 @@ type Props = {
   busy: boolean;
   error: string | null;
   onClose: () => void;
-  onCreate: (input: SouvenirDraft) => Promise<void>;
-  onSaveNote: (id: string, body: string) => Promise<void>;
+  onCreate: (input: SouvenirDraft, photos: File[]) => Promise<void>;
+  onSaveNote: (id: string, body: string, photos: File[]) => Promise<void>;
+  onDeletePhoto: (photoId: string) => Promise<void>;
 };
+
+function PhotoPicker({
+  existing,
+  files,
+  total,
+  busy,
+  preparing,
+  error,
+  confirmDeleteId,
+  deletingId,
+  onFiles,
+  onRemoveFile,
+  onAskDelete,
+  onCancelDelete,
+  onDelete,
+}: {
+  existing: SouvenirSnapshot["photos"];
+  files: File[];
+  total: number;
+  busy: boolean;
+  preparing: boolean;
+  error: string | null;
+  confirmDeleteId: string | null;
+  deletingId: string | null;
+  onFiles: (files: File[]) => void;
+  onRemoveFile: (index: number) => void;
+  onAskDelete: (id: string) => void;
+  onCancelDelete: () => void;
+  onDelete: (id: string) => void;
+}) {
+  const previews = useMemo(
+    () => files.map((file) => ({ file, url: URL.createObjectURL(file) })),
+    [files],
+  );
+
+  useEffect(
+    () => () => {
+      for (const preview of previews) URL.revokeObjectURL(preview.url);
+    },
+    [previews],
+  );
+
+  const remaining = MAX_PHOTOS - total;
+
+  return (
+    <section className="mt-4">
+      <div className="flex items-baseline justify-between gap-2">
+        <p className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-gold/70">
+          Photos
+        </p>
+        <span className="text-[10px] text-ash">
+          {total} / {MAX_PHOTOS}
+        </span>
+      </div>
+
+      <div className="mt-2 grid grid-cols-4 gap-2">
+        {existing.map((photo) => (
+          <div
+            key={photo.id}
+            className="relative aspect-square overflow-hidden rounded-xl border border-gold/20 bg-ink-950/60"
+          >
+            <img
+              src={`/api/souvenirs/photos/${photo.id}`}
+              alt=""
+              loading="lazy"
+              decoding="async"
+              className="h-full w-full object-cover"
+            />
+            {photo.mine ? (
+              <button
+                type="button"
+                onClick={() => onAskDelete(photo.id)}
+                aria-label="Retirer cette photo"
+                className="absolute right-1 top-1 grid h-7 w-7 place-items-center rounded-full border border-gold/30 bg-ink-950/80 text-cream/80 transition hover:text-cream"
+              >
+                <XIcon className="h-3.5 w-3.5" />
+              </button>
+            ) : null}
+
+            {confirmDeleteId === photo.id ? (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-ink-950/90 px-1 text-center">
+                <p className="text-[9px] leading-tight text-cream/80">
+                  Retirer ?
+                </p>
+                <div className="flex gap-1">
+                  <button
+                    type="button"
+                    onClick={() => onDelete(photo.id)}
+                    disabled={deletingId === photo.id}
+                    className="rounded-md bg-rose px-1.5 py-0.5 text-[9px] font-semibold text-cream disabled:opacity-50"
+                  >
+                    {deletingId === photo.id ? "…" : "Oui"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onCancelDelete}
+                    className="rounded-md border border-gold/20 px-1.5 py-0.5 text-[9px] text-cream/60"
+                  >
+                    Non
+                  </button>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        ))}
+
+        {previews.map((preview, index) => (
+          <div
+            key={`${preview.file.name}-${index}`}
+            className="relative aspect-square overflow-hidden rounded-xl border border-gold/20 bg-ink-950/60"
+          >
+            <img
+              src={preview.url}
+              alt=""
+              className="h-full w-full object-cover"
+            />
+            <button
+              type="button"
+              onClick={() => onRemoveFile(index)}
+              aria-label="Retirer cette photo"
+              className="absolute right-1 top-1 grid h-7 w-7 place-items-center rounded-full border border-gold/30 bg-ink-950/80 text-cream/80 transition hover:text-cream"
+            >
+              <XIcon className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        ))}
+
+        {remaining > 0 ? (
+          <label className="grid aspect-square cursor-pointer place-items-center rounded-xl border border-dashed border-gold/30 bg-gold/[0.04] text-gold transition hover:border-gold/55 hover:bg-gold/[0.08]">
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              className="sr-only"
+              disabled={busy || preparing}
+              onChange={(event) => {
+                // Copier la liste AVANT de vider l'input : FileList est vivant
+                // et serait vidé par `value = ""`.
+                const selected = event.target.files
+                  ? Array.from(event.target.files)
+                  : [];
+                event.target.value = "";
+                onFiles(selected);
+              }}
+            />
+            <CameraIcon className="h-5 w-5" />
+            <span className="mt-0.5 text-[9px]">Ajouter</span>
+          </label>
+        ) : null}
+      </div>
+
+      <p className="mt-1.5 text-[10px] leading-relaxed text-ash">
+        JPEG compressé, 1600 px max · visible uniquement par vous deux.
+      </p>
+
+      {preparing ? (
+        <p role="status" className="mt-1 text-[10.5px] text-gold">
+          Préparation des photos…
+        </p>
+      ) : null}
+      {error ? (
+        <p role="alert" className="mt-1 text-[10.5px] text-rose-soft">
+          {error}
+        </p>
+      ) : null}
+    </section>
+  );
+}
 
 export function SouvenirDialog({
   open,
@@ -60,16 +236,25 @@ export function SouvenirDialog({
   onClose,
   onCreate,
   onSaveNote,
+  onDeletePhoto,
 }: Props) {
   const [title, setTitle] = useState("");
   const [emoji, setEmoji] = useState("✨");
   const [date, setDate] = useState(() => toDateInput(Date.now()));
   const [body, setBody] = useState("");
   const [localError, setLocalError] = useState<string | null>(null);
+  const [photoFiles, setPhotoFiles] = useState<File[]>([]);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const [preparing, setPreparing] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
     setLocalError(null);
+    setPhotoError(null);
+    setPhotoFiles([]);
+    setConfirmDeleteId(null);
     setBody(mode === "note" ? (souvenir?.mine ?? "") : "");
     setTitle(prefill?.title ?? "");
     setEmoji(prefill?.emoji ?? "✨");
@@ -98,13 +283,55 @@ export function SouvenirDialog({
   const canSubmit = useMemo(() => {
     if (busy) return false;
     if (mode === "note") {
-      return trimmedBody.length >= 1 && trimmedBody.length <= MAX_BODY;
+      if (trimmedBody.length > MAX_BODY) return false;
+      return trimmedBody.length >= 1 || photoFiles.length > 0;
     }
     if (!usingIdea && title.trim().length < 2) return false;
     return trimmedBody.length <= MAX_BODY;
-  }, [busy, mode, trimmedBody, title, usingIdea]);
+  }, [busy, mode, trimmedBody, title, usingIdea, photoFiles.length]);
 
   if (!open) return null;
+
+  const existingPhotos = souvenir?.photos ?? [];
+  const totalPhotos = existingPhotos.length + photoFiles.length;
+
+  async function handleFiles(files: File[]) {
+    if (files.length === 0) return;
+    const available = MAX_PHOTOS - totalPhotos;
+    if (available <= 0) {
+      setPhotoError(`Ce souvenir contient déjà ${MAX_PHOTOS} photos.`);
+      return;
+    }
+    const selected = files.slice(0, Math.min(available, 6));
+    setPreparing(true);
+    setPhotoError(null);
+    try {
+      const prepared = await compressPhotos(selected);
+      setPhotoFiles((current) => [...current, ...prepared]);
+    } catch (caught) {
+      setPhotoError(
+        caught instanceof Error
+          ? caught.message
+          : "Impossible de préparer ces photos.",
+      );
+    } finally {
+      setPreparing(false);
+    }
+  }
+
+  async function handleDeletePhoto(photoId: string) {
+    setDeletingId(photoId);
+    try {
+      await onDeletePhoto(photoId);
+      setConfirmDeleteId(null);
+    } catch (caught) {
+      setPhotoError(
+        caught instanceof Error ? caught.message : "Impossible de retirer cette photo.",
+      );
+    } finally {
+      setDeletingId(null);
+    }
+  }
 
   async function handleSubmit() {
     if (!canSubmit) return;
@@ -116,7 +343,7 @@ export function SouvenirDialog({
         setLocalError("Écrivez au moins quelques mots.");
         return;
       }
-      await onSaveNote(souvenir.id, trimmedBody);
+      await onSaveNote(souvenir.id, trimmedBody, photoFiles);
       return;
     }
 
@@ -126,13 +353,16 @@ export function SouvenirDialog({
       return;
     }
 
-    await onCreate({
-      ...(prefill?.ideaId
-        ? { ideaId: prefill.ideaId }
-        : { title: title.trim(), emoji }),
-      happenedAt,
-      ...(trimmedBody.length > 0 ? { body: trimmedBody } : {}),
-    });
+    await onCreate(
+      {
+        ...(prefill?.ideaId
+          ? { ideaId: prefill.ideaId }
+          : { title: title.trim(), emoji }),
+        happenedAt,
+        ...(trimmedBody.length > 0 ? { body: trimmedBody } : {}),
+      },
+      photoFiles,
+    );
   }
 
   const shownError = localError ?? error;
@@ -228,7 +458,7 @@ export function SouvenirDialog({
                 <>
                   <label
                     htmlFor="souvenir-title"
-                    className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-gold/80"
+                    className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-gold/70"
                   >
                     Le date
                   </label>
@@ -239,11 +469,11 @@ export function SouvenirDialog({
                     maxLength={80}
                     autoFocus
                     placeholder="Ex. Dîner sur les quais"
-                    className="mt-2 w-full rounded-xl border border-gold/25 bg-ink-950/70 px-3 py-2.5 text-[13px] text-cream placeholder:text-ash focus:border-gold/60 focus:outline-none"
+                    className="mt-2 w-full rounded-xl border border-gold/25 bg-ink-950/70 px-3 py-2.5 text-[13px] text-cream placeholder:text-cream/25 focus:border-gold/60 focus:outline-none"
                   />
 
                   <div className="mt-3">
-                    <p className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-gold/80">
+                    <p className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-gold/70">
                       Ambiance
                     </p>
                     <div className="mt-2 flex flex-wrap gap-1.5">
@@ -270,7 +500,7 @@ export function SouvenirDialog({
 
               <label
                 htmlFor="souvenir-date"
-                className="mt-4 block text-[10.5px] font-semibold uppercase tracking-[0.16em] text-gold/80"
+                className="mt-4 block text-[10.5px] font-semibold uppercase tracking-[0.16em] text-gold/70"
               >
                 Quand ?
               </label>
@@ -287,7 +517,7 @@ export function SouvenirDialog({
 
           <label
             htmlFor="souvenir-body"
-            className="mt-4 block text-[10.5px] font-semibold uppercase tracking-[0.16em] text-gold/80"
+            className="mt-4 block text-[10.5px] font-semibold uppercase tracking-[0.16em] text-gold/70"
           >
             {mode === "note"
               ? "Ce que vous avez préféré"
@@ -300,7 +530,7 @@ export function SouvenirDialog({
             rows={4}
             autoFocus={mode === "note"}
             placeholder="Un détail, une phrase, une sensation…"
-            className="mt-2 w-full resize-none rounded-xl border border-gold/25 bg-ink-950/70 px-3 py-2.5 text-[13px] leading-relaxed text-cream placeholder:text-ash focus:border-gold/60 focus:outline-none"
+            className="mt-2 w-full resize-none rounded-xl border border-gold/25 bg-ink-950/70 px-3 py-2.5 text-[13px] leading-relaxed text-cream placeholder:text-cream/25 focus:border-gold/60 focus:outline-none"
           />
           <div className="mt-1 flex items-center justify-between text-[10px] text-ash">
             <span>Texte brut · visible uniquement par vous deux</span>
@@ -308,6 +538,26 @@ export function SouvenirDialog({
               {body.length} / {MAX_BODY}
             </span>
           </div>
+
+          <PhotoPicker
+            existing={existingPhotos}
+            files={photoFiles}
+            total={totalPhotos}
+            busy={busy}
+            preparing={preparing}
+            error={photoError}
+            confirmDeleteId={confirmDeleteId}
+            deletingId={deletingId}
+            onFiles={(files) => void handleFiles(files)}
+            onRemoveFile={(index) =>
+              setPhotoFiles((current) =>
+                current.filter((_, itemIndex) => itemIndex !== index),
+              )
+            }
+            onAskDelete={(id) => setConfirmDeleteId(id)}
+            onCancelDelete={() => setConfirmDeleteId(null)}
+            onDelete={(id) => void handleDeletePhoto(id)}
+          />
         </div>
 
         <footer className="flex items-center justify-end gap-2 border-t border-gold/12 px-5 py-3.5">
@@ -315,14 +565,14 @@ export function SouvenirDialog({
             type="button"
             onClick={onClose}
             disabled={busy}
-            className="rounded-xl px-3.5 py-2 text-[12px] text-cream/55 transition hover:bg-white/5 hover:text-cream disabled:opacity-40"
+            className="rounded-xl px-3.5 py-2 text-[12px] text-cream/55 transition hover:bg-gold/5 hover:text-cream disabled:opacity-40"
           >
             Annuler
           </button>
           <button
             type="button"
             onClick={() => void handleSubmit()}
-            disabled={!canSubmit}
+            disabled={!canSubmit || preparing}
             className="rounded-xl border border-gold/45 bg-gradient-to-r from-ember to-rose px-4 py-2.5 text-[12.5px] font-semibold text-cream transition hover:border-gold/70 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
           >
             {busy
