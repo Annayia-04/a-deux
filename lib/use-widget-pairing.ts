@@ -31,8 +31,16 @@ function deviceLabel(): string {
   return "Appareil";
 }
 
-export function useWidgetPairing({ enabled }: { enabled: boolean }): void {
+export function useWidgetPairing({
+  enabled,
+  onPaired,
+}: {
+  enabled: boolean;
+  onPaired?: () => void;
+}): void {
   const handled = useRef(false);
+  const pairedCallback = useRef(onPaired);
+  pairedCallback.current = onPaired;
 
   useEffect(() => {
     if (!enabled || handled.current) return;
@@ -69,6 +77,7 @@ export function useWidgetPairing({ enabled }: { enabled: boolean }): void {
           endpoint: window.location.origin,
           label: deviceLabel(),
         });
+        pairedCallback.current?.();
       } catch {
         // Le widget est un confort : un échec d'association ne doit jamais
         // gêner l'application. On retentera au prochain lancement.

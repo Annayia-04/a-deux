@@ -274,7 +274,14 @@ export function DateSwipeApp({
 
   // App native : associe le téléphone au widget « Petit ping » dès que le
   // duo est complet. Sans effet dans un navigateur.
-  useWidgetPairing({ enabled: Boolean(session && couple?.complete) });
+  useWidgetPairing({
+    enabled: Boolean(session && couple?.complete),
+    onPaired: () =>
+      showToast(
+        "Widget « Petit ping » associé : touchez-le pour envoyer une pensée.",
+        "success",
+      ),
+  });
 
   const handleSendTap = useCallback(async () => {
     vibrateTap([12]);
