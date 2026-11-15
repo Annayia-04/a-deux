@@ -28,6 +28,14 @@ const GENRES: Record<ChoiceCategory, { tag: string; label: string }[]> = {
     { tag: "science-fiction", label: "Science-fiction" },
     { tag: "drame", label: "Drame" },
     { tag: "horreur", label: "Horreur" },
+    { tag: "action", label: "Action" },
+    { tag: "aventure", label: "Aventure" },
+    { tag: "animation", label: "Animation" },
+    { tag: "famille", label: "Famille" },
+    { tag: "polar", label: "Polar" },
+    { tag: "fantastique", label: "Fantastique" },
+    { tag: "mystere", label: "Mystère" },
+    { tag: "documentaire", label: "Documentaire" },
     { tag: "classique", label: "Classique" },
     { tag: "musique", label: "Musique" },
   ],
@@ -138,6 +146,21 @@ export function ChoiceFiltersSheet({
                 </>
               ) : (
                 <>
+                  <Section title="Type">
+                    <Chip
+                      active={draft.kind === "movie"}
+                      onClick={() => toggle("kind", "movie")}
+                    >
+                      Films
+                    </Chip>
+                    <Chip
+                      active={draft.kind === "series"}
+                      onClick={() => toggle("kind", "series")}
+                    >
+                      Séries
+                    </Chip>
+                  </Section>
+
                   <Section title="Lieu">
                     <Chip
                       active={draft.place === "canape"}
@@ -198,8 +221,8 @@ export function ChoiceFiltersSheet({
 
               {category === "movie" ? (
                 <p className="mt-4 text-[9.5px] leading-relaxed text-ash">
-                  Durées, notes et plateformes indicatives : les catalogues
-                  changent souvent.
+                  Titres, durées et notes : IMDb. Plateformes : sélection
+                  éditoriale ; les autres titres affichent « IMDb ».
                 </p>
               ) : null}
             </div>

@@ -35,9 +35,15 @@ describe("catalogue de choix", () => {
       } else {
         expect(choice.duration, choice.id).toBeGreaterThan(0);
         expect(choice.rating, choice.id).toBeGreaterThan(0);
-        expect(choice.platform, choice.id).toBeTruthy();
       }
     }
+  });
+
+  it("ouvre le catalogue Film aux séries IMDb", () => {
+    const movies = CHOICES_BY_CATEGORY.movie;
+    expect(movies.length).toBeGreaterThanOrEqual(400);
+    expect(movies.some((choice) => choice.kind === "series")).toBe(true);
+    expect(movies.some((choice) => choice.id.startsWith("tt"))).toBe(true);
   });
 
   it("utilise des identifiants et des titres uniques", () => {

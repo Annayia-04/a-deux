@@ -64,6 +64,7 @@ export type ChoiceCategory = (typeof CHOICE_CATEGORIES)[number];
 
 export type FoodMode = "cuisiner" | "livraison" | "restaurant";
 export type MoviePlatform = "netflix" | "prime" | "canal" | "salle";
+export type ChoiceKind = "movie" | "series";
 
 /** Carte statique du catalogue Nourriture / Films. */
 export type Choice = {
@@ -81,6 +82,8 @@ export type Choice = {
   duration?: number;
   rating?: number;
   platform?: MoviePlatform;
+  /** Film ou série (les cartes historiques sans kind sont des films). */
+  kind?: ChoiceKind;
 };
 
 export type ChoiceMatchSummary = {

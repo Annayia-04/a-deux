@@ -187,9 +187,10 @@ export const choiceSchema = z
     mode: z.enum(["cuisiner", "livraison", "restaurant"]).optional(),
     budget: z.union([z.literal(1), z.literal(2), z.literal(3)]).optional(),
     time: z.number().int().min(5).max(240).optional(),
-    duration: z.number().int().min(60).max(360).optional(),
+    duration: z.number().int().min(20).max(360).optional(),
     rating: z.number().min(0).max(10).optional(),
     platform: z.enum(["netflix", "prime", "canal", "salle"]).optional(),
+    kind: z.enum(["movie", "series"]).optional(),
   })
   .strict()
   .superRefine((choice, ctx) => {
@@ -207,16 +208,22 @@ export const choiceSchema = z
         });
       }
     } else {
-      if (!choice.duration || !choice.rating || !choice.platform) {
+      if (!choice.duration || !choice.rating) {
         ctx.addIssue({
           code: "custom",
-          message: "Un film doit préciser durée, note et plateforme.",
+          message: "Un film doit préciser durée et note.",
         });
       }
       if (choice.mode || choice.budget || choice.time) {
         ctx.addIssue({
           code: "custom",
           message: "Un film ne porte pas de métadonnées de plat.",
+        });
+      }
+      if (choice.kind === "series" && choice.platform === "salle") {
+        ctx.addIssue({
+          code: "custom",
+          message: "Une série ne se projette pas en salle.",
         });
       }
     }

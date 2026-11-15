@@ -55,9 +55,10 @@ export function ChoiceCard({
   footer?: ReactNode;
 }) {
   const meta = CHOICE_CATEGORY_META[choice.category];
+  const isSeries = choice.kind === "series";
   const foodMode = choice.mode ? FOOD_MODE_META[choice.mode] : null;
   const duration = choice.duration
-    ? formatChoiceDuration(choice.duration)
+    ? `${formatChoiceDuration(choice.duration)}${isSeries ? "/ép." : ""}`
     : null;
   const platform = choice.platform
     ? MOVIE_PLATFORM_LABEL[choice.platform]
@@ -66,7 +67,9 @@ export function ChoiceCard({
   const topLeft =
     choice.category === "food"
       ? `${foodMode?.emoji ?? "🍽️"} ${foodMode?.label ?? meta.label}`
-      : (choice.tags[0] ?? meta.label).replaceAll("-", " ");
+      : isSeries
+        ? "Série"
+        : (choice.tags[0] ?? meta.label).replaceAll("-", " ");
   const topRight =
     choice.category === "food"
       ? choice.budget
@@ -78,7 +81,7 @@ export function ChoiceCard({
       ? choice.time
         ? `${choice.time} min`
         : ""
-      : platform ?? "";
+      : platform ?? "IMDb";
 
   return (
     <article className="frame-gold relative flex h-full w-full flex-col overflow-hidden rounded-[24px] border border-gold/30 bg-ink-850 shadow-[0_30px_80px_-24px_rgba(0,0,0,0.92)]">

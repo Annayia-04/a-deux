@@ -1,11 +1,12 @@
 import { hashSeed, mulberry32 } from "@/lib/seeded";
+import { IMDB_CHOICES } from "@/lib/imdb-choices";
 import type { Choice, ChoiceCategory, FoodMode, MoviePlatform } from "@/lib/types";
 
 /**
  * Catalogues statiques Nourriture / Films.
  * Aucun asset distant : les visuels sont des emojis et des dégradés CSS.
  */
-export const CHOICES: Choice[] = [
+const CURATED_CHOICES: Choice[] = [
   // -------------------------------------------------------------------------
   // Nourriture
   // -------------------------------------------------------------------------
@@ -644,6 +645,9 @@ export const CHOICES: Choice[] = [
     duration: 94, rating: 7.8, platform: "canal",
   },
 ];
+
+/** Sélection éditoriale + catalogue IMDb (films et séries). */
+export const CHOICES: Choice[] = [...CURATED_CHOICES, ...IMDB_CHOICES];
 
 export const CHOICES_BY_ID: ReadonlyMap<string, Choice> = new Map(
   CHOICES.map((choice) => [choice.id, choice]),

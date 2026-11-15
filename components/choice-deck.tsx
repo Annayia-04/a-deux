@@ -152,7 +152,9 @@ export function ChoiceDeck({
     <div className="mx-auto w-full max-w-md">
       <div className="mb-1.5 flex items-center justify-between gap-2 text-[10.5px] text-ash">
         <span className="tabular-nums">
-          {snapshot ? `${snapshot.swiped} / ${snapshot.total} cartes` : "—"}
+          {snapshot
+            ? `${snapshot.swiped} / ${snapshot.total} cartes · 40 par page`
+            : "—"}
         </span>
         <span className="inline-flex items-center gap-1">
           <SparklesIcon className="h-3 w-3" />
