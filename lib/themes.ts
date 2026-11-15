@@ -1,6 +1,14 @@
 export const THEME_COOKIE = "a_deux_theme";
 
-export type ThemeId = "gothique" | "minuit" | "rose" | "foret";
+export type ThemeId =
+  | "gothique"
+  | "minuit"
+  | "rose"
+  | "foret"
+  | "tarot"
+  | "ocean"
+  | "lavande"
+  | "terracotta";
 
 export type ThemeMeta = {
   id: ThemeId;
@@ -39,6 +47,34 @@ export const THEMES: readonly ThemeMeta[] = [
     description: "Vert profond, bordeaux et laiton patiné.",
     themeColor: "#070d09",
     swatches: ["#070d09", "#8e2f3c", "#c8b27a"],
+  },
+  {
+    id: "tarot",
+    label: "Tarot ancien",
+    description: "Parchemin fumé, cuivre et encre brune.",
+    themeColor: "#0b0906",
+    swatches: ["#0b0906", "#8f2f3a", "#d9b46b"],
+  },
+  {
+    id: "ocean",
+    label: "Océan de minuit",
+    description: "Bleu abyssal, écume et laiton mouillé.",
+    themeColor: "#050c11",
+    swatches: ["#050c11", "#2f6d74", "#c7b98a"],
+  },
+  {
+    id: "lavande",
+    label: "Nuit de lavande",
+    description: "Violet profond, lilas et or pâle.",
+    themeColor: "#0c0712",
+    swatches: ["#0c0712", "#7a3f86", "#cdb47f"],
+  },
+  {
+    id: "terracotta",
+    label: "Terre cuite",
+    description: "Argile brûlée, cuivre et sable chaud.",
+    themeColor: "#120b08",
+    swatches: ["#120b08", "#a14834", "#cf9d5f"],
   },
 ] as const;
 

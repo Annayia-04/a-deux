@@ -246,7 +246,11 @@ export function DiscoverView({
                   aria-hidden
                   className="pointer-events-none absolute inset-0 translate-y-4 scale-[0.94] opacity-40"
                 >
-                  <DateCard idea={third} compact={compact} />
+                  <DateCard
+                    idea={third}
+                    compact={compact}
+                    number={swiped + 3}
+                  />
                 </div>
               ) : null}
               {second ? (
@@ -254,7 +258,11 @@ export function DiscoverView({
                   aria-hidden
                   className="pointer-events-none absolute inset-0 translate-y-2 scale-[0.97] opacity-65"
                 >
-                  <DateCard idea={second} compact={compact} />
+                  <DateCard
+                    idea={second}
+                    compact={compact}
+                    number={swiped + 2}
+                  />
                 </div>
               ) : null}
 
@@ -263,6 +271,7 @@ export function DiscoverView({
                 ref={cardRef}
                 idea={top}
                 compact={compact}
+                number={swiped + 1}
                 onDecide={onDecide}
                 onInteract={dismissHint}
               />
@@ -321,9 +330,10 @@ export function DiscoverView({
 const SwipeCard = forwardRef<SwipeCardHandle, {
   idea: Idea;
   compact: boolean;
+  number: number;
   onDecide: (idea: Idea, direction: SwipeDirection) => void;
   onInteract: () => void;
-}>(function SwipeCard({ idea, compact, onDecide, onInteract }, ref) {
+}>(function SwipeCard({ idea, compact, number, onDecide, onInteract }, ref) {
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-FLY_DISTANCE, 0, FLY_DISTANCE], [-16, 0, 16]);
   const likeOpacity = useTransform(x, [24, 120], [0, 1]);
@@ -391,7 +401,7 @@ const SwipeCard = forwardRef<SwipeCardHandle, {
         className="h-full w-full cursor-grab touch-none active:cursor-grabbing"
         aria-roledescription="carte à swiper"
       >
-        <DateCard idea={idea} compact={compact} />
+        <DateCard idea={idea} compact={compact} number={number} />
 
         <motion.div
           style={{ opacity: likeOpacity }}

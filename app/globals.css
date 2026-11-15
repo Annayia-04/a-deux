@@ -134,6 +134,114 @@ html[data-theme="foret"] {
   --orn: rgba(200, 178, 122, 0.55);
 }
 
+html[data-theme="tarot"] {
+  --color-ink-950: #0b0906;
+  --color-ink-900: #120f0a;
+  --color-ink-850: #17130d;
+  --color-ink-800: #1e1810;
+  --color-ink-700: #2a2116;
+  --color-cream: #f1e7d4;
+  --color-ash: #a99a83;
+  --color-rose: #8f2f3a;
+  --color-rose-soft: #d8aaa6;
+  --color-gold: #d9b46b;
+  --color-mint: #b9b09e;
+  --color-ember: #5b1a22;
+  --glow-a: rgba(140, 70, 30, 0.3);
+  --glow-b: rgba(217, 180, 107, 0.09);
+  --glow-c: rgba(90, 35, 25, 0.18);
+  --glow-d: rgba(120, 55, 30, 0.16);
+  --dot-color: rgba(241, 231, 212, 0.026);
+  --glass-bg: rgba(23, 19, 13, 0.75);
+  --glass-border: rgba(217, 180, 107, 0.24);
+  --card-wash: rgba(217, 180, 107, 0.05);
+  --card-top: #1e1810;
+  --card-bottom: #120f0a;
+  --card-border: rgba(217, 180, 107, 0.24);
+  --orn: rgba(217, 180, 107, 0.58);
+}
+
+html[data-theme="ocean"] {
+  --color-ink-950: #050c11;
+  --color-ink-900: #0a141b;
+  --color-ink-850: #0e1a22;
+  --color-ink-800: #13232d;
+  --color-ink-700: #1b303c;
+  --color-cream: #e6f0f2;
+  --color-ash: #90a5ad;
+  --color-rose: #2f6d74;
+  --color-rose-soft: #9dc6c8;
+  --color-gold: #c7b98a;
+  --color-mint: #a8c3c5;
+  --color-ember: #123944;
+  --glow-a: rgba(35, 100, 120, 0.3);
+  --glow-b: rgba(199, 185, 138, 0.08);
+  --glow-c: rgba(20, 60, 80, 0.18);
+  --glow-d: rgba(25, 75, 90, 0.16);
+  --dot-color: rgba(230, 240, 242, 0.026);
+  --glass-bg: rgba(14, 26, 34, 0.75);
+  --glass-border: rgba(199, 185, 138, 0.22);
+  --card-wash: rgba(199, 185, 138, 0.05);
+  --card-top: #13232d;
+  --card-bottom: #0a141b;
+  --card-border: rgba(199, 185, 138, 0.22);
+  --orn: rgba(199, 185, 138, 0.55);
+}
+
+html[data-theme="lavande"] {
+  --color-ink-950: #0c0712;
+  --color-ink-900: #120a1a;
+  --color-ink-850: #170d21;
+  --color-ink-800: #1e1229;
+  --color-ink-700: #291a37;
+  --color-cream: #efe7f4;
+  --color-ash: #a99ab6;
+  --color-rose: #7a3f86;
+  --color-rose-soft: #cba8d3;
+  --color-gold: #cdb47f;
+  --color-mint: #beb1c7;
+  --color-ember: #42204d;
+  --glow-a: rgba(90, 50, 130, 0.32);
+  --glow-b: rgba(205, 180, 127, 0.08);
+  --glow-c: rgba(60, 30, 90, 0.18);
+  --glow-d: rgba(75, 40, 105, 0.16);
+  --dot-color: rgba(239, 231, 244, 0.026);
+  --glass-bg: rgba(23, 13, 33, 0.75);
+  --glass-border: rgba(205, 180, 127, 0.22);
+  --card-wash: rgba(205, 180, 127, 0.05);
+  --card-top: #1e1229;
+  --card-bottom: #120a1a;
+  --card-border: rgba(205, 180, 127, 0.22);
+  --orn: rgba(205, 180, 127, 0.55);
+}
+
+html[data-theme="terracotta"] {
+  --color-ink-950: #120b08;
+  --color-ink-900: #1a100c;
+  --color-ink-850: #20140f;
+  --color-ink-800: #281a13;
+  --color-ink-700: #34231a;
+  --color-cream: #f4e6d8;
+  --color-ash: #b09a86;
+  --color-rose: #a14834;
+  --color-rose-soft: #ddb09c;
+  --color-gold: #cf9d5f;
+  --color-mint: #c4b4a4;
+  --color-ember: #5f2619;
+  --glow-a: rgba(150, 70, 35, 0.3);
+  --glow-b: rgba(207, 157, 95, 0.08);
+  --glow-c: rgba(100, 45, 25, 0.16);
+  --glow-d: rgba(120, 60, 30, 0.16);
+  --dot-color: rgba(244, 230, 216, 0.026);
+  --glass-bg: rgba(32, 20, 15, 0.75);
+  --glass-border: rgba(207, 157, 95, 0.22);
+  --card-wash: rgba(207, 157, 95, 0.05);
+  --card-top: #281a13;
+  --card-bottom: #1a100c;
+  --card-border: rgba(207, 157, 95, 0.22);
+  --orn: rgba(207, 157, 95, 0.55);
+}
+
 @layer base {
   html {
     color-scheme: dark;

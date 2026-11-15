@@ -2,14 +2,18 @@ import { describe, expect, it } from "vitest";
 import { isThemeId, parseTheme, THEMES, themeById } from "@/lib/themes";
 
 describe("thèmes", () => {
-  it("expose quatre thèmes avec des identifiants uniques", () => {
-    expect(THEMES).toHaveLength(4);
-    expect(new Set(THEMES.map((theme) => theme.id)).size).toBe(4);
+  it("expose huit thèmes avec des identifiants uniques", () => {
+    expect(THEMES).toHaveLength(8);
+    expect(new Set(THEMES.map((theme) => theme.id)).size).toBe(8);
   });
 
   it("valide uniquement les identifiants connus", () => {
     expect(isThemeId("minuit")).toBe(true);
     expect(isThemeId("foret")).toBe(true);
+    expect(isThemeId("tarot")).toBe(true);
+    expect(isThemeId("ocean")).toBe(true);
+    expect(isThemeId("lavande")).toBe(true);
+    expect(isThemeId("terracotta")).toBe(true);
     expect(isThemeId("clair")).toBe(false);
     expect(isThemeId(null)).toBe(false);
   });
