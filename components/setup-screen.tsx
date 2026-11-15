@@ -6,6 +6,7 @@ import { AccountCard } from "@/components/account-card";
 import { InstallCard } from "@/components/install-card";
 import { ThemePicker } from "@/components/theme-picker";
 import { WidgetStatusCard } from "@/components/widget-status-card";
+import { PushStatusCard } from "@/components/push-status-card";
 import {
   ArrowRightIcon,
   BoltIcon,
@@ -173,6 +174,7 @@ export function SetupScreen({
               hasSession={hasSession}
               coupleComplete={couple?.complete === true}
             />
+            <PushStatusCard hasSession={hasSession} />
           </div>
         </div>
       </div>

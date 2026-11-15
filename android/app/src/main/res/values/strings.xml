@@ -6,6 +6,7 @@
     <string name="custom_url_scheme">fr.adeux.app</string>
 
     <string name="widget_ping_title">Petit ping</string>
+    <string name="widget_ping_message">Une pensée pour toi</string>
     <string name="widget_ping_hint">Toucher pour envoyer</string>
     <string name="widget_ping_description">Envoie une pensée à votre partenaire sans ouvrir l’application.</string>
     <string name="widget_ping_sent">Ping envoyé</string>

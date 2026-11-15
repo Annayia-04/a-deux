@@ -22,7 +22,7 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   // Évite que Next remonte jusqu'à un lockfile présent dans C:\Users\angel.
   outputFileTracingRoot: process.cwd(),
-  serverExternalPackages: ["pg"],
+  serverExternalPackages: ["pg", "firebase-admin"],
   async headers() {
     return [
       {

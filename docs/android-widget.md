@@ -28,7 +28,9 @@ swipes, ni les souvenirs, et il est supprimé avec la session (cascade PostgreSQ
 
 Le widget suit la palette gothique romantique de l’application : fond
 anthracite `#141218`, double filet d’or `#C5A059`, titre parchemin `#EAE4DC`
-(serif) et sous-titre cendre `#8E8894`. Les icônes de l’application et l’écran
+(serif) et sous-titre cendre `#8E8894`. L’icône est un **cœur** (`widget_heart.xml`),
+le titre affiche « Une pensée pour toi » et le sous-titre « Toucher pour
+envoyer ». Les icônes de l’application et l’écran
 de démarrage sont générés depuis `public/icons/icon.svg` :
 
 ```bash

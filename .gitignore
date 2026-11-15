@@ -25,3 +25,6 @@ coverage/
 Thumbs.db
 
 .vercel/
+
+# Secrets locaux (clé de service Firebase, etc.)
+.secrets/

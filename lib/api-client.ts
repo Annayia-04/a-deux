@@ -145,6 +145,23 @@ export const api = {
     });
   },
 
+  registerPushDevice(
+    token: string,
+    platform: "android" | "ios" | "web",
+  ): Promise<{ ok: boolean }> {
+    return request<{ ok: boolean }>("/api/push/devices", {
+      method: "POST",
+      body: { token, platform },
+    });
+  },
+
+  unregisterPushDevice(token: string): Promise<{ ok: boolean }> {
+    return request<{ ok: boolean }>("/api/push/devices", {
+      method: "DELETE",
+      body: { token },
+    });
+  },
+
   exchangeNativeAuth(code: string): Promise<{ ok: boolean }> {
     return request<{ ok: boolean }>("/api/auth/native/exchange", {
       method: "POST",

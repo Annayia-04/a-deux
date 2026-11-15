@@ -353,6 +353,73 @@ export async function undoLastSwipe(sessionId: string): Promise<string | null> {
 }
 
 // ---------------------------------------------------------------------------
+// Appareils de notification
+// ---------------------------------------------------------------------------
+
+export type PushPlatform = "android" | "ios" | "web";
+
+export async function upsertPushDevice(
+  token: string,
+  sessionId: string,
+  platform: PushPlatform,
+  now: number = Date.now(),
+): Promise<void> {
+  await query(
+    `INSERT INTO push_devices (token, session_id, platform, created_at, last_used_at)
+     VALUES ($1, $2, $3, $4, $4)
+     ON CONFLICT (token)
+     DO UPDATE SET session_id = EXCLUDED.session_id,
+                   platform = EXCLUDED.platform,
+                   last_used_at = EXCLUDED.last_used_at`,
+    [token, sessionId, platform, now],
+  );
+}
+
+export async function countPushDevices(sessionId: string): Promise<number> {
+  const row = await queryOne<{ total: number }>(
+    "SELECT COUNT(*)::int AS total FROM push_devices WHERE session_id = $1",
+    [sessionId],
+  );
+  return row?.total ?? 0;
+}
+
+export async function deletePushDevice(
+  token: string,
+  sessionId: string,
+): Promise<boolean> {
+  const changes = await getPoolQuery(
+    "DELETE FROM push_devices WHERE token = $1 AND session_id = $2",
+    [token, sessionId],
+  );
+  return changes > 0;
+}
+
+/** Jetons des autres membres du duo, pour notifier un ping. */
+export async function listPartnerPushTokens(
+  coupleId: string,
+  sessionId: string,
+): Promise<string[]> {
+  const rows = await query<{ token: string }>(
+    `SELECT p.token
+       FROM push_devices p
+       JOIN couple_members m ON m.session_id = p.session_id
+      WHERE m.couple_id = $1 AND p.session_id <> $2`,
+    [coupleId, sessionId],
+  );
+  return rows.map((row) => row.token);
+}
+
+/** Retire les jetons que FCM a déclarés invalides. */
+export async function deletePushDevicesByTokens(
+  tokens: string[],
+): Promise<void> {
+  if (tokens.length === 0) return;
+  await query("DELETE FROM push_devices WHERE token = ANY($1::text[])", [
+    tokens,
+  ]);
+}
+
+// ---------------------------------------------------------------------------
 // Espaces à deux
 // ---------------------------------------------------------------------------
 

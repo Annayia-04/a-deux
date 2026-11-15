@@ -13,7 +13,7 @@
         android:layout_width="22dp"
         android:layout_height="22dp"
         android:contentDescription="@null"
-        android:src="@drawable/widget_spark" />
+        android:src="@drawable/widget_heart" />
 
     <LinearLayout
         android:layout_width="0dp"
@@ -28,7 +28,7 @@
             android:layout_height="wrap_content"
             android:fontFamily="serif"
             android:maxLines="1"
-            android:text="@string/widget_ping_title"
+            android:text="@string/widget_ping_message"
             android:textColor="#EAE4DC"
             android:textSize="15sp"
             android:textStyle="bold" />

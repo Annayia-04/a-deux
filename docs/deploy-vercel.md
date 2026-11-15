@@ -28,8 +28,9 @@ DATABASE_URL_DIRECT="postgres://…" npm run db:migrate
 DATABASE_URL_DIRECT="postgres://…" npm run db:status
 ```
 
-Les migrations `001` → `003` créent l’identité, le lien compte → session, puis
-toutes les tables de jeu. Elles sont idempotentes et protégées par un checksum.
+Les migrations `001` → `006` créent l’identité, le lien compte → session, les
+tables de jeu, l’album photo, la passerelle de connexion native et les appareils
+de notification. Elles sont idempotentes et protégées par un checksum.
 
 > Ne pas lancer `npm start` localement contre la base de production pour
 > « tester » : le smoke crée de vraies sessions et de vrais duos.
@@ -55,6 +56,8 @@ Preview) :
 | `APP_SESSION_SECRET` | `node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"` |
 | `GOOGLE_CLIENT_ID` | identifiant OAuth Web (facultatif) |
 | `GOOGLE_CLIENT_SECRET` | secret OAuth Web (facultatif) |
+| `ANDROID_APK_URL` | URL publique de l’APK (Vercel Blob), pour `/api/download/android` |
+| `FIREBASE_SERVICE_ACCOUNT` | contenu JSON de la clé de service Firebase (facultatif, voir `docs/firebase-push.md`) |
 
 `DATABASE_URL_DIRECT` n’est **pas** nécessaire à l’exécution : garder la chaîne
 directe pour les migrations locales. Ne jamais exposer ces valeurs dans le

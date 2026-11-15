@@ -1,2 +1,5 @@
 /build/*
 !/build/.npmkeep
+
+# Configuration Firebase (jamais commitée)
+google-services.json

@@ -13,6 +13,7 @@ import {
   setTapReadCursor,
 } from "@/lib/db";
 import { HttpError } from "@/lib/http";
+import { notifyPartnerOfTap } from "@/lib/push";
 import type { TapSnapshot } from "@/lib/types";
 
 const TAP_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
@@ -25,6 +26,13 @@ export async function sendTapForSession(
 
   await purgeOldTapRecords(now - TAP_RETENTION_MS);
   const id = await insertTapRecord(membership.id, sessionId, now);
+
+  // Notification push de l'autre membre, sans bloquer plus de 4 secondes.
+  await Promise.race([
+    notifyPartnerOfTap(membership.id, sessionId),
+    new Promise<void>((resolve) => setTimeout(resolve, 4000)),
+  ]).catch(() => undefined);
+
   return { id, createdAt: now };
 }
 

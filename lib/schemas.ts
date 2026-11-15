@@ -112,6 +112,17 @@ export const nativeAuthExchangeSchema = z
   .object({ code: z.string().regex(/^[A-Za-z0-9_-]{43}$/) })
   .strict();
 
+export const pushDeviceSchema = z
+  .object({
+    token: z.string().min(20).max(4096),
+    platform: z.enum(["android", "ios", "web"]),
+  })
+  .strict();
+
+export const pushDeviceDeleteSchema = z
+  .object({ token: z.string().min(20).max(4096) })
+  .strict();
+
 const happenedAtSchema = z
   .number()
   .int()

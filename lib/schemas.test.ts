@@ -8,6 +8,8 @@ import {
   souvenirIdSchema,
   choiceSwipeSchema,
   tapSeenSchema,
+  pushDeviceSchema,
+  pushDeviceDeleteSchema,
 } from "@/lib/schemas";
 import { DEFAULT_PREFS } from "@/lib/types";
 
@@ -261,6 +263,56 @@ describe("tapSeenSchema", () => {
   it("refuse les champs supplémentaires", () => {
     expect(
       tapSeenSchema.safeParse({ tapId: 1, sessionId: "autre" }).success,
+    ).toBe(false);
+  });
+});
+
+describe("pushDeviceSchema", () => {
+  const token = "f".repeat(64);
+
+  it("accepte un jeton Android", () => {
+    expect(
+      pushDeviceSchema.safeParse({ token, platform: "android" }).success,
+    ).toBe(true);
+  });
+
+  it("refuse une plateforme inconnue", () => {
+    expect(
+      pushDeviceSchema.safeParse({ token, platform: "desktop" }).success,
+    ).toBe(false);
+  });
+
+  it("refuse un jeton trop court", () => {
+    expect(
+      pushDeviceSchema.safeParse({ token: "court", platform: "android" })
+        .success,
+    ).toBe(false);
+  });
+
+  it("refuse les champs supplémentaires", () => {
+    expect(
+      pushDeviceSchema.safeParse({
+        token,
+        platform: "android",
+        sessionId: "autre",
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("pushDeviceDeleteSchema", () => {
+  it("accepte un jeton seul", () => {
+    expect(pushDeviceDeleteSchema.safeParse({ token: "f".repeat(64) }).success).toBe(
+      true,
+    );
+  });
+
+  it("refuse les champs supplémentaires", () => {
+    expect(
+      pushDeviceDeleteSchema.safeParse({
+        token: "f".repeat(64),
+        platform: "android",
+      }).success,
     ).toBe(false);
   });
 });

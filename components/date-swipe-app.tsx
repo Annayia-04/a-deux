@@ -48,6 +48,7 @@ import { useSwipeSync } from "@/lib/use-swipe-sync";
 import { useTaps } from "@/lib/use-taps";
 import { useWidgetPairing } from "@/lib/use-widget-pairing";
 import { useNativeAuthListener } from "@/lib/native-auth";
+import { usePushNotifications } from "@/lib/push-notifications";
 
 type Mode = "setup" | "swiping" | "results";
 type LocalDecision = { ideaId: string; direction: SwipeDirection };
@@ -286,6 +287,11 @@ export function DateSwipeApp({
 
   useNativeAuthListener({
     onSuccess: () => window.location.reload(),
+    onError: (message) => showToast(message, "error"),
+  });
+
+  usePushNotifications({
+    enabled: Boolean(session),
     onError: (message) => showToast(message, "error"),
   });
 
