@@ -1,4 +1,5 @@
 import type { ReactElement } from "react";
+import Image from "next/image";
 import {
   BoltIcon,
   ClockIcon,
@@ -117,46 +118,28 @@ export function DateCard({
           className="absolute inset-0"
           style={{
             backgroundImage:
-              "radial-gradient(80% 100% at 78% 0%, rgba(255,255,255,0.3), transparent 62%)",
+              "radial-gradient(80% 100% at 78% 0%, rgba(255,255,255,0.26), transparent 62%)",
           }}
         />
-        <div aria-hidden className="grain absolute inset-0 opacity-20" />
-        <div
+        <div aria-hidden className="grain absolute inset-0 opacity-15" />
+
+        <div aria-hidden className="absolute inset-0 bg-ink-950/25" />
+
+        <Image
+          src={primaryTheme.illustration}
+          alt=""
+          fill
+          sizes="(max-width: 480px) 100vw, 420px"
+          unoptimized
+          priority={number === 1}
           aria-hidden
-          className="absolute -bottom-16 -left-10 h-44 w-44 rounded-full bg-black/25 blur-2xl"
+          className="pointer-events-none select-none object-cover"
         />
 
-        {!compact ? (
-          <>
-            <div
-              aria-hidden
-              className="pointer-events-none absolute inset-x-10 bottom-0 top-5 rounded-t-full border border-gold/25"
-            />
-            <div
-              aria-hidden
-              className="pointer-events-none absolute inset-x-14 bottom-0 top-8 rounded-t-full border border-gold/10"
-            />
-          </>
-        ) : null}
-
-        <span
+        <div
           aria-hidden
-          className="absolute left-[13%] top-[42%] text-[10px] leading-none text-gold/45"
-        >
-          ✦
-        </span>
-        <span
-          aria-hidden
-          className="absolute right-[12%] top-[28%] text-[8px] leading-none text-gold/35"
-        >
-          ✦
-        </span>
-        <span
-          aria-hidden
-          className="absolute bottom-[18%] right-[20%] text-[7px] leading-none text-gold/25"
-        >
-          ✦
-        </span>
+          className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-ink-950/55 to-transparent"
+        />
 
         <div
           className={`absolute inset-x-0 top-0 flex items-start justify-between gap-2 ${
@@ -187,27 +170,8 @@ export function DateCard({
         </div>
 
         <div
-          className={`relative flex h-full items-center justify-center ${
-            compact ? "pb-0 pt-6" : "pb-1 pt-7"
-          }`}
-        >
-          <span
-            aria-hidden
-            className={`select-none leading-none drop-shadow-[0_16px_30px_rgba(0,0,0,0.35)] ${
-              compact ? "text-[42px]" : "text-[64px]"
-            }`}
-          >
-            {idea.emoji}
-          </span>
-        </div>
-
-        <div
           aria-hidden
-          className="absolute inset-x-0 -bottom-px h-16"
-          style={{
-            backgroundImage:
-              "linear-gradient(to top, rgba(20,18,24,0.92), transparent)",
-          }}
+          className="absolute inset-x-0 -bottom-px h-16 bg-gradient-to-t from-ink-850 via-ink-850/45 to-transparent"
         />
       </div>
 
@@ -219,6 +183,21 @@ export function DateCard({
         }`}
       >
         <div className="min-h-0">
+          <div
+            className={`relative z-10 flex justify-center ${
+              compact ? "-mt-4 mb-0.5" : "-mt-6 mb-1"
+            }`}
+          >
+            <span
+              aria-hidden
+              className={`grid place-items-center rounded-full border border-gold/45 bg-ink-900/95 shadow-[0_10px_24px_-12px_rgba(0,0,0,0.9)] ring-1 ring-inset ring-gold/15 ${
+                compact ? "h-9 w-9 text-[17px]" : "h-11 w-11 text-[21px]"
+              }`}
+            >
+              {idea.emoji}
+            </span>
+          </div>
+
           <div className="mb-1 flex items-center justify-center gap-2 text-gold/70">
             <span
               aria-hidden

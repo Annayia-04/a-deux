@@ -6,6 +6,8 @@ type Meta = {
   /** Dégradé du visuel de carte, du plus clair au plus profond. */
   gradient: readonly [string, string];
   accent: string;
+  /** Gravure d'arcane posée sur le dégradé. */
+  illustration: string;
 };
 
 export const THEME_META: Record<Theme, Meta> = {
@@ -14,48 +16,56 @@ export const THEME_META: Record<Theme, Meta> = {
     emoji: "🖼️",
     gradient: ["#4b3560", "#221a2f"],
     accent: "#d8c7e6",
+    illustration: "/illustrations/culture.svg",
   },
   gastronomie: {
     label: "Gastronomie",
     emoji: "🍽️",
     gradient: ["#7d3a2c", "#2a1512"],
     accent: "#ecc9a9",
+    illustration: "/illustrations/gastronomie.svg",
   },
   nature: {
     label: "Nature",
     emoji: "🌿",
     gradient: ["#3f5a45", "#141d17"],
     accent: "#c6dcc6",
+    illustration: "/illustrations/nature.svg",
   },
   aventure: {
     label: "Aventure",
     emoji: "🧭",
     gradient: ["#6f2f22", "#23100f"],
     accent: "#e8c2a6",
+    illustration: "/illustrations/aventure.svg",
   },
   creatif: {
     label: "Créatif",
     emoji: "🎨",
     gradient: ["#5f2a42", "#231120"],
     accent: "#e6c1d1",
+    illustration: "/illustrations/creatif.svg",
   },
   detente: {
     label: "Détente",
     emoji: "🛋️",
     gradient: ["#3b4a60", "#161b25"],
     accent: "#c7d4e4",
+    illustration: "/illustrations/detente.svg",
   },
   sport: {
     label: "Sport",
     emoji: "🏃",
     gradient: ["#4f4f2c", "#1b1b11"],
     accent: "#dedcb4",
+    illustration: "/illustrations/sport.svg",
   },
   nocturne: {
     label: "Nocturne",
     emoji: "🌙",
     gradient: ["#54243c", "#1b0f1e"],
     accent: "#e2c2d2",
+    illustration: "/illustrations/nocturne.svg",
   },
 };
 
