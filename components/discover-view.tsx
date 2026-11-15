@@ -264,6 +264,7 @@ export function DiscoverView({
                 idea={top}
                 compact={compact}
                 onDecide={onDecide}
+                onInteract={dismissHint}
               />
             </>
           ) : (
@@ -321,7 +322,8 @@ const SwipeCard = forwardRef<SwipeCardHandle, {
   idea: Idea;
   compact: boolean;
   onDecide: (idea: Idea, direction: SwipeDirection) => void;
-}>(function SwipeCard({ idea, compact, onDecide }, ref) {
+  onInteract: () => void;
+}>(function SwipeCard({ idea, compact, onDecide, onInteract }, ref) {
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-FLY_DISTANCE, 0, FLY_DISTANCE], [-16, 0, 16]);
   const likeOpacity = useTransform(x, [24, 120], [0, 1]);
@@ -380,6 +382,7 @@ const SwipeCard = forwardRef<SwipeCardHandle, {
         dragMomentum={false}
         dragElastic={0.85}
         dragConstraints={{ left: -520, right: 520 }}
+        onDragStart={onInteract}
         onDragEnd={handleDragEnd}
         initial={{ opacity: 0, scale: 0.965, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
