@@ -317,24 +317,33 @@ export function DuoTab({
               </div>
             </section>
 
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={onOpenSouvenirs}
-                className="inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-xl border border-gold/20 bg-ink-800/50 px-3 py-2 text-[11px] text-cream/70 transition hover:border-gold/40 hover:text-cream"
-              >
-                <BookIcon className="h-4 w-4 text-gold/80" />
-                Nos souvenirs
-              </button>
-              <button
-                type="button"
-                onClick={onOpenChoices}
-                className="inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-xl border border-mint/20 bg-mint/[0.05] px-3 py-2 text-[11px] text-mint transition hover:border-mint/40 hover:bg-mint/10"
-              >
-                <CardsIcon className="h-4 w-4" />
-                Nourriture & Films
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={onOpenSouvenirs}
+              className="group flex w-full items-center gap-3 rounded-2xl border border-gold/35 bg-gradient-to-br from-gold/[0.12] via-transparent to-rose/[0.08] p-3.5 text-left transition hover:border-gold/60 hover:from-gold/[0.16]"
+            >
+              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-gold/35 bg-gold/10 text-gold shadow-[0_8px_20px_-12px_rgba(197,160,89,0.8)]">
+                <BookIcon className="h-5 w-5" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block font-display text-[18px] leading-tight text-cream">
+                  Nos souvenirs
+                </span>
+                <span className="mt-0.5 block text-[10.5px] leading-snug text-cream/55">
+                  Vos dates, vos photos et vos mots
+                </span>
+              </span>
+              <ArrowRightIcon className="h-4 w-4 shrink-0 text-gold/55 transition group-hover:translate-x-0.5" />
+            </button>
+
+            <button
+              type="button"
+              onClick={onOpenChoices}
+              className="inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-mint/20 bg-mint/[0.05] px-3 py-2 text-[11px] text-mint transition hover:border-mint/40 hover:bg-mint/10"
+            >
+              <CardsIcon className="h-4 w-4" />
+              Nourriture &amp; Films
+            </button>
 
             <section className="pt-1">
               <div className="flex items-baseline justify-between gap-2">
