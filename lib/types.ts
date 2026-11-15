@@ -62,6 +62,9 @@ export type Swipe = {
 export const CHOICE_CATEGORIES = ["food", "movie"] as const;
 export type ChoiceCategory = (typeof CHOICE_CATEGORIES)[number];
 
+export type FoodMode = "cuisiner" | "livraison" | "restaurant";
+export type MoviePlatform = "netflix" | "prime" | "canal" | "salle";
+
 /** Carte statique du catalogue Nourriture / Films. */
 export type Choice = {
   id: string;
@@ -70,6 +73,14 @@ export type Choice = {
   tagline: string;
   emoji: string;
   tags: string[];
+  /** Plat : comment le vivre et à quel prix. */
+  mode?: FoodMode;
+  budget?: 1 | 2 | 3;
+  time?: number;
+  /** Film : durée en minutes, note et disponibilité. */
+  duration?: number;
+  rating?: number;
+  platform?: MoviePlatform;
 };
 
 export type ChoiceMatchSummary = {

@@ -1,13 +1,17 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { XIcon } from "@/components/icons";
-import type { ChoiceCategory } from "@/lib/types";
+import {
+  FOOD_MODE_META,
+  MOVIE_PLATFORM_LABEL,
+  budgetLabel,
+} from "@/lib/choices";
+import type { ChoiceCategory, FoodMode, MoviePlatform } from "@/lib/types";
+import type { ChoiceFilterState } from "@/lib/choice-filters";
 
-const TAGS: Record<
-  ChoiceCategory,
-  { tag: string; label: string }[]
-> = {
+const GENRES: Record<ChoiceCategory, { tag: string; label: string }[]> = {
   food: [
     { tag: "italien", label: "Italien" },
     { tag: "asiatique", label: "Asiatique" },
@@ -29,21 +33,35 @@ const TAGS: Record<
   ],
 };
 
-/** Filtre rapide des decks Food et Film par tag de catalogue. */
+/** Filtres avancés Food (mode, budget, envie) et Film (lieu, durée, genre, plateforme). */
 export function ChoiceFiltersSheet({
   open,
   category,
-  selected,
-  onSelect,
+  filters,
+  onApply,
   onClose,
 }: {
   open: boolean;
   category: ChoiceCategory;
-  selected: string | null;
-  onSelect: (tag: string | null) => void;
+  filters: ChoiceFilterState;
+  onApply: (filters: ChoiceFilterState) => void;
   onClose: () => void;
 }) {
-  const options = TAGS[category];
+  const [draft, setDraft] = useState<ChoiceFilterState>(filters);
+
+  useEffect(() => {
+    if (open) setDraft(filters);
+  }, [filters, open]);
+
+  function toggle<K extends keyof ChoiceFilterState>(
+    key: K,
+    value: ChoiceFilterState[K],
+  ) {
+    setDraft((current) => ({
+      ...current,
+      [key]: current[key] === value ? undefined : value,
+    }));
+  }
 
   return (
     <AnimatePresence>
@@ -65,9 +83,9 @@ export function ChoiceFiltersSheet({
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={{ type: "spring", stiffness: 320, damping: 34 }}
-            className="w-full max-w-lg overflow-hidden rounded-t-[26px] border border-gold/25 bg-ink-900 p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-2xl sm:rounded-[26px]"
+            className="flex max-h-[82dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-[26px] border border-gold/25 bg-ink-900 shadow-2xl sm:rounded-[26px]"
           >
-            <div className="flex items-start justify-between gap-3">
+            <div className="flex shrink-0 items-start justify-between gap-3 px-5 pb-2 pt-4">
               <div>
                 <p className="text-[9.5px] font-semibold uppercase tracking-[0.2em] text-gold/80">
                   {category === "food" ? "Food" : "Film"}
@@ -78,11 +96,6 @@ export function ChoiceFiltersSheet({
                 >
                   Affiner les cartes
                 </h2>
-                <p className="mt-0.5 text-[11px] text-cream/50">
-                  {category === "food"
-                    ? "Une envie, un style de plat."
-                    : "Un genre pour ce soir."}
-                </p>
               </div>
               <button
                 type="button"
@@ -94,49 +107,160 @@ export function ChoiceFiltersSheet({
               </button>
             </div>
 
-            <div className="mt-4 flex flex-wrap gap-1.5">
-              <button
-                type="button"
-                onClick={() => onSelect(null)}
-                aria-pressed={selected === null}
-                className={`min-h-10 rounded-full border px-3 py-1.5 text-[11.5px] transition ${
-                  selected === null
-                    ? "border-gold/60 bg-rose/20 text-cream"
-                    : "border-gold/15 bg-ink-800/50 text-cream/65 hover:border-gold/35"
-                }`}
-              >
-                Tous
-              </button>
-              {options.map((option) => {
-                const active = selected === option.tag;
-                return (
-                  <button
-                    key={option.tag}
-                    type="button"
-                    onClick={() => onSelect(option.tag)}
-                    aria-pressed={active}
-                    className={`min-h-10 rounded-full border px-3 py-1.5 text-[11.5px] transition ${
-                      active
-                        ? "border-gold/60 bg-rose/20 text-cream"
-                        : "border-gold/15 bg-ink-800/50 text-cream/65 hover:border-gold/35"
-                    }`}
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-3">
+              {category === "food" ? (
+                <>
+                  <Section title="Mode">
+                    {(Object.keys(FOOD_MODE_META) as FoodMode[]).map((mode) => (
+                      <Chip
+                        key={mode}
+                        active={(draft.mode ?? null) === mode}
+                        onClick={() => toggle("mode", mode)}
+                      >
+                        {FOOD_MODE_META[mode].emoji} {FOOD_MODE_META[mode].label}
+                      </Chip>
+                    ))}
+                  </Section>
+
+                  <Section title="Budget">
+                    {[1, 2, 3].map((budget) => (
+                      <Chip
+                        key={budget}
+                        active={draft.budget === budget}
+                        onClick={() =>
+                          toggle("budget", budget as 1 | 2 | 3)
+                        }
+                      >
+                        {budgetLabel(budget as 1 | 2 | 3)}
+                      </Chip>
+                    ))}
+                  </Section>
+                </>
+              ) : (
+                <>
+                  <Section title="Lieu">
+                    <Chip
+                      active={draft.place === "canape"}
+                      onClick={() => toggle("place", "canape")}
+                    >
+                      🛋️ Canapé
+                    </Chip>
+                    <Chip
+                      active={draft.place === "cinema"}
+                      onClick={() => toggle("place", "cinema")}
+                    >
+                      🍿 Au cinéma
+                    </Chip>
+                  </Section>
+
+                  <Section title="Durée">
+                    <Chip
+                      active={draft.duration === "short"}
+                      onClick={() => toggle("duration", "short")}
+                    >
+                      Moins de 1 h 45
+                    </Chip>
+                    <Chip
+                      active={draft.duration === "long"}
+                      onClick={() => toggle("duration", "long")}
+                    >
+                      Plus de 2 h
+                    </Chip>
+                  </Section>
+
+                  <Section title="Plateforme">
+                    {(Object.keys(MOVIE_PLATFORM_LABEL) as MoviePlatform[]).map(
+                      (platform) => (
+                        <Chip
+                          key={platform}
+                          active={draft.platform === platform}
+                          onClick={() => toggle("platform", platform)}
+                        >
+                          {MOVIE_PLATFORM_LABEL[platform]}
+                        </Chip>
+                      ),
+                    )}
+                  </Section>
+                </>
+              )}
+
+              <Section title={category === "food" ? "Envie" : "Genre"}>
+                {GENRES[category].map((genre) => (
+                  <Chip
+                    key={genre.tag}
+                    active={draft.tag === genre.tag}
+                    onClick={() => toggle("tag", genre.tag)}
                   >
-                    {option.label}
-                  </button>
-                );
-              })}
+                    {genre.label}
+                  </Chip>
+                ))}
+              </Section>
+
+              {category === "movie" ? (
+                <p className="mt-4 text-[9.5px] leading-relaxed text-ash">
+                  Durées, notes et plateformes indicatives : les catalogues
+                  changent souvent.
+                </p>
+              ) : null}
             </div>
 
-            <button
-              type="button"
-              onClick={onClose}
-              className="mt-5 inline-flex min-h-12 w-full items-center justify-center rounded-xl border border-gold/45 bg-gradient-to-r from-ember to-rose px-5 py-3 text-[13px] font-semibold text-cream transition hover:border-gold/70 hover:brightness-110"
-            >
-              Voir les cartes
-            </button>
+            <div className="shrink-0 border-t border-gold/15 bg-ink-900/95 px-5 pb-[calc(0.9rem+env(safe-area-inset-bottom))] pt-3">
+              <button
+                type="button"
+                onClick={() => {
+                  onApply(draft);
+                  onClose();
+                }}
+                className="inline-flex min-h-12 w-full items-center justify-center rounded-xl border border-gold/45 bg-gradient-to-r from-ember to-rose px-5 py-3 text-[13px] font-semibold text-cream transition hover:border-gold/70 hover:brightness-110"
+              >
+                Voir les cartes
+              </button>
+            </div>
           </motion.div>
         </motion.div>
       ) : null}
     </AnimatePresence>
+  );
+}
+
+function Section({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="mt-4">
+      <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-gold/75">
+        {title}
+      </p>
+      <div className="flex flex-wrap gap-1.5">{children}</div>
+    </div>
+  );
+}
+
+function Chip({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={`min-h-10 rounded-full border px-3 py-1.5 text-[11.5px] transition ${
+        active
+          ? "border-gold/60 bg-rose/20 text-cream"
+          : "border-gold/15 bg-ink-800/50 text-cream/65 hover:border-gold/35"
+      }`}
+    >
+      {children}
+    </button>
   );
 }

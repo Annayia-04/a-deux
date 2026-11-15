@@ -4,6 +4,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, MotionConfig, motion } from "motion/react";
 import { AppShell, type TabId } from "@/components/app-shell";
 import { ChoiceFiltersSheet } from "@/components/choice-filters-sheet";
+import {
+  countChoiceFilters,
+  filterChoices,
+  type ChoiceFilterState,
+} from "@/lib/choice-filters";
 import { ChoicesDiscover } from "@/components/choices-discover";
 import { DiscoverView } from "@/components/discover-view";
 import { DuoDialog, type DuoDialogTab } from "@/components/duo-dialog";
@@ -166,7 +171,7 @@ export function DateSwipeApp({
   const [passedOpen, setPassedOpen] = useState(false);
   const [detailIdea, setDetailIdea] = useState<Idea | null>(null);
   const [universe, setUniverse] = useState<Universe>("activity");
-  const [choiceFilter, setChoiceFilter] = useState<string | null>(null);
+  const [choiceFilters, setChoiceFilters] = useState<ChoiceFilterState>({});
   const [choiceFiltersOpen, setChoiceFiltersOpen] = useState(false);
   const [builderOpen, setBuilderOpen] = useState(false);
   const [builderPrefill, setBuilderPrefill] = useState<BuilderPrefill>(null);
@@ -373,12 +378,10 @@ export function DateSwipeApp({
 
   const filteredChoices = useMemo(() => {
     const snapshot = choices.snapshot;
-    if (!snapshot || !choiceFilter) return snapshot;
-    const deck = snapshot.deck.filter((choice) =>
-      choice.tags.includes(choiceFilter),
-    );
+    if (!snapshot || countChoiceFilters(choiceFilters) === 0) return snapshot;
+    const deck = filterChoices(snapshot.deck, choiceFilters);
     return { ...snapshot, deck, total: deck.length, swiped: 0 };
-  }, [choiceFilter, choices.snapshot]);
+  }, [choiceFilters, choices.snapshot]);
 
   const {
     enqueue,
@@ -943,17 +946,17 @@ export function DateSwipeApp({
           type="button"
           onClick={() => setChoiceFiltersOpen(true)}
           aria-label={
-            choiceFilter
-              ? `Filtres, ${choiceFilter} sélectionné`
+            countChoiceFilters(choiceFilters) > 0
+              ? `Filtres, ${countChoiceFilters(choiceFilters)} actif${countChoiceFilters(choiceFilters) > 1 ? "s" : ""}`
               : "Filtres"
           }
           className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-gold/25 bg-ink-800/60 px-3 py-1.5 text-[11.5px] font-medium text-cream/75 transition hover:border-gold/45 hover:text-cream"
         >
           <SlidersIcon className="h-3.5 w-3.5 text-gold/80" />
           Filtres
-          {choiceFilter ? (
+          {countChoiceFilters(choiceFilters) > 0 ? (
             <span className="grid h-4 min-w-4 place-items-center rounded-full bg-gold px-1 text-[9.5px] font-bold leading-none text-[#17110a]">
-              1
+              {countChoiceFilters(choiceFilters)}
             </span>
           ) : null}
         </button>
@@ -984,7 +987,7 @@ export function DateSwipeApp({
                 value={universe}
                 onChange={(next) => {
                   setUniverse(next);
-                  setChoiceFilter(null);
+                  setChoiceFilters({});
                   setChoiceFiltersOpen(false);
                 }}
               />
@@ -1181,8 +1184,8 @@ export function DateSwipeApp({
       <ChoiceFiltersSheet
         open={choiceFiltersOpen}
         category={universe === "food" ? "food" : "movie"}
-        selected={choiceFilter}
-        onSelect={setChoiceFilter}
+        filters={choiceFilters}
+        onApply={setChoiceFilters}
         onClose={() => setChoiceFiltersOpen(false)}
       />
 

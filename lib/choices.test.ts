@@ -26,6 +26,20 @@ describe("catalogue de choix", () => {
     }
   });
 
+  it("enrichit chaque carte avec ses métadonnées", () => {
+    for (const choice of CHOICES) {
+      if (choice.category === "food") {
+        expect(choice.mode, choice.id).toBeTruthy();
+        expect(choice.budget, choice.id).toBeGreaterThanOrEqual(1);
+        expect(choice.time, choice.id).toBeGreaterThan(0);
+      } else {
+        expect(choice.duration, choice.id).toBeGreaterThan(0);
+        expect(choice.rating, choice.id).toBeGreaterThan(0);
+        expect(choice.platform, choice.id).toBeTruthy();
+      }
+    }
+  });
+
   it("utilise des identifiants et des titres uniques", () => {
     const ids = new Set(CHOICES.map((choice) => choice.id));
     const titles = new Set(CHOICES.map((choice) => choice.title));

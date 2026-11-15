@@ -10,7 +10,13 @@ import {
   SparklesIcon,
   XIcon,
 } from "@/components/icons";
-import { CHOICE_CATEGORY_META } from "@/lib/choices";
+import {
+  CHOICE_CATEGORY_META,
+  FOOD_MODE_META,
+  MOVIE_PLATFORM_LABEL,
+  budgetLabel,
+  formatChoiceDuration,
+} from "@/lib/choices";
 import type {
   Choice,
   ChoiceCategory,
@@ -62,6 +68,13 @@ export function ChoiceDeck({
   const meta = CHOICE_CATEGORY_META[category];
   const [exitDirection, setExitDirection] = useState<SwipeDirection>("like");
   const top = snapshot?.deck[0];
+  const foodMode = top?.mode ? FOOD_MODE_META[top.mode] : null;
+  const movieDuration = top?.duration
+    ? formatChoiceDuration(top.duration)
+    : null;
+  const moviePlatform = top?.platform
+    ? MOVIE_PLATFORM_LABEL[top.platform]
+    : null;
   const second = snapshot?.deck[1];
   const third = snapshot?.deck[2];
 
@@ -250,10 +263,16 @@ export function ChoiceDeck({
                 <>
                   <div className="relative flex items-start justify-between gap-2">
                     <span className="rounded-full border border-gold/25 bg-ink-950/60 px-2.5 py-1 text-[9px] uppercase tracking-[0.14em] text-cream/80">
-                      {meta.label}
+                      {top.category === "food"
+                        ? `${foodMode?.emoji ?? "🍽️"} ${foodMode?.label ?? meta.label}`
+                        : (top.tags[0] ?? meta.label).replaceAll("-", " ")}
                     </span>
                     <span className="rounded-full border border-gold/25 bg-ink-950/60 px-2 py-0.5 text-[9px] uppercase tracking-[0.14em] text-gold/80">
-                      {meta.kicker}
+                      {top.category === "food"
+                        ? top.budget
+                          ? budgetLabel(top.budget)
+                          : meta.kicker
+                        : `${movieDuration ?? ""}${top.rating ? ` · ★ ${top.rating.toFixed(1)}` : ""}`}
                     </span>
                   </div>
 
@@ -272,6 +291,13 @@ export function ChoiceDeck({
                     </h4>
                     <p className="mt-1.5 line-clamp-2 max-w-[280px] text-[12.5px] leading-relaxed text-cream/60 [@media(max-height:720px)]:mt-1 [@media(max-height:720px)]:text-[11px]">
                       {top.tagline}
+                    </p>
+                    <p className="mt-1 text-[10.5px] text-ash [@media(max-height:720px)]:text-[10px]">
+                      {top.category === "food"
+                        ? top.time
+                          ? `${top.time} min`
+                          : ""
+                        : moviePlatform ?? ""}
                     </p>
                     <ul className="mt-3 flex flex-wrap justify-center gap-1.5 [@media(max-height:720px)]:hidden">
                       {top.tags.map((tag) => (
@@ -308,6 +334,15 @@ export function ChoiceDeck({
                     </h4>
                     <p className="mt-1.5 text-[11.5px] leading-relaxed text-cream/55">
                       {top.tagline}
+                    </p>
+                    <p className="mt-1 text-[10px] text-ash">
+                      {top.category === "food"
+                        ? [foodMode?.label, top.budget ? budgetLabel(top.budget) : null, top.time ? `${top.time} min` : null]
+                            .filter(Boolean)
+                            .join(" · ")
+                        : [movieDuration, top.rating ? `★ ${top.rating.toFixed(1)}` : null, moviePlatform]
+                            .filter(Boolean)
+                            .join(" · ")}
                     </p>
                     <ul className="mt-2.5 flex flex-wrap gap-1">
                       {top.tags.map((tag) => (

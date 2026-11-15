@@ -184,8 +184,43 @@ export const choiceSchema = z
     tagline: z.string().min(3).max(120),
     emoji: z.string().min(1).max(8),
     tags: z.array(z.string().regex(/^[a-z0-9-]+$/)).min(1).max(3),
+    mode: z.enum(["cuisiner", "livraison", "restaurant"]).optional(),
+    budget: z.union([z.literal(1), z.literal(2), z.literal(3)]).optional(),
+    time: z.number().int().min(5).max(240).optional(),
+    duration: z.number().int().min(60).max(360).optional(),
+    rating: z.number().min(0).max(10).optional(),
+    platform: z.enum(["netflix", "prime", "canal", "salle"]).optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((choice, ctx) => {
+    if (choice.category === "food") {
+      if (!choice.mode || !choice.budget || !choice.time) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Un plat doit préciser mode, budget et temps.",
+        });
+      }
+      if (choice.duration || choice.rating || choice.platform) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Un plat ne porte pas de métadonnées de film.",
+        });
+      }
+    } else {
+      if (!choice.duration || !choice.rating || !choice.platform) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Un film doit préciser durée, note et plateforme.",
+        });
+      }
+      if (choice.mode || choice.budget || choice.time) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Un film ne porte pas de métadonnées de plat.",
+        });
+      }
+    }
+  });
 
 // ---------------------------------------------------------------------------
 // Tap

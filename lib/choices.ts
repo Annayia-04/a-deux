@@ -1,5 +1,5 @@
 import { hashSeed, mulberry32 } from "@/lib/seeded";
-import type { Choice, ChoiceCategory } from "@/lib/types";
+import type { Choice, ChoiceCategory, FoodMode, MoviePlatform } from "@/lib/types";
 
 /**
  * Catalogues statiques Nourriture / Films.
@@ -16,6 +16,7 @@ export const CHOICES: Choice[] = [
     tagline: "Pâte étalée, four brûlant, discussions sur la garniture.",
     emoji: "🍕",
     tags: ["italien", "four"],
+    mode: "cuisiner", budget: 1, time: 25,
   },
   {
     id: "pates-fraiches",
@@ -24,6 +25,7 @@ export const CHOICES: Choice[] = [
     tagline: "Une sauce simple, beaucoup de parmesan.",
     emoji: "🍝",
     tags: ["italien", "rapide"],
+    mode: "cuisiner", budget: 1, time: 20,
   },
   {
     id: "ramen",
@@ -32,6 +34,7 @@ export const CHOICES: Choice[] = [
     tagline: "Un bouillon long, des œufs mollets, du bruit en mangeant.",
     emoji: "🍜",
     tags: ["asiatique", "chaud"],
+    mode: "restaurant", budget: 2, time: 45,
   },
   {
     id: "sushis",
@@ -40,6 +43,7 @@ export const CHOICES: Choice[] = [
     tagline: "Commande à partager, baguettes mal tenues.",
     emoji: "🍣",
     tags: ["japonais", "frais"],
+    mode: "livraison", budget: 3, time: 30,
   },
   {
     id: "tacos",
@@ -48,6 +52,7 @@ export const CHOICES: Choice[] = [
     tagline: "Ça déborde, c'est le but.",
     emoji: "🌮",
     tags: ["mexicain", "epice"],
+    mode: "livraison", budget: 1, time: 20,
   },
   {
     id: "burgers",
@@ -56,6 +61,7 @@ export const CHOICES: Choice[] = [
     tagline: "Pain brioché, frites, serviettes en quantité.",
     emoji: "🍔",
     tags: ["americain", "gourmand"],
+    mode: "livraison", budget: 2, time: 25,
   },
   {
     id: "buddha-bowl",
@@ -64,6 +70,7 @@ export const CHOICES: Choice[] = [
     tagline: "Des légumes, des graines, une sauce qui change tout.",
     emoji: "🥗",
     tags: ["sain", "vegetarien"],
+    mode: "cuisiner", budget: 2, time: 30,
   },
   {
     id: "poke-bowl",
@@ -72,6 +79,7 @@ export const CHOICES: Choice[] = [
     tagline: "Riz tiède, poisson frais, avocat en lamelles.",
     emoji: "🐟",
     tags: ["frais", "sain"],
+    mode: "livraison", budget: 2, time: 20,
   },
   {
     id: "couscous",
@@ -80,6 +88,7 @@ export const CHOICES: Choice[] = [
     tagline: "Un grand plat, deux assiettes, personne ne compte.",
     emoji: "🍲",
     tags: ["oriental", "convivial"],
+    mode: "cuisiner", budget: 1, time: 60,
   },
   {
     id: "raclette",
@@ -88,6 +97,7 @@ export const CHOICES: Choice[] = [
     tagline: "Le fromage coule, la soirée aussi.",
     emoji: "🧀",
     tags: ["fromage", "hiver"],
+    mode: "cuisiner", budget: 2, time: 40,
   },
   {
     id: "fondue-savoyarde",
@@ -96,6 +106,7 @@ export const CHOICES: Choice[] = [
     tagline: "Du pain, du vin blanc, une fourchette à partager.",
     emoji: "🫕",
     tags: ["fromage", "hiver"],
+    mode: "cuisiner", budget: 2, time: 40,
   },
   {
     id: "crepes",
@@ -104,6 +115,7 @@ export const CHOICES: Choice[] = [
     tagline: "Sucrées, salées, et une dernière pour la route.",
     emoji: "🥞",
     tags: ["sucre", "breton"],
+    mode: "cuisiner", budget: 1, time: 30,
   },
   {
     id: "brunch",
@@ -112,6 +124,7 @@ export const CHOICES: Choice[] = [
     tagline: "Trop de plats, aucun horaire, café à volonté.",
     emoji: "🍳",
     tags: ["weekend", "long"],
+    mode: "restaurant", budget: 2, time: 60,
   },
   {
     id: "tapas",
@@ -120,6 +133,7 @@ export const CHOICES: Choice[] = [
     tagline: "Pleins de petites assiettes et de grandes discussions.",
     emoji: "🫒",
     tags: ["espagnol", "partage"],
+    mode: "restaurant", budget: 2, time: 60,
   },
   {
     id: "dim-sum",
@@ -128,6 +142,7 @@ export const CHOICES: Choice[] = [
     tagline: "Des paniers vapeur qui n'arrêtent jamais d'arriver.",
     emoji: "🥟",
     tags: ["chinois", "partage"],
+    mode: "restaurant", budget: 2, time: 60,
   },
   {
     id: "curry",
@@ -136,6 +151,7 @@ export const CHOICES: Choice[] = [
     tagline: "Épicé juste ce qu'il faut, avec beaucoup de riz.",
     emoji: "🍛",
     tags: ["indien", "epice"],
+    mode: "cuisiner", budget: 2, time: 45,
   },
   {
     id: "barbecue",
@@ -144,6 +160,7 @@ export const CHOICES: Choice[] = [
     tagline: "Légumes grillés, brochettes, fumée dans les cheveux.",
     emoji: "🍖",
     tags: ["ete", "dehors"],
+    mode: "cuisiner", budget: 2, time: 60,
   },
   {
     id: "pique-nique",
@@ -152,6 +169,7 @@ export const CHOICES: Choice[] = [
     tagline: "Une couverture, des sandwiches, le soleil décide.",
     emoji: "🧺",
     tags: ["dehors", "simple"],
+    mode: "cuisiner", budget: 1, time: 30,
   },
   {
     id: "soupe-maison",
@@ -160,6 +178,7 @@ export const CHOICES: Choice[] = [
     tagline: "Un légume, un mixeur, deux bols fumants.",
     emoji: "🥣",
     tags: ["hiver", "reconfort"],
+    mode: "cuisiner", budget: 1, time: 30,
   },
   {
     id: "risotto",
@@ -168,6 +187,7 @@ export const CHOICES: Choice[] = [
     tagline: "On remue à tour de rôle, on goûte trop souvent.",
     emoji: "🍚",
     tags: ["italien", "cremeux"],
+    mode: "cuisiner", budget: 2, time: 40,
   },
   {
     id: "paella",
@@ -176,6 +196,7 @@ export const CHOICES: Choice[] = [
     tagline: "Un plat pour deux, posé au milieu de la table.",
     emoji: "🥘",
     tags: ["espagnol", "convivial"],
+    mode: "cuisiner", budget: 2, time: 60,
   },
   {
     id: "assiette-grecque",
@@ -184,6 +205,7 @@ export const CHOICES: Choice[] = [
     tagline: "Feta, tomates, olives et pain chaud.",
     emoji: "🥙",
     tags: ["grec", "frais"],
+    mode: "livraison", budget: 1, time: 25,
   },
   {
     id: "pho",
@@ -192,6 +214,7 @@ export const CHOICES: Choice[] = [
     tagline: "Un bouillon parfumé, des herbes fraîches à ajouter.",
     emoji: "🥢",
     tags: ["vietnamien", "chaud"],
+    mode: "restaurant", budget: 2, time: 40,
   },
   {
     id: "bagels",
@@ -200,6 +223,7 @@ export const CHOICES: Choice[] = [
     tagline: "Pain dense, garniture généreuse, papier sulfurisé.",
     emoji: "🥯",
     tags: ["brunch", "rapide"],
+    mode: "livraison", budget: 1, time: 20,
   },
   {
     id: "food-truck",
@@ -208,6 +232,7 @@ export const CHOICES: Choice[] = [
     tagline: "On commande au comptoir et on mange sur un capot.",
     emoji: "🚚",
     tags: ["rue", "rapide"],
+    mode: "restaurant", budget: 1, time: 20,
   },
   {
     id: "apero-marche",
@@ -216,6 +241,7 @@ export const CHOICES: Choice[] = [
     tagline: "Fromage, tomates, pain : le marché fait le reste.",
     emoji: "🧺",
     tags: ["dehors", "local"],
+    mode: "restaurant", budget: 1, time: 45,
   },
   {
     id: "chocolat-chaud",
@@ -224,6 +250,7 @@ export const CHOICES: Choice[] = [
     tagline: "Deux tasses, des viennoiseries, personne ne bouge.",
     emoji: "☕",
     tags: ["sucre", "cosy"],
+    mode: "cuisiner", budget: 1, time: 10,
   },
   {
     id: "glaces",
@@ -232,6 +259,7 @@ export const CHOICES: Choice[] = [
     tagline: "Deux parfums, une cuillère volée.",
     emoji: "🍦",
     tags: ["ete", "sucre"],
+    mode: "restaurant", budget: 2, time: 20,
   },
   {
     id: "planche-apero",
@@ -240,6 +268,7 @@ export const CHOICES: Choice[] = [
     tagline: "Charcuterie, fromage, pickles et lumière tamisée.",
     emoji: "🍷",
     tags: ["partage", "soir"],
+    mode: "cuisiner", budget: 2, time: 20,
   },
   {
     id: "bibimbap",
@@ -248,6 +277,7 @@ export const CHOICES: Choice[] = [
     tagline: "Tout mélanger avant de goûter, c'est la règle.",
     emoji: "🍱",
     tags: ["coreen", "complet"],
+    mode: "restaurant", budget: 2, time: 40,
   },
 
   // -------------------------------------------------------------------------
@@ -260,6 +290,7 @@ export const CHOICES: Choice[] = [
     tagline: "Des rêves imbriqués et une fin qui cloche.",
     emoji: "🌀",
     tags: ["science-fiction", "thriller"],
+    duration: 148, rating: 8.8, platform: "netflix",
   },
   {
     id: "interstellar",
@@ -268,6 +299,7 @@ export const CHOICES: Choice[] = [
     tagline: "L'espace, le temps, les larmes.",
     emoji: "🚀",
     tags: ["science-fiction", "drame"],
+    duration: 169, rating: 8.7, platform: "prime",
   },
   {
     id: "le-grand-bain",
@@ -276,6 +308,7 @@ export const CHOICES: Choice[] = [
     tagline: "Une équipe de bras cassés et une piscine.",
     emoji: "🏊",
     tags: ["comedie", "francais"],
+    duration: 122, rating: 6.9, platform: "netflix",
   },
   {
     id: "intouchables",
@@ -284,6 +317,7 @@ export const CHOICES: Choice[] = [
     tagline: "Une amitié improbable, des répliques cultes.",
     emoji: "🤝",
     tags: ["comedie", "francais"],
+    duration: 112, rating: 8.5, platform: "netflix",
   },
   {
     id: "amelie-poulain",
@@ -292,6 +326,7 @@ export const CHOICES: Choice[] = [
     tagline: "Paris en mieux, avec des cuillères qui cassent.",
     emoji: "🍮",
     tags: ["romantique", "francais"],
+    duration: 122, rating: 8.3, platform: "prime",
   },
   {
     id: "la-la-land",
@@ -300,6 +335,7 @@ export const CHOICES: Choice[] = [
     tagline: "Des pas de danse et un peu de mélancolie.",
     emoji: "🎹",
     tags: ["romantique", "musique"],
+    duration: 128, rating: 8.0, platform: "netflix",
   },
   {
     id: "whiplash",
@@ -308,6 +344,7 @@ export const CHOICES: Choice[] = [
     tagline: "La batterie jusqu'au bout de la nuit.",
     emoji: "🥁",
     tags: ["drame", "musique"],
+    duration: 107, rating: 8.5, platform: "prime",
   },
   {
     id: "parasite",
@@ -316,6 +353,7 @@ export const CHOICES: Choice[] = [
     tagline: "Une maison, deux mondes, un escalier.",
     emoji: "🏠",
     tags: ["thriller", "coreen"],
+    duration: 132, rating: 8.5, platform: "canal",
   },
   {
     id: "pulp-fiction",
@@ -324,6 +362,7 @@ export const CHOICES: Choice[] = [
     tagline: "Des dialogues, une mallette, aucune chronologie.",
     emoji: "🍔",
     tags: ["classique", "polar"],
+    duration: 154, rating: 8.9, platform: "netflix",
   },
   {
     id: "les-evades",
@@ -332,6 +371,7 @@ export const CHOICES: Choice[] = [
     tagline: "L'espoir, la pluie, un poster au mur.",
     emoji: "🌧️",
     tags: ["drame", "classique"],
+    duration: 142, rating: 9.3, platform: "prime",
   },
   {
     id: "forrest-gump",
@@ -340,6 +380,7 @@ export const CHOICES: Choice[] = [
     tagline: "La vie comme une boîte de chocolats.",
     emoji: "🍫",
     tags: ["drame", "classique"],
+    duration: 142, rating: 8.8, platform: "netflix",
   },
   {
     id: "matrix",
@@ -348,6 +389,7 @@ export const CHOICES: Choice[] = [
     tagline: "La pilule rouge, les lunettes noires.",
     emoji: "🟥",
     tags: ["science-fiction", "action"],
+    duration: 136, rating: 8.7, platform: "netflix",
   },
   {
     id: "seigneur-des-anneaux",
@@ -356,6 +398,7 @@ export const CHOICES: Choice[] = [
     tagline: "La communauté, la montagne, les paysages.",
     emoji: "💍",
     tags: ["fantastique", "aventure"],
+    duration: 178, rating: 8.8, platform: "prime",
   },
   {
     id: "harry-potter",
@@ -364,6 +407,7 @@ export const CHOICES: Choice[] = [
     tagline: "Poudlard, le train, la baguette qui choisit.",
     emoji: "⚡",
     tags: ["fantastique", "aventure"],
+    duration: 152, rating: 7.6, platform: "netflix",
   },
   {
     id: "star-wars",
@@ -372,6 +416,7 @@ export const CHOICES: Choice[] = [
     tagline: "Une galaxie lointaine, très lointaine.",
     emoji: "⭐",
     tags: ["science-fiction", "aventure"],
+    duration: 121, rating: 8.6, platform: "canal",
   },
   {
     id: "jurassic-park",
@@ -380,6 +425,7 @@ export const CHOICES: Choice[] = [
     tagline: "Des dinosaures, un parc, une mauvaise idée.",
     emoji: "🦖",
     tags: ["aventure", "classique"],
+    duration: 127, rating: 8.2, platform: "netflix",
   },
   {
     id: "alien",
@@ -388,6 +434,7 @@ export const CHOICES: Choice[] = [
     tagline: "Dans l'espace, personne ne vous entend crier.",
     emoji: "👽",
     tags: ["horreur", "science-fiction"],
+    duration: 117, rating: 8.5, platform: "prime",
   },
   {
     id: "get-out",
@@ -396,6 +443,7 @@ export const CHOICES: Choice[] = [
     tagline: "Un sourire poli qui devient vite inquiétant.",
     emoji: "👀",
     tags: ["horreur", "thriller"],
+    duration: 104, rating: 7.8, platform: "netflix",
   },
   {
     id: "midsommar",
@@ -404,6 +452,7 @@ export const CHOICES: Choice[] = [
     tagline: "Pleine lumière, fleurs et malaise croissant.",
     emoji: "🌼",
     tags: ["horreur", "suedois"],
+    duration: 148, rating: 7.1, platform: "prime",
   },
   {
     id: "conjuring",
@@ -412,6 +461,7 @@ export const CHOICES: Choice[] = [
     tagline: "Une maison, des bruits, une lampe de poche.",
     emoji: "🕯️",
     tags: ["horreur", "maison"],
+    duration: 112, rating: 7.3, platform: "netflix",
   },
   {
     id: "spider-verse",
@@ -420,6 +470,7 @@ export const CHOICES: Choice[] = [
     tagline: "Chaque image est une affiche.",
     emoji: "🕸️",
     tags: ["animation", "action"],
+    duration: 140, rating: 8.6, platform: "netflix",
   },
   {
     id: "totoro",
@@ -428,6 +479,7 @@ export const CHOICES: Choice[] = [
     tagline: "Le chat-bus et la sieste sous la pluie.",
     emoji: "🐈",
     tags: ["animation", "doux"],
+    duration: 86, rating: 8.1, platform: "netflix",
   },
   {
     id: "chihiro",
@@ -436,6 +488,7 @@ export const CHOICES: Choice[] = [
     tagline: "Des esprits, un bain public, un tunnel.",
     emoji: "🏮",
     tags: ["animation", "japonais"],
+    duration: 125, rating: 8.6, platform: "netflix",
   },
   {
     id: "coco",
@@ -444,6 +497,7 @@ export const CHOICES: Choice[] = [
     tagline: "La musique, les ancêtres, les larmes faciles.",
     emoji: "🎸",
     tags: ["animation", "famille"],
+    duration: 105, rating: 8.4, platform: "prime",
   },
   {
     id: "la-haut",
@@ -452,6 +506,7 @@ export const CHOICES: Choice[] = [
     tagline: "Des ballons, une maison, un vieux monsieur.",
     emoji: "🎈",
     tags: ["animation", "famille"],
+    duration: 96, rating: 8.3, platform: "prime",
   },
   {
     id: "grand-budapest",
@@ -460,6 +515,7 @@ export const CHOICES: Choice[] = [
     tagline: "Symétrie parfaite et concierge légendaire.",
     emoji: "🛎️",
     tags: ["comedie", "esthetique"],
+    duration: 99, rating: 8.1, platform: "canal",
   },
   {
     id: "a-couteaux-tires",
@@ -468,6 +524,7 @@ export const CHOICES: Choice[] = [
     tagline: "Un whodunit confortable avec des pulls larges.",
     emoji: "🔪",
     tags: ["polar", "comedie"],
+    duration: 130, rating: 7.9, platform: "netflix",
   },
   {
     id: "gone-girl",
@@ -476,6 +533,7 @@ export const CHOICES: Choice[] = [
     tagline: "Un anniversaire de mariage qui dérape.",
     emoji: "📓",
     tags: ["thriller", "drame"],
+    duration: 149, rating: 8.1, platform: "prime",
   },
   {
     id: "portrait-femme-en-feu",
@@ -484,6 +542,7 @@ export const CHOICES: Choice[] = [
     tagline: "Des regards, du feu, une île.",
     emoji: "🔥",
     tags: ["romantique", "francais"],
+    duration: 122, rating: 8.1, platform: "salle",
   },
   {
     id: "demoiselles-rochefort",
@@ -492,6 +551,7 @@ export const CHOICES: Choice[] = [
     tagline: "Des couleurs vives et des chorégraphies en plein air.",
     emoji: "🎺",
     tags: ["musique", "classique"],
+    duration: 120, rating: 7.7, platform: "salle",
   },
   {
     id: "le-samourai",
@@ -500,6 +560,7 @@ export const CHOICES: Choice[] = [
     tagline: "Un imperméable, un chapeau, très peu de mots.",
     emoji: "🕶️",
     tags: ["polar", "classique"],
+    duration: 105, rating: 8.0, platform: "salle",
   },
   {
     id: "oss-117",
@@ -508,6 +569,7 @@ export const CHOICES: Choice[] = [
     tagline: "Un agent sûr de lui, des répliques absurdes.",
     emoji: "🕵️",
     tags: ["comedie", "francais"],
+    duration: 99, rating: 7.3, platform: "netflix",
   },
   {
     id: "truman-show",
@@ -516,6 +578,7 @@ export const CHOICES: Choice[] = [
     tagline: "Une vie en direct, un bateau au bout du décor.",
     emoji: "📺",
     tags: ["drame", "science-fiction"],
+    duration: 103, rating: 8.2, platform: "prime",
   },
   {
     id: "eternal-sunshine",
@@ -524,6 +587,7 @@ export const CHOICES: Choice[] = [
     tagline: "Effacer l'autre, puis regretter.",
     emoji: "🧠",
     tags: ["romantique", "science-fiction"],
+    duration: 108, rating: 8.3, platform: "netflix",
   },
   {
     id: "before-sunrise",
@@ -532,6 +596,7 @@ export const CHOICES: Choice[] = [
     tagline: "Une nuit à Vienne, une conversation sans fin.",
     emoji: "🌅",
     tags: ["romantique", "drame"],
+    duration: 101, rating: 8.1, platform: "canal",
   },
   {
     id: "lost-in-translation",
@@ -540,6 +605,7 @@ export const CHOICES: Choice[] = [
     tagline: "Tokyo, deux solitudes, un bar d'hôtel.",
     emoji: "🏨",
     tags: ["romantique", "drame"],
+    duration: 102, rating: 7.7, platform: "prime",
   },
   {
     id: "drive",
@@ -548,6 +614,7 @@ export const CHOICES: Choice[] = [
     tagline: "Néon, gants, silence et moteur.",
     emoji: "🚗",
     tags: ["thriller", "esthetique"],
+    duration: 100, rating: 7.8, platform: "netflix",
   },
   {
     id: "mad-max-fury-road",
@@ -556,6 +623,7 @@ export const CHOICES: Choice[] = [
     tagline: "Le désert à plein régime, sans pause.",
     emoji: "🏜️",
     tags: ["action", "aventure"],
+    duration: 120, rating: 8.1, platform: "prime",
   },
   {
     id: "little-miss-sunshine",
@@ -564,6 +632,7 @@ export const CHOICES: Choice[] = [
     tagline: "Un van jaune, une famille, un concours.",
     emoji: "🚌",
     tags: ["comedie", "famille"],
+    duration: 101, rating: 7.8, platform: "netflix",
   },
   {
     id: "moonrise-kingdom",
@@ -572,6 +641,7 @@ export const CHOICES: Choice[] = [
     tagline: "Deux enfants, une fugue, une île.",
     emoji: "⛺",
     tags: ["romantique", "doux"],
+    duration: 94, rating: 7.8, platform: "canal",
   },
 ];
 
@@ -633,4 +703,32 @@ export function rankChoices(
     deck[swap] = current;
   }
   return deck;
+}
+
+export const FOOD_MODE_META: Record<
+  FoodMode,
+  { label: string; emoji: string }
+> = {
+  cuisiner: { label: "À cuisiner", emoji: "🏠" },
+  livraison: { label: "Livraison", emoji: "🛵" },
+  restaurant: { label: "Restaurant", emoji: "🍽️" },
+};
+
+export const MOVIE_PLATFORM_LABEL: Record<MoviePlatform, string> = {
+  netflix: "Netflix",
+  prime: "Prime Video",
+  canal: "Canal+",
+  salle: "Au cinéma",
+};
+
+export function budgetLabel(budget: 1 | 2 | 3): string {
+  return "€".repeat(budget);
+}
+
+/** « 1 h 55 », « 2 h » ou « 25 min ». */
+export function formatChoiceDuration(minutes: number): string {
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return rest === 0 ? `${hours} h` : `${hours} h ${String(rest).padStart(2, "0")}`;
 }
