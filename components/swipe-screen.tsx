@@ -229,7 +229,7 @@ export function SwipeScreen({
 
   return (
     <main className="flex h-screen h-dvh flex-col overflow-hidden [@media(max-height:520px)]:overflow-y-auto">
-      <header className="shrink-0 px-3 pt-4 sm:px-6">
+      <header className="shrink-0 px-3 pt-[max(2.25rem,env(safe-area-inset-top))] sm:px-6 sm:pt-4">
         <div className="mx-auto flex w-full max-w-4xl items-center justify-between gap-2">
           <Brand />
 

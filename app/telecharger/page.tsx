@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function TelechargerPage() {
   return (
-    <main className="mx-auto flex min-h-screen min-h-dvh w-full max-w-2xl flex-col px-4 pb-10 pt-5 sm:px-6">
+    <main className="mx-auto flex min-h-screen min-h-dvh w-full max-w-2xl flex-col px-4 pb-[calc(2.5rem+env(safe-area-inset-bottom))] pt-[max(2.25rem,env(safe-area-inset-top))] sm:px-6 sm:pt-5">
       <Brand />
 
       <section className="grimoire ornament-corners relative mt-8 overflow-hidden rounded-[28px] p-6 sm:p-8">

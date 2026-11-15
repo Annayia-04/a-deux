@@ -64,8 +64,8 @@ export function ResultsView({
   }
 
   return (
-    <main className="mx-auto flex min-h-screen min-h-dvh w-full max-w-4xl flex-col px-4 pb-14 sm:px-6">
-      <header className="flex items-center justify-between gap-3 py-5">
+    <main className="mx-auto flex min-h-screen min-h-dvh w-full max-w-4xl flex-col px-4 pb-[calc(3.5rem+env(safe-area-inset-bottom))] sm:px-6">
+      <header className="flex items-center justify-between gap-3 pb-5 pt-[max(2.25rem,env(safe-area-inset-top))] sm:pt-5">
         <Brand />
         <button
           type="button"

@@ -77,8 +77,8 @@ export function SetupScreen({
   onCopyDuoCode,
 }: Props) {
   return (
-    <main className="mx-auto flex min-h-screen min-h-dvh w-full max-w-7xl flex-col px-4 pb-8 sm:px-6">
-      <header className="flex items-center justify-between py-5">
+    <main className="mx-auto flex min-h-screen min-h-dvh w-full max-w-7xl flex-col px-4 pb-[calc(2rem+env(safe-area-inset-bottom))] sm:px-6">
+      <header className="flex items-center justify-between pb-5 pt-[max(2.25rem,env(safe-area-inset-top))] sm:pt-5">
         <Brand />
         <span className="hidden items-center gap-1.5 rounded-full border border-gold/20 bg-ink-800/50 px-3 py-1.5 text-[10.5px] text-cream/55 sm:inline-flex">
           <LockIcon className="h-3.5 w-3.5 text-gold/80" />
