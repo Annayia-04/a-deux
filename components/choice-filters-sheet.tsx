@@ -221,8 +221,9 @@ export function ChoiceFiltersSheet({
 
               {category === "movie" ? (
                 <p className="mt-4 text-[9.5px] leading-relaxed text-ash">
-                  Titres, durées et notes : IMDb. Plateformes : sélection
-                  éditoriale ; les autres titres affichent « IMDb ».
+                  Titres, durées et notes : IMDb. Affiches : Wikipédia.
+                  Plateformes : sélection éditoriale ; les autres titres
+                  affichent « IMDb ».
                 </p>
               ) : null}
             </div>

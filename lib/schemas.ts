@@ -191,6 +191,7 @@ export const choiceSchema = z
     rating: z.number().min(0).max(10).optional(),
     platform: z.enum(["netflix", "prime", "canal", "salle"]).optional(),
     kind: z.enum(["movie", "series"]).optional(),
+    year: z.number().int().min(1900).max(2100).optional(),
   })
   .strict()
   .superRefine((choice, ctx) => {

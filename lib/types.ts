@@ -84,6 +84,8 @@ export type Choice = {
   platform?: MoviePlatform;
   /** Film ou série (les cartes historiques sans kind sont des films). */
   kind?: ChoiceKind;
+  /** Année de sortie (catalogue IMDb). */
+  year?: number;
 };
 
 export type ChoiceMatchSummary = {

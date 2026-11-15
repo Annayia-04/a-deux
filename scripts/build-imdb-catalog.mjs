@@ -192,6 +192,7 @@ async function main() {
       tags,
       duration: runtime,
       rating: Number(rating.rating.toFixed(1)),
+      year,
       kind,
       score: rating.rating * Math.log10(rating.votes + 1),
     });

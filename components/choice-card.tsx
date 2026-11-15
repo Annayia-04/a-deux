@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { SparklesIcon } from "@/components/icons";
+import { MOVIE_POSTERS } from "@/lib/posters";
 import {
   CHOICE_CATEGORY_META,
   FOOD_MODE_META,
@@ -55,6 +56,7 @@ export function ChoiceCard({
   footer?: ReactNode;
 }) {
   const meta = CHOICE_CATEGORY_META[choice.category];
+  const poster = MOVIE_POSTERS[choice.id] ?? null;
   const isSeries = choice.kind === "series";
   const foodMode = choice.mode ? FOOD_MODE_META[choice.mode] : null;
   const duration = choice.duration
@@ -120,13 +122,33 @@ export function ChoiceCard({
           <div className="relative flex h-full items-center justify-center">
             <span
               aria-hidden
-              className={`grid place-items-center rounded-[24px] bg-ink-950/35 ring-1 ring-gold/30 ${
-                tight
-                  ? "h-14 w-14 text-[28px]"
-                  : "h-20 w-20 rounded-[26px] text-[40px]"
+              className={`relative grid place-items-center overflow-hidden rounded-[12px] border border-gold/30 bg-ink-950/40 ring-1 ring-inset ring-gold/15 ${
+                tight ? "h-14 w-10" : "h-20 w-14"
               }`}
             >
-              {choice.emoji}
+              <span
+                className={`${tight ? "text-[22px]" : "text-[30px]"} ${
+                  poster ? "opacity-0" : ""
+                }`}
+              >
+                {choice.emoji}
+              </span>
+              {poster ? (
+                <img
+                  src={poster}
+                  alt=""
+                  loading={number === 1 ? "eager" : "lazy"}
+                  decoding="async"
+                  referrerPolicy="no-referrer"
+                  onError={(event) => {
+                    event.currentTarget.style.display = "none";
+                    event.currentTarget.previousElementSibling?.classList.remove(
+                      "opacity-0",
+                    );
+                  }}
+                  className="absolute inset-0 h-full w-full object-cover"
+                />
+              ) : null}
             </span>
           </div>
         ) : (
@@ -155,6 +177,19 @@ export function ChoiceCard({
                 <span className="relative text-[58px] drop-shadow-[0_14px_24px_rgba(0,0,0,0.45)]">
                   {choice.emoji}
                 </span>
+                {poster ? (
+                  <img
+                    src={poster}
+                    alt=""
+                    loading={number === 1 ? "eager" : "lazy"}
+                    decoding="async"
+                    referrerPolicy="no-referrer"
+                    onError={(event) => {
+                      event.currentTarget.style.display = "none";
+                    }}
+                    className="absolute inset-0 h-full w-full object-cover"
+                  />
+                ) : null}
                 <div
                   aria-hidden
                   className="pointer-events-none absolute inset-0 ring-1 ring-inset ring-gold/25"
