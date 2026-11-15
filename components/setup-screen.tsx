@@ -5,6 +5,7 @@ import { Brand } from "@/components/brand";
 import { AccountCard } from "@/components/account-card";
 import { InstallCard } from "@/components/install-card";
 import { ThemePicker } from "@/components/theme-picker";
+import { WidgetStatusCard } from "@/components/widget-status-card";
 import {
   ArrowRightIcon,
   BoltIcon,
@@ -27,6 +28,7 @@ type Props = {
   duoError: string | null;
   account: AccountSnapshot | null;
   authProviders: AuthProvider[];
+  hasSession: boolean;
   onStart: (prefs: Prefs) => Promise<void>;
   onResume: () => void;
   onCancelEdit: () => void;
@@ -65,6 +67,7 @@ export function SetupScreen({
   duoError,
   account,
   authProviders,
+  hasSession,
   onStart,
   onResume,
   onCancelEdit,
@@ -166,6 +169,10 @@ export function SetupScreen({
             <AccountCard account={account} providers={authProviders} />
             <InstallCard />
             <ThemePicker />
+            <WidgetStatusCard
+              hasSession={hasSession}
+              coupleComplete={couple?.complete === true}
+            />
           </div>
         </div>
       </div>

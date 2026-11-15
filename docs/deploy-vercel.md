@@ -84,7 +84,7 @@ anonyme fonctionne normalement.
    n’est visible que depuis les deux sessions du duo, puis changer de thème
    dans **Apparence** et recharger la page.
 5. Installer la PWA depuis le téléphone (HTTPS requis) : l’icône « À deux »
-   apparaît, avec les raccourcis « Petit ping » et « Mon duo ».
+   apparaît, avec le raccourci « Mon duo ».
 5. Widget Android : recompiler l’APK avec l’URL publique, puis
    `node scripts/render-android-assets.mjs` si les visuels changent.
 

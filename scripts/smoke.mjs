@@ -1111,13 +1111,12 @@ await check("manifeste PWA servi et complet", async () => {
     "icône maskable absente",
   );
 
-  // Raccourcis de l'icône installée : petit ping et espace à deux.
+  // Raccourci de l'icône installée : espace à deux uniquement.
   assert.ok(Array.isArray(manifest.shortcuts), "raccourcis absents");
   const ping = manifest.shortcuts.find((shortcut) =>
     shortcut.url.includes("ping=1"),
   );
-  assert.ok(ping, "raccourci petit ping absent");
-  assert.match(ping.name, /ping/i);
+  assert.equal(ping, undefined, "le raccourci ping ne doit plus être proposé");
   const duo = manifest.shortcuts.find((shortcut) =>
     shortcut.url.includes("duo=1"),
   );

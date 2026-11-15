@@ -158,8 +158,9 @@ export function InstallCard() {
                 </div>
                 {mode === "native" ? (
                   <p className="mt-2 text-[10.5px] leading-relaxed text-ash">
-                    Astuce : après installation, appui long sur l’icône de
-                    l’app → « Petit ping ».
+                    Astuce : pour envoyer un ping sans ouvrir l’app, utilisez le
+                    widget Android ou la tuile « Petit ping » des réglages
+                    rapides.
                   </p>
                 ) : null}
               </div>

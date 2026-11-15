@@ -21,7 +21,7 @@ public class WidgetBridgePlugin extends Plugin {
     public void getPingToken(PluginCall call) {
         SharedPreferences prefs = prefs();
         JSObject result = new JSObject();
-        result.put("token", prefs.getString(PingWidgetProvider.KEY_TOKEN, null));
+        result.put("token", prefs.getString(PingSender.KEY_TOKEN, null));
         call.resolve(result);
     }
 
@@ -42,8 +42,8 @@ public class WidgetBridgePlugin extends Plugin {
         String normalized = endpoint.replaceAll("/+$", "");
         prefs()
             .edit()
-            .putString(PingWidgetProvider.KEY_TOKEN, token)
-            .putString(PingWidgetProvider.KEY_ENDPOINT, normalized)
+            .putString(PingSender.KEY_TOKEN, token)
+            .putString(PingSender.KEY_ENDPOINT, normalized)
             .apply();
 
         PingWidgetProvider.updateAll(getContext(), getContext().getString(R.string.widget_ping_hint));
@@ -58,6 +58,6 @@ public class WidgetBridgePlugin extends Plugin {
     }
 
     private SharedPreferences prefs() {
-        return getContext().getSharedPreferences(PingWidgetProvider.PREFS, Context.MODE_PRIVATE);
+        return getContext().getSharedPreferences(PingSender.PREFS, Context.MODE_PRIVATE);
     }
 }

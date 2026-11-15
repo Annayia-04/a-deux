@@ -37,6 +37,17 @@
                 android:resource="@xml/ping_widget_info" />
         </receiver>
 
+        <service
+            android:name=".PingTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_tile_ping"
+            android:label="@string/widget_ping_title"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

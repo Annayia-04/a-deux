@@ -715,6 +715,7 @@ export function DateSwipeApp({
           duoError={duoError}
           account={account}
           authProviders={authProviders}
+          hasSession={Boolean(session)}
           onStart={handleStart}
           onResume={handleResume}
           onCancelEdit={cancelEdit}

@@ -320,8 +320,8 @@ Objectif : un widget cliquable sur l’écran d’accueil qui envoie une pensée
 **sans ouvrir l’application**. Impossible en PWA pure : cela exige le wrapper
 natif. Étapes prévues :
 
-1. **Raccourci PWA (livré)** : appui long sur l’icône → « Petit ping » ; l’app
-   s’ouvre et envoie le tap immédiatement (`/?ping=1`).
+1. **Tuile Réglages rapides Android** : envoie le tap sans ouvrir l’app, avec
+   le même jeton d’appareil que le widget.
 2. **Jeton d’appareil** : quand un duo est complet, l’app enregistre un appareil
    (`POST /api/widget/devices`) et reçoit un jeton opaque, stocké haché côté
    serveur (`widget_devices`, lié à `session_id`, révocable). Le jeton natif est

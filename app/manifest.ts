@@ -21,25 +21,12 @@ export default function manifest(): MetadataRoute.Manifest {
     dir: "ltr",
     categories: ["lifestyle", "social"],
     /*
-     * Raccourcis de l'icône installée (appui long sur l'icône).
-     * « Petit ping » ouvre l'app et envoie immédiatement la pensée ;
-     * « Mon duo » ouvre directement l'espace à deux.
+     * Raccourci de l'icône installée (appui long sur l'icône).
+     * « Mon duo » ouvre directement l'espace à deux. Le ping instantané est
+     * réservé au widget et à la tuile Réglages rapides Android, qui n'ouvrent
+     * pas l'application.
      */
     shortcuts: [
-      {
-        name: "Petit ping",
-        short_name: "Ping",
-        description:
-          "Envoyer une pensée rapide à votre partenaire sans chercher le bouton.",
-        url: "/?ping=1",
-        icons: [
-          {
-            src: "/icons/icon-192.png",
-            sizes: "192x192",
-            type: "image/png",
-          },
-        ],
-      },
       {
         name: "Mon duo",
         short_name: "Duo",

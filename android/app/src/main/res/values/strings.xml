@@ -9,6 +9,7 @@
     <string name="widget_ping_hint">Toucher pour envoyer</string>
     <string name="widget_ping_description">Envoie une pensée à votre partenaire sans ouvrir l’application.</string>
     <string name="widget_ping_sent">Ping envoyé</string>
+    <string name="widget_ping_sending">Envoi…</string>
     <string name="widget_ping_wait">Patientez un instant</string>
     <string name="widget_ping_pair">Ouvrir l’app pour associer</string>
     <string name="widget_ping_incomplete">Complétez votre duo</string>
