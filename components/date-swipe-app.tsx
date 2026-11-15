@@ -7,6 +7,7 @@ import { DiscoverView } from "@/components/discover-view";
 import { DuoDialog, type DuoDialogTab } from "@/components/duo-dialog";
 import { DuoTab } from "@/components/duo-tab";
 import { FiltersSheet } from "@/components/filters-sheet";
+import { IdeaDetailSheet } from "@/components/idea-detail-sheet";
 import { MatchCelebration, type CelebrationData } from "@/components/match-celebration";
 import { PassedSheet } from "@/components/passed-sheet";
 import { ProfileView } from "@/components/profile-view";
@@ -151,6 +152,7 @@ export function DateSwipeApp({
   const [launchAction, setLaunchAction] = useState<LaunchAction>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [passedOpen, setPassedOpen] = useState(false);
+  const [matchDetail, setMatchDetail] = useState<Idea | null>(null);
   const [passedIdeas, setPassedIdeas] = useState<Idea[]>([]);
   const [passedLoading, setPassedLoading] = useState(false);
   const [passedError, setPassedError] = useState<string | null>(null);
@@ -901,6 +903,7 @@ export function DateSwipeApp({
             onShareInvite={() => void handleShareInvite()}
             onCopyCode={() => void handleCopyDuoCode()}
             onShareMatch={(idea) => void handleShareMatch(idea)}
+            onOpenMatch={setMatchDetail}
             onOpenSouvenirs={() => openDuoDialog("souvenirs")}
             onOpenChoices={() => openDuoDialog("choices")}
             onDiscover={() => setTab("decouvrir")}
@@ -1019,6 +1022,12 @@ export function DateSwipeApp({
         onLeave={handleLeaveDuo}
         onCopyCode={() => void handleCopyDuoCode()}
         onMarkSeen={() => void markSeen()}
+      />
+
+      <IdeaDetailSheet
+        idea={matchDetail}
+        onClose={() => setMatchDetail(null)}
+        onShare={(idea) => void handleShareMatch(idea)}
       />
 
       <AnimatePresence>

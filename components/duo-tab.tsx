@@ -29,6 +29,7 @@ type Props = {
   onShareInvite: () => void;
   onCopyCode: () => void;
   onShareMatch: (idea: Idea) => void;
+  onOpenMatch: (idea: Idea) => void;
   onOpenSouvenirs: () => void;
   onOpenChoices: () => void;
   onDiscover: () => void;
@@ -52,6 +53,7 @@ export function DuoTab({
   onShareInvite,
   onCopyCode,
   onShareMatch,
+  onOpenMatch,
   onOpenSouvenirs,
   onOpenChoices,
   onDiscover,
@@ -323,39 +325,47 @@ export function DuoTab({
                   {couple.matches.map((match) => (
                     <li
                       key={match.idea.id}
-                      className={`grimoire flex items-center gap-3 rounded-2xl p-3 ${
+                      className={`grimoire flex items-stretch gap-1 rounded-2xl p-1.5 ${
                         match.seen ? "" : "ring-1 ring-inset ring-rose/30"
                       }`}
                     >
-                      <span
-                        aria-hidden
-                        className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-ink-800/80 text-[22px] ring-1 ring-gold/20"
+                      <button
+                        type="button"
+                        onClick={() => onOpenMatch(match.idea)}
+                        aria-label={`Lire l’activité ${match.idea.title}`}
+                        className="flex min-w-0 flex-1 items-center gap-3 rounded-xl px-1.5 py-1.5 text-left transition hover:bg-white/[0.035]"
                       >
-                        {match.idea.emoji}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="flex items-center gap-1.5 font-display text-[16px] leading-tight text-cream">
-                          <span className="truncate">{match.idea.title}</span>
-                          {!match.seen ? (
-                            <span
-                              aria-label="Nouveau match"
-                              className="h-1.5 w-1.5 shrink-0 rounded-full bg-rose"
-                            />
-                          ) : null}
-                        </p>
-                        <p className="mt-0.5 truncate text-[10.5px] text-ash">
-                          {match.idea.duration} ·{" "}
-                          {match.idea.budget === 0
-                            ? "Gratuit"
-                            : formatBudget(match.idea.budget)}{" "}
-                          · {match.idea.tagline}
-                        </p>
-                      </div>
+                        <span
+                          aria-hidden
+                          className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-ink-800/80 text-[22px] ring-1 ring-gold/20"
+                        >
+                          {match.idea.emoji}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="flex items-center gap-1.5 font-display text-[16px] leading-tight text-cream">
+                            <span className="truncate">{match.idea.title}</span>
+                            {!match.seen ? (
+                              <span
+                                aria-label="Nouveau match"
+                                className="h-1.5 w-1.5 shrink-0 rounded-full bg-rose"
+                              />
+                            ) : null}
+                          </span>
+                          <span className="mt-0.5 block truncate text-[10.5px] text-ash">
+                            {match.idea.duration} ·{" "}
+                            {match.idea.budget === 0
+                              ? "Gratuit"
+                              : formatBudget(match.idea.budget)}{" "}
+                            · {match.idea.tagline}
+                          </span>
+                        </span>
+                        <ArrowRightIcon className="h-4 w-4 shrink-0 text-gold/45" />
+                      </button>
                       <button
                         type="button"
                         onClick={() => onShareMatch(match.idea)}
                         aria-label={`Partager le date ${match.idea.title}`}
-                        className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-gold/25 bg-gold/[0.06] text-gold transition hover:border-gold/50 hover:bg-gold/15"
+                        className="my-auto grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-gold/25 bg-gold/[0.06] text-gold transition hover:border-gold/50 hover:bg-gold/15"
                       >
                         <ShareIcon className="h-4 w-4" />
                       </button>
