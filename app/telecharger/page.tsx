@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Brand } from "@/components/brand";
 import { DownloadIcon, LockIcon, SparklesIcon } from "@/components/icons";
+import { APP_VERSION } from "@/lib/version";
 
 export const metadata: Metadata = {
   title: "Application Android — À deux",
@@ -35,7 +36,8 @@ export default function TelechargerPage() {
           Télécharger l’APK Android
         </a>
         <p className="mt-2 text-[10.5px] text-ash">
-          Environ 5 Mo · Android 7 ou plus · hors Play Store
+          Version {APP_VERSION} · environ 8,5 Mo · Android 7 ou plus · hors Play
+          Store
         </p>
 
         <ol className="mt-6 space-y-3 text-[12.5px] leading-relaxed text-cream/70">

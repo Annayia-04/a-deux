@@ -15,6 +15,7 @@ import {
 } from "@/components/icons";
 import type { AuthProvider } from "@/lib/auth/provider";
 import type { AccountSnapshot, CoupleSnapshot } from "@/lib/types";
+import { APP_VERSION } from "@/lib/version";
 
 type Props = {
   account: AccountSnapshot | null;
@@ -172,7 +173,7 @@ export function ProfileView({
 
         <p className="flex items-center justify-center gap-1.5 pt-2 text-center text-[10px] leading-relaxed text-ash">
           <HeartIcon className="h-3 w-3 text-rose/70" />
-          À deux · vos envies restent les vôtres.
+          Version {APP_VERSION} · vos envies restent les vôtres.
         </p>
       </div>
     </div>
