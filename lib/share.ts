@@ -43,3 +43,20 @@ export function buildDuoInviteText(code: string, url: string): string {
     url,
   ].join("\n");
 }
+
+/** Texte de partage d'une envie gardée, hors match. */
+export function buildIdeaShareText(idea: Idea): string {
+  const meta = [
+    idea.duration,
+    SETTING_LABEL[idea.setting],
+    idea.budget === 0 ? "gratuit" : `≈ ${idea.budget} € / pers.`,
+  ].join(" · ");
+
+  return [
+    `${idea.emoji} ${idea.title}`,
+    idea.tagline,
+    meta,
+    `Astuce : ${idea.tip}`,
+    "Une envie trouvée sur À deux.",
+  ].join("\n");
+}

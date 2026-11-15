@@ -5,7 +5,6 @@ import {
   ArrowRightIcon,
   CopyIcon,
   HeartIcon,
-  SparklesIcon,
   TrashIcon,
 } from "@/components/icons";
 import { SETTING_LABEL, THEME_META } from "@/lib/preferences";
@@ -18,6 +17,7 @@ type Props = {
   removingId: string | null;
   onCopy: () => void;
   onRemove: (idea: Idea) => void;
+  onOpenDetail: (idea: Idea) => void;
   onDiscover: () => void;
   onOpenFilters: () => void;
 };
@@ -29,6 +29,7 @@ export function WishlistView({
   removingId,
   onCopy,
   onRemove,
+  onOpenDetail,
   onDiscover,
   onOpenFilters,
 }: Props) {
@@ -99,11 +100,16 @@ export function WishlistView({
                     delay: Math.min(index * 0.04, 0.3),
                     ease: [0.3, 0.8, 0.2, 1],
                   }}
-                  className={`grimoire rounded-2xl p-3 transition ${
+                  className={`grimoire flex items-stretch gap-1 rounded-2xl p-1.5 transition ${
                     removing ? "opacity-40" : ""
                   }`}
                 >
-                  <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => onOpenDetail(idea)}
+                    aria-label={`Lire l’envie ${idea.title}`}
+                    className="flex min-w-0 flex-1 items-center gap-3 rounded-xl px-1.5 py-1.5 text-left transition hover:bg-white/[0.035]"
+                  >
                     <span
                       aria-hidden
                       className="grid h-12 w-12 shrink-0 place-items-center rounded-xl text-[24px] ring-1 ring-gold/20"
@@ -114,40 +120,32 @@ export function WishlistView({
                       {idea.emoji}
                     </span>
 
-                    <div className="min-w-0 flex-1">
-                      <h2 className="truncate font-display text-[17px] leading-tight text-cream">
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-display text-[17px] leading-tight text-cream">
                         {idea.title}
-                      </h2>
-                      <p className="mt-0.5 truncate text-[10.5px] text-ash">
+                      </span>
+                      <span className="mt-0.5 block truncate text-[10.5px] text-ash">
                         {idea.budget === 0 ? "Gratuit" : `${idea.budget} €`} ·{" "}
                         {idea.duration} · {SETTING_LABEL[idea.setting]} ·{" "}
                         {theme.label}
-                      </p>
-                      <p className="mt-0.5 line-clamp-1 text-[11px] text-cream/55">
+                      </span>
+                      <span className="mt-0.5 block truncate text-[11px] text-cream/55">
                         {idea.tagline}
-                      </p>
-                    </div>
+                      </span>
+                    </span>
 
-                    <button
-                      type="button"
-                      onClick={() => onRemove(idea)}
-                      disabled={removing}
-                      aria-label={`Retirer ${idea.title} de mes envies`}
-                      className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-gold/15 bg-ink-800/50 text-ash transition hover:border-rose/40 hover:bg-rose/15 hover:text-rose-soft disabled:opacity-40"
-                    >
-                      <TrashIcon className="h-4 w-4" />
-                    </button>
-                  </div>
+                    <ArrowRightIcon className="h-4 w-4 shrink-0 text-gold/45" />
+                  </button>
 
-                  <details className="group mt-2 border-t border-gold/10 pt-1.5">
-                    <summary className="inline-flex cursor-pointer list-none items-center gap-1 text-[10px] font-medium text-gold/70 transition hover:text-gold [&::-webkit-details-marker]:hidden">
-                      <SparklesIcon className="h-3 w-3" />
-                      Le petit plus
-                    </summary>
-                    <p className="mt-1 rounded-lg bg-gold/[0.06] px-2.5 py-2 text-[10.5px] leading-relaxed text-gold/85">
-                      {idea.tip}
-                    </p>
-                  </details>
+                  <button
+                    type="button"
+                    onClick={() => onRemove(idea)}
+                    disabled={removing}
+                    aria-label={`Retirer ${idea.title} de mes envies`}
+                    className="my-auto grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-gold/15 bg-ink-800/50 text-ash transition hover:border-rose/40 hover:bg-rose/15 hover:text-rose-soft disabled:opacity-40"
+                  >
+                    <TrashIcon className="h-4 w-4" />
+                  </button>
                 </motion.li>
               );
             })}

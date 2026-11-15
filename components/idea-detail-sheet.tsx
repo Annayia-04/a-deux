@@ -28,10 +28,12 @@ export function IdeaDetailSheet({
   idea,
   onClose,
   onShare,
+  shareLabel = "Proposer ce rendez-vous",
 }: {
   idea: Idea | null;
   onClose: () => void;
   onShare: (idea: Idea) => void;
+  shareLabel?: string;
 }) {
   useEffect(() => {
     if (!idea) return;
@@ -178,7 +180,7 @@ export function IdeaDetailSheet({
                 className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-gold/45 bg-gradient-to-r from-ember to-rose px-5 py-3 text-[13px] font-semibold text-cream transition hover:border-gold/70 hover:brightness-110"
               >
                 <ShareIcon className="h-4 w-4" />
-                Proposer ce rendez-vous
+                {shareLabel}
               </button>
             </div>
           </motion.div>

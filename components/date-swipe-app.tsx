@@ -37,6 +37,7 @@ import {
 } from "@/lib/launch-action";
 import {
   buildDuoInviteText,
+  buildIdeaShareText,
   buildMatchShareText,
   buildShareText,
 } from "@/lib/share";
@@ -152,7 +153,8 @@ export function DateSwipeApp({
   const [launchAction, setLaunchAction] = useState<LaunchAction>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [passedOpen, setPassedOpen] = useState(false);
-  const [matchDetail, setMatchDetail] = useState<Idea | null>(null);
+  const [detailIdea, setDetailIdea] = useState<Idea | null>(null);
+  const [detailSource, setDetailSource] = useState<"match" | "envie">("match");
   const [passedIdeas, setPassedIdeas] = useState<Idea[]>([]);
   const [passedLoading, setPassedLoading] = useState(false);
   const [passedError, setPassedError] = useState<string | null>(null);
@@ -714,6 +716,17 @@ export function DateSwipeApp({
     [shareOrCopy],
   );
 
+  const handleShareWish = useCallback(
+    async (idea: Idea) => {
+      await shareOrCopy({
+        title: idea.title,
+        text: buildIdeaShareText(idea),
+        url: `${window.location.origin}/?duo=1`,
+      });
+    },
+    [shareOrCopy],
+  );
+
   const handleShareCelebration = useCallback(async () => {
     if (!activeCelebration?.shareText) return;
     await shareOrCopy({
@@ -903,7 +916,10 @@ export function DateSwipeApp({
             onShareInvite={() => void handleShareInvite()}
             onCopyCode={() => void handleCopyDuoCode()}
             onShareMatch={(idea) => void handleShareMatch(idea)}
-            onOpenMatch={setMatchDetail}
+            onOpenMatch={(idea) => {
+              setDetailSource("match");
+              setDetailIdea(idea);
+            }}
             onOpenSouvenirs={() => openDuoDialog("souvenirs")}
             onOpenChoices={() => openDuoDialog("choices")}
             onDiscover={() => setTab("decouvrir")}
@@ -918,6 +934,10 @@ export function DateSwipeApp({
             removingId={removingLikedId}
             onCopy={() => void handleCopyWishlist()}
             onRemove={(idea) => void handleRemoveLiked(idea)}
+            onOpenDetail={(idea) => {
+              setDetailSource("envie");
+              setDetailIdea(idea);
+            }}
             onDiscover={() => setTab("decouvrir")}
             onOpenFilters={() => setFiltersOpen(true)}
           />
@@ -1025,9 +1045,18 @@ export function DateSwipeApp({
       />
 
       <IdeaDetailSheet
-        idea={matchDetail}
-        onClose={() => setMatchDetail(null)}
-        onShare={(idea) => void handleShareMatch(idea)}
+        idea={detailIdea}
+        shareLabel={
+          detailSource === "match"
+            ? "Proposer ce rendez-vous"
+            : "Partager cette envie"
+        }
+        onClose={() => setDetailIdea(null)}
+        onShare={(idea) =>
+          void (detailSource === "match"
+            ? handleShareMatch(idea)
+            : handleShareWish(idea))
+        }
       />
 
       <AnimatePresence>
