@@ -11,50 +11,8 @@ import { readFileSync, writeFileSync } from "node:fs";
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-const CURATED_EN_TITLES = {
-  inception: ["Inception"],
-  interstellar: ["Interstellar (film)"],
-  "le-grand-bain": ["Sink or Swim (2018 film)"],
-  intouchables: ["The Intouchables"],
-  "amelie-poulain": ["Amélie (film)"],
-  "la-la-land": ["La La Land"],
-  whiplash: ["Whiplash (2014 film)"],
-  parasite: ["Parasite (2019 film)"],
-  "pulp-fiction": ["Pulp Fiction"],
-  "les-evades": ["The Shawshank Redemption"],
-  "forrest-gump": ["Forrest Gump"],
-  matrix: ["The Matrix"],
-  "seigneur-des-anneaux": [
-    "The Lord of the Rings: The Fellowship of the Ring",
-  ],
-  "harry-potter": ["Harry Potter and the Philosopher's Stone (film)"],
-  "star-wars": ["Star Wars (film)"],
-  "jurassic-park": ["Jurassic Park (film)"],
-  alien: ["Alien (film)"],
-  "get-out": ["Get Out"],
-  midsommar: ["Midsommar"],
-  conjuring: ["The Conjuring"],
-  "spider-verse": ["Spider-Man: Across the Spider-Verse"],
-  totoro: ["My Neighbor Totoro"],
-  chihiro: ["Spirited Away"],
-  coco: ["Coco (2017 film)"],
-  "la-haut": ["Up (2009 film)"],
-  "grand-budapest": ["The Grand Budapest Hotel"],
-  "a-couteaux-tires": ["Knives Out"],
-  "gone-girl": ["Gone Girl (film)"],
-  "portrait-femme-en-feu": ["Portrait of a Lady on Fire"],
-  "demoiselles-rochefort": ["The Young Girls of Rochefort"],
-  "le-samourai": ["Le Samouraï"],
-  "oss-117": ["OSS 117: Cairo, Nest of Spies"],
-  "truman-show": ["The Truman Show"],
-  "eternal-sunshine": ["Eternal Sunshine of the Spotless Mind"],
-  "before-sunrise": ["Before Sunrise"],
-  "lost-in-translation": ["Lost in Translation (film)"],
-  drive: ["Drive (2011 film)"],
-  "mad-max-fury-road": ["Mad Max: Fury Road"],
-  "little-miss-sunshine": ["Little Miss Sunshine"],
-  "moonrise-kingdom": ["Moonrise Kingdom"],
-};
+import { CURATED_EN_TITLES } from "./curated-en-titles.mjs";
+
 
 function normalizeUrl(url) {
   if (!url) return null;

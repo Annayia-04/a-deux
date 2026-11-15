@@ -8,7 +8,7 @@ describe("affiches de films", () => {
     for (const [id, url] of entries) {
       expect(id.length, id).toBeGreaterThan(2);
       expect(url, id).toMatch(
-        /^https:\/\/upload\.wikimedia\.org\/wikipedia\/[a-z-]+\//,
+        /^https:\/\/(upload\.wikimedia\.org\/wikipedia\/[a-z-]+|image\.tmdb\.org\/t\/p\/w500)\//,
       );
       expect(url, id).not.toContain("?");
     }
