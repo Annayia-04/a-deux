@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { GoogleIcon, UserIcon } from "@/components/icons";
+import { startGoogleSignIn } from "@/lib/native-auth";
 import type { AuthProvider } from "@/lib/auth/provider";
 import type { AccountSnapshot } from "@/lib/types";
 
@@ -102,13 +103,14 @@ export function AccountCard({
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
                 {providers.includes("google") ? (
-                  <a
-                    href="/api/auth/google"
+                  <button
+                    type="button"
+                    onClick={() => void startGoogleSignIn()}
                     className="inline-flex min-h-11 items-center gap-2 rounded-full border border-gold/30 bg-white px-3.5 py-1.5 text-[11.5px] font-semibold text-ink-950 transition hover:bg-cream"
                   >
                     <GoogleIcon className="h-3.5 w-3.5" />
                     Continuer avec Google
-                  </a>
+                  </button>
                 ) : null}
                 {providers.includes("apple") ? (
                   <a

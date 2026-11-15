@@ -33,7 +33,8 @@ export async function GET(request: Request): Promise<NextResponse> {
       );
     }
 
-    const state = createOAuthState("google");
+    const native = new URL(request.url).searchParams.get("native") === "1";
+    const state = createOAuthState("google", { native });
     const redirectUri = `${publicOrigin(request)}/api/auth/google/callback`;
 
     const authorizationUrl = buildGoogleAuthorizationUrl({

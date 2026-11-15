@@ -107,6 +107,11 @@ export const souvenirIdSchema = z.string().regex(/^[a-f0-9]{24}$/);
 
 export const souvenirPhotoIdSchema = z.string().regex(/^[a-f0-9]{24}$/);
 
+/** Code de passage OAuth natif : 32 octets en base64url. */
+export const nativeAuthExchangeSchema = z
+  .object({ code: z.string().regex(/^[A-Za-z0-9_-]{43}$/) })
+  .strict();
+
 const happenedAtSchema = z
   .number()
   .int()

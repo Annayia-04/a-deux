@@ -47,6 +47,7 @@ import { useCoupleSync } from "@/lib/use-couple-sync";
 import { useSwipeSync } from "@/lib/use-swipe-sync";
 import { useTaps } from "@/lib/use-taps";
 import { useWidgetPairing } from "@/lib/use-widget-pairing";
+import { useNativeAuthListener } from "@/lib/native-auth";
 
 type Mode = "setup" | "swiping" | "results";
 type LocalDecision = { ideaId: string; direction: SwipeDirection };
@@ -281,6 +282,11 @@ export function DateSwipeApp({
         "Widget « Petit ping » associé : touchez-le pour envoyer une pensée.",
         "success",
       ),
+  });
+
+  useNativeAuthListener({
+    onSuccess: () => window.location.reload(),
+    onError: (message) => showToast(message, "error"),
   });
 
   const handleSendTap = useCallback(async () => {

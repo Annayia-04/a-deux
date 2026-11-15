@@ -213,6 +213,16 @@ export async function setAppSession(
   );
 }
 
+export async function findUserById(
+  userId: string,
+): Promise<AccountUser | null> {
+  const result = await getPool().query(
+    `SELECT ${USER_COLUMNS} FROM users WHERE id = $1`,
+    [userId],
+  );
+  return result.rows[0] ? toUser(result.rows[0]) : null;
+}
+
 export async function findUserByAppSession(
   appSessionId: string,
 ): Promise<AccountUser | null> {

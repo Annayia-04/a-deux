@@ -145,6 +145,13 @@ export const api = {
     });
   },
 
+  exchangeNativeAuth(code: string): Promise<{ ok: boolean }> {
+    return request<{ ok: boolean }>("/api/auth/native/exchange", {
+      method: "POST",
+      body: { code },
+    });
+  },
+
   createSouvenir(
     input: SouvenirDraft,
   ): Promise<{ souvenir: SouvenirSnapshot }> {

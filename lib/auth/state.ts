@@ -16,6 +16,8 @@ export type OAuthStatePayload = {
   nonce: string;
   verifier: string;
   iat: number;
+  /** Lancement depuis l'application native : retour par deep link. */
+  native?: boolean;
 };
 
 function base64url(input: Buffer | string): string {
@@ -28,6 +30,7 @@ function sign(value: string, secret: string): string {
 
 export function createOAuthState(
   provider: OAuthStatePayload["provider"],
+  options: { native?: boolean } = {},
 ): OAuthStatePayload {
   return {
     provider,
@@ -35,6 +38,7 @@ export function createOAuthState(
     nonce: randomBytes(24).toString("base64url"),
     verifier: randomBytes(48).toString("base64url"),
     iat: Date.now(),
+    ...(options.native ? { native: true } : {}),
   };
 }
 
@@ -93,7 +97,10 @@ export function openOAuthState(
   if (!Number.isFinite(payload.iat) || now - payload.iat > maxAge) return null;
   if (payload.iat > now + 60_000) return null;
 
-  return payload as OAuthStatePayload;
+  return {
+    ...(payload as OAuthStatePayload),
+    ...(payload.native === true ? { native: true } : {}),
+  };
 }
 
 /** Challenge PKCE S256 : base64url(SHA-256(verifier)). */

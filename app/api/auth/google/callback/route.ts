@@ -17,6 +17,7 @@ import {
   GoogleAuthError,
   verifyGoogleIdToken,
 } from "@/lib/auth/google";
+import { createAuthHandoff } from "@/lib/auth/handoff";
 import { publicOrigin } from "@/lib/auth/origin";
 import { OAUTH_COOKIE, openOAuthState } from "@/lib/auth/state";
 import { authCookieSecret, googleConfig } from "@/lib/config";
@@ -53,21 +54,35 @@ function stateCookieOptions(request: Request) {
   };
 }
 
-/** Retour utilisateur : jamais de détail technique dans l'URL. */
-function backToApp(
-  request: Request,
-  notice: "ok" | "refus" | "etat" | "erreur",
-): NextResponse {
-  const response = NextResponse.redirect(
-    `${publicOrigin(request)}/?compte=${notice}`,
-    303,
-  );
+type Notice = "ok" | "refus" | "etat" | "erreur";
+
+function finish(response: NextResponse, request: Request): NextResponse {
   response.cookies.set(OAUTH_COOKIE, "", stateCookieOptions(request));
   response.headers.set("cache-control", "no-store, max-age=0");
   return response;
 }
 
+/** Retour utilisateur web : jamais de détail technique dans l'URL. */
+function backToApp(request: Request, notice: Notice): NextResponse {
+  return finish(
+    NextResponse.redirect(`${publicOrigin(request)}/?compte=${notice}`, 303),
+    request,
+  );
+}
+
+/** Retour application native : deep link avec un code à usage unique. */
+function backToNative(notice: Notice, code: string | undefined, request: Request): NextResponse {
+  const params = new URLSearchParams();
+  if (code) params.set("code", code);
+  else params.set("error", notice);
+  return finish(
+    NextResponse.redirect(`fr.adeux.app://auth?${params.toString()}`, 303),
+    request,
+  );
+}
+
 export async function GET(request: Request): Promise<NextResponse> {
+  let native = false;
   try {
     enforceRateLimit(request, "auth:google:callback", 60, 60_000);
 
@@ -81,15 +96,16 @@ export async function GET(request: Request): Promise<NextResponse> {
     }
 
     const url = new URL(request.url);
-    if (url.searchParams.get("error")) return backToApp(request, "refus");
+    const store = await cookies();
+    const payload = openOAuthState(store.get(OAUTH_COOKIE)?.value, secret);
+    native = payload?.native === true;
+
+    if (url.searchParams.get("error")) {
+      return native ? backToNative("refus", undefined, request) : backToApp(request, "refus");
+    }
 
     const code = url.searchParams.get("code");
     const returnedState = url.searchParams.get("state");
-    const store = await cookies();
-    const payload = openOAuthState(
-      store.get(OAUTH_COOKIE)?.value,
-      secret,
-    );
 
     if (
       !code ||
@@ -98,7 +114,7 @@ export async function GET(request: Request): Promise<NextResponse> {
       payload.provider !== "google" ||
       payload.state !== returnedState
     ) {
-      return backToApp(request, "etat");
+      return native ? backToNative("etat", undefined, request) : backToApp(request, "etat");
     }
 
     const redirectUri = `${publicOrigin(request)}/api/auth/google/callback`;
@@ -116,6 +132,12 @@ export async function GET(request: Request): Promise<NextResponse> {
     });
 
     const user = await upsertGoogleUser(identity);
+
+    // Application native : le code est échangé par la WebView contre sa session.
+    if (native) {
+      const handoff = await createAuthHandoff(user.id);
+      return backToNative("ok", handoff, request);
+    }
 
     // ---------------------------------------------------------------------
     // Liaison avec la session applicative (données dans PostgreSQL).
@@ -170,13 +192,15 @@ export async function GET(request: Request): Promise<NextResponse> {
     return response;
   } catch (error) {
     if (error instanceof GoogleAuthError) {
-      return backToApp(request, "erreur");
+      return native ? backToNative("erreur", undefined, request) : backToApp(request, "erreur");
     }
     if (error instanceof HttpError) {
-      return fail(error.status, error.message);
+      return native
+        ? backToNative("erreur", undefined, request)
+        : fail(error.status, error.message);
     }
     // Aucun jeton, code ou secret dans les logs.
     console.error("[auth] callback Google en échec :", error);
-    return backToApp(request, "erreur");
+    return native ? backToNative("erreur", undefined, request) : backToApp(request, "erreur");
   }
 }

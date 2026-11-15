@@ -179,13 +179,21 @@ export function SetupScreen({
 
       <footer className="flex flex-col items-center justify-between gap-2 border-t border-gold/15 pt-4 text-[10.5px] text-ash sm:flex-row">
         <p>À deux — des centaines d’idées et un espace à deux pour arrêter de scroller.</p>
-        <a
-          href="#selection"
-          className="inline-flex items-center gap-1 transition hover:text-cream/60"
-        >
-          Configurer ma sélection
-          <ArrowRightIcon className="h-3 w-3" />
-        </a>
+        <span className="inline-flex items-center gap-4">
+          <a
+            href="/telecharger"
+            className="transition hover:text-cream/60"
+          >
+            Application Android
+          </a>
+          <a
+            href="#selection"
+            className="inline-flex items-center gap-1 transition hover:text-cream/60"
+          >
+            Configurer ma sélection
+            <ArrowRightIcon className="h-3 w-3" />
+          </a>
+        </span>
       </footer>
     </main>
   );
