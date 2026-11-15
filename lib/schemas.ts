@@ -34,6 +34,16 @@ export const swipeSchema = z
   })
   .strict();
 
+export const swipeRemoveSchema = z
+  .object({
+    ideaId: z
+      .string()
+      .min(1)
+      .max(64)
+      .regex(/^[a-z0-9-]+$/, "Identifiant invalide"),
+  })
+  .strict();
+
 export const sessionRequestSchema = z.object({ prefs: prefsSchema }).strict();
 export const previewRequestSchema = z.object({ prefs: prefsSchema }).strict();
 

@@ -151,7 +151,7 @@ await check("la page rend le deck côté serveur avec CSP à nonce", async () =>
   });
   assert.equal(response.status, 200, "page d'accueil indisponible");
   const html = await response.text();
-  assert.match(html, /Glissez la carte|Glissez ou utilisez les boutons/);
+  assert.match(html, /Détails de l’idée/);
   assert.ok(htmlHasTitle(html, firstIdea.title), "première carte absente du HTML");
   assert.match(html, /aria-valuenow="0"/);
   assert.match(
@@ -196,7 +196,7 @@ await check("état rechargé : progression et envie visibles", async () => {
   const html = await response.text();
   assert.equal(response.status, 200);
   assert.match(html, /aria-valuenow="1"/);
-  assert.ok(html.includes("Voir mes envies (1)"), "compteur d'envies absent");
+  assert.match(html, /1<!-- --> gardée/, "compteur d'envies absent");
   assert.ok(htmlHasTitle(html, secondIdea.title), "carte suivante absente");
 });
 
@@ -292,7 +292,7 @@ await check("la page repasse en configuration après effacement", async () => {
     headers: { accept: "text/html" },
   });
   const html = await response.text();
-  assert.match(html, /Commencer à swiper/);
+  assert.match(html, /Choisir mes envies/);
 });
 
 // ---------------------------------------------------------------------------

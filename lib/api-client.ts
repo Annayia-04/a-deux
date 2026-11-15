@@ -23,7 +23,7 @@ export class ApiError extends Error {
 }
 
 type RequestInit = {
-  method?: "GET" | "POST" | "PUT" | "DELETE";
+  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
   signal?: AbortSignal;
 };
@@ -78,6 +78,13 @@ export const api = {
     });
   },
 
+  updatePrefs(prefs: Prefs): Promise<SessionSnapshot> {
+    return request<SessionSnapshot>("/api/session", {
+      method: "PATCH",
+      body: { prefs },
+    });
+  },
+
   deleteSession(): Promise<{ ok: boolean }> {
     return request<{ ok: boolean }>("/api/session", { method: "DELETE" });
   },
@@ -110,6 +117,17 @@ export const api = {
     return request<{ ok: boolean; ideaId: string }>("/api/swipes/undo", {
       method: "POST",
     });
+  },
+
+  removeSwipe(ideaId: string): Promise<{ ok: boolean }> {
+    return request<{ ok: boolean }>("/api/swipes", {
+      method: "DELETE",
+      body: { ideaId },
+    });
+  },
+
+  listPassedIdeas(): Promise<{ passed: Idea[] }> {
+    return request<{ passed: Idea[] }>("/api/swipes");
   },
 
   getCouple(signal?: AbortSignal): Promise<{ couple: CoupleSnapshot | null }> {

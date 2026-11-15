@@ -22,14 +22,26 @@ const SETTING_SHORT: Record<Idea["setting"], string> = {
 function MetaItem({
   icon: Icon,
   label,
+  compact,
 }: {
   icon: (props: { className?: string }) => ReactElement;
   label: string;
+  compact: boolean;
 }) {
   return (
-    <li className="flex min-w-0 items-center gap-1 rounded-lg bg-ink-800/70 px-1.5 py-1 ring-1 ring-inset ring-gold/15 [@media(min-height:701px)]:gap-1.5 [@media(min-height:701px)]:px-2 [@media(min-height:701px)]:py-1.5">
-      <Icon className="h-3 w-3 shrink-0 text-ash [@media(min-height:701px)]:h-3.5 [@media(min-height:701px)]:w-3.5" />
-      <span className="truncate text-[10px] text-cream/75 [@media(min-height:701px)]:text-[11px]">
+    <li
+      className={`flex min-w-0 items-center gap-1 rounded-lg bg-ink-800/70 ring-1 ring-inset ring-gold/15 ${
+        compact ? "px-1.5 py-0.5" : "px-1.5 py-1"
+      }`}
+    >
+      <Icon
+        className={`shrink-0 text-ash ${compact ? "h-3 w-3" : "h-3.5 w-3.5"}`}
+      />
+      <span
+        className={`truncate text-cream/75 ${
+          compact ? "text-[9.5px]" : "text-[10.5px]"
+        }`}
+      >
         {label}
       </span>
     </li>
@@ -37,20 +49,29 @@ function MetaItem({
 }
 
 /**
- * Carte d'une idée de rendez-vous. Purement présentationnelle :
- * le geste de swipe est géré par le parent.
+ * Carte d'une idée de rendez-vous. Purement présentationnelle : le geste de
+ * swipe est géré par le parent. `compact` s'adapte aux petits écrans pour que
+ * tout le contenu tienne sans scroll.
  */
-export function DateCard({ idea }: { idea: Idea }) {
+export function DateCard({
+  idea,
+  compact = false,
+}: {
+  idea: Idea;
+  compact?: boolean;
+}) {
   const primaryTheme = THEME_META[idea.themes[0] ?? "detente"];
 
   return (
-    <article className="relative flex h-full w-full flex-col overflow-hidden rounded-[28px] border border-gold/30 bg-ink-850 shadow-[0_30px_80px_-24px_rgba(0,0,0,0.92)] frame-gold">
+    <article className="frame-gold relative flex h-full w-full flex-col overflow-hidden rounded-[24px] border border-gold/30 bg-ink-850 shadow-[0_30px_80px_-24px_rgba(0,0,0,0.92)]">
       <div
         aria-hidden
-        className="ornament-corners pointer-events-none absolute inset-0 z-20 rounded-[28px]"
+        className="ornament-corners pointer-events-none absolute inset-0 z-20 rounded-[24px]"
       />
       <div
-        className="relative h-[34%] min-h-[118px] shrink-0 overflow-hidden [@media(min-height:701px)]:min-h-[148px]"
+        className={`relative shrink-0 overflow-hidden ${
+          compact ? "h-[24%] min-h-[84px]" : "h-[30%] min-h-[112px]"
+        }`}
         style={{
           backgroundImage: `linear-gradient(145deg, ${primaryTheme.gradient[0]} 0%, ${primaryTheme.gradient[1]} 100%)`,
         }}
@@ -69,26 +90,40 @@ export function DateCard({ idea }: { idea: Idea }) {
           className="absolute -bottom-16 -left-10 h-44 w-44 rounded-full bg-black/25 blur-2xl"
         />
 
-        <div className="absolute inset-x-0 top-0 flex items-start justify-between gap-2 p-3.5">
+        <div
+          className={`absolute inset-x-0 top-0 flex items-start justify-between gap-2 ${
+            compact ? "p-2.5" : "p-3.5"
+          }`}
+        >
           <div className="flex flex-wrap gap-1.5">
             {idea.themes.slice(0, 2).map((theme) => (
               <span
                 key={theme}
-                className="rounded-full bg-ink-950/55 px-2.5 py-1 text-[9.5px] font-semibold uppercase tracking-[0.13em] text-cream/90 ring-1 ring-gold/35 backdrop-blur-md"
+                className={`rounded-full bg-ink-950/55 font-semibold uppercase tracking-[0.13em] text-cream/90 ring-1 ring-gold/35 backdrop-blur-md ${
+                  compact
+                    ? "px-2 py-0.5 text-[8.5px]"
+                    : "px-2.5 py-1 text-[9.5px]"
+                }`}
               >
                 {THEME_META[theme].label}
               </span>
             ))}
           </div>
-          <span className="shrink-0 rounded-full bg-ink-950/55 px-2.5 py-1 text-[11px] font-medium text-cream/90 ring-1 ring-gold/35 backdrop-blur-md">
+          <span
+            className={`shrink-0 rounded-full bg-ink-950/55 font-medium text-cream/90 ring-1 ring-gold/35 backdrop-blur-md ${
+              compact ? "px-2 py-0.5 text-[10px]" : "px-2.5 py-1 text-[11px]"
+            }`}
+          >
             {idea.budget === 0 ? "Gratuit" : `≈ ${idea.budget} €`}
           </span>
         </div>
 
-        <div className="relative flex h-full items-center justify-center pb-2 pt-9 [@media(min-height:701px)]:pt-8">
+        <div className="relative flex h-full items-center justify-center pb-1 pt-7">
           <span
             aria-hidden
-            className="select-none text-[60px] leading-none drop-shadow-[0_16px_30px_rgba(0,0,0,0.35)] [@media(min-height:701px)]:text-[86px]"
+            className={`select-none leading-none drop-shadow-[0_16px_30px_rgba(0,0,0,0.35)] ${
+              compact ? "text-[42px]" : "text-[64px]"
+            }`}
           >
             {idea.emoji}
           </span>
@@ -104,38 +139,67 @@ export function DateCard({ idea }: { idea: Idea }) {
         />
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col justify-between gap-1.5 px-4 pb-3 pt-2.5 [@media(min-height:701px)]:gap-2.5 [@media(min-height:701px)]:px-5 [@media(min-height:701px)]:pb-4 [@media(min-height:701px)]:pt-3.5">
+      <div
+        className={`flex min-h-0 flex-1 flex-col justify-between ${
+          compact
+            ? "gap-1 px-3.5 pb-2.5 pt-2"
+            : "gap-1.5 px-4 pb-3 pt-2.5"
+        }`}
+      >
         <div className="min-h-0">
-          <h2 className="balance line-clamp-2 font-display text-[21px] leading-[1.06] tracking-[-0.01em] text-cream [@media(min-height:701px)]:text-[26px]">
+          <h2
+            className={`balance line-clamp-2 font-display leading-[1.06] tracking-[-0.01em] text-cream ${
+              compact ? "text-[19px]" : "text-[23px]"
+            }`}
+          >
             {idea.title}
           </h2>
-          <p className="mt-0.5 line-clamp-1 text-[11.5px] text-rose-soft/90 [@media(min-height:701px)]:mt-1 [@media(min-height:701px)]:text-[12.5px]">
+          <p
+            className={`mt-0.5 line-clamp-1 text-rose-soft/90 ${
+              compact ? "text-[10.5px]" : "text-[11.5px]"
+            }`}
+          >
             {idea.tagline}
           </p>
-          <p className="mt-1.5 line-clamp-2 text-[11px] leading-relaxed text-cream/60 [@media(min-height:701px)]:mt-2 [@media(min-height:701px)]:line-clamp-3 [@media(min-height:701px)]:text-[12px]">
-            {idea.description}
-          </p>
+          {compact ? null : (
+            <p className="mt-1.5 line-clamp-2 text-[11px] leading-relaxed text-cream/60">
+              {idea.description}
+            </p>
+          )}
         </div>
 
-        <ul className="grid grid-cols-2 gap-1 [@media(min-height:701px)]:gap-1.5">
-          <MetaItem icon={ClockIcon} label={idea.duration} />
+        <ul
+          className={`grid grid-cols-2 ${compact ? "gap-1" : "gap-1.5"}`}
+          aria-label="Détails de l’idée"
+        >
+          <MetaItem icon={ClockIcon} label={idea.duration} compact={compact} />
           <MetaItem
             icon={WalletIcon}
             label={idea.budget === 0 ? "Gratuit" : `≈ ${idea.budget} €`}
+            compact={compact}
           />
-          <MetaItem icon={MapPinIcon} label={SETTING_SHORT[idea.setting]} />
+          <MetaItem
+            icon={MapPinIcon}
+            label={SETTING_SHORT[idea.setting]}
+            compact={compact}
+          />
           <MetaItem
             icon={BoltIcon}
             label={`${TIME_LABEL[idea.time]} · ${ENERGY_LABEL[idea.energy]}`}
+            compact={compact}
           />
         </ul>
 
-        <div className="rounded-xl border border-gold/20 bg-gold/[0.07] px-2.5 py-1.5 [@media(min-height:701px)]:rounded-2xl [@media(min-height:701px)]:px-3 [@media(min-height:701px)]:py-2">
-          <p className="flex items-center gap-1.5 text-[8.5px] font-semibold uppercase tracking-[0.16em] text-gold/80 [@media(min-height:701px)]:text-[9px]">
+        <div
+          className={`rounded-xl border border-gold/20 bg-gold/[0.07] ${
+            compact ? "px-2 py-1" : "px-2.5 py-1.5"
+          }`}
+        >
+          <p className="flex items-center gap-1.5 text-[8.5px] font-semibold uppercase tracking-[0.16em] text-gold/80">
             <SparklesIcon className="h-3 w-3" />
             Le petit plus
           </p>
-          <p className="mt-0.5 line-clamp-1 text-[10px] leading-snug text-gold/90 [@media(min-height:701px)]:line-clamp-2 [@media(min-height:701px)]:text-[11px]">
+          <p className="mt-0.5 line-clamp-1 text-[10px] leading-snug text-gold/90">
             {idea.tip}
           </p>
         </div>

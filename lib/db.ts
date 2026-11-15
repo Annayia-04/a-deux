@@ -138,6 +138,18 @@ export async function resetSessionRecord(
   });
 }
 
+/** Change les préférences sans effacer les swipes (filtres appliqués). */
+export async function updateSessionPrefs(
+  id: string,
+  prefs: Prefs,
+  now: number = Date.now(),
+): Promise<void> {
+  await query(
+    "UPDATE sessions SET prefs = $1, last_seen_at = $2 WHERE id = $3",
+    [JSON.stringify(prefs), now, id],
+  );
+}
+
 export async function getSessionRecord(
   id: string,
 ): Promise<SessionRecord | null> {
@@ -328,6 +340,18 @@ export async function countSwipes(sessionId: string): Promise<number> {
     [sessionId],
   );
   return row?.total ?? 0;
+}
+
+/** Retire un swipe précis (utile pour supprimer une envie gardée). */
+export async function removeSwipe(
+  sessionId: string,
+  ideaId: string,
+): Promise<boolean> {
+  const changes = await getPoolQuery(
+    "DELETE FROM swipes WHERE session_id = $1 AND idea_id = $2",
+    [sessionId, ideaId],
+  );
+  return changes > 0;
 }
 
 /** Annule le dernier swipe et renvoie l'idée restaurée (transactionnel). */

@@ -18,6 +18,7 @@ import {
   getSessionRecord,
   resetSessionRecord,
   resolveSessionId,
+  updateSessionPrefs,
 } from "@/lib/db";
 import {
   apiError,
@@ -143,6 +144,52 @@ export async function POST(request: Request): Promise<NextResponse> {
     const response = json(snapshot, 201);
     response.cookies.set(SESSION_COOKIE, token, sessionCookieOptions(request));
     return response;
+  } catch (error) {
+    return apiError(error);
+  }
+}
+
+/**
+ * Applique de nouveaux filtres sans perdre les envies gardées ni le duo.
+ * Le deck est recalculé avec le même seed ; les cartes déjà swipées restent
+ * exclues.
+ */
+export async function PATCH(request: Request): Promise<NextResponse> {
+  try {
+    assertSameOrigin(request);
+
+    const store = await cookies();
+    const token = readTokenFromCookieStore(store);
+    if (!token || !isValidSessionToken(token)) {
+      throw new HttpError(401, "Votre session a expiré. Relancez une sélection.");
+    }
+    const sessionId = await resolveSessionId(hashToken(token));
+    if (!sessionId) {
+      throw new HttpError(401, "Votre session a expiré. Relancez une sélection.");
+    }
+    enforceRateLimit(request, "session:filters", 30, 60_000, sessionId);
+
+    const { prefs } = await readJson(request, sessionRequestSchema);
+    const record = await getSessionRecord(sessionId);
+    if (!record) {
+      throw new HttpError(401, "Votre session a expiré. Relancez une sélection.");
+    }
+
+    if (rankIdeas(prefs, record.seed).length === 0) {
+      throw new HttpError(
+        422,
+        "Aucune idée ne correspond à ces critères. Élargissez un filtre.",
+      );
+    }
+
+    await updateSessionPrefs(sessionId, prefs);
+
+    const session = await loadSessionByToken(token);
+    if (!session) {
+      throw new HttpError(500, "Impossible de recharger votre sélection.");
+    }
+
+    return json(toPublicSnapshot(session));
   } catch (error) {
     return apiError(error);
   }

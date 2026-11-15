@@ -137,6 +137,7 @@ html[data-theme="foret"] {
 @layer base {
   html {
     color-scheme: dark;
+    height: 100%;
   }
 
   body {
@@ -161,6 +162,8 @@ html[data-theme="foret"] {
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
+    /* Pas de rebond ni de pull-to-refresh pendant le swipe vertical. */
+    overscroll-behavior-y: none;
   }
 
   ::selection {

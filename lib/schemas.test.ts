@@ -10,6 +10,7 @@ import {
   tapSeenSchema,
   pushDeviceSchema,
   pushDeviceDeleteSchema,
+  swipeRemoveSchema,
 } from "@/lib/schemas";
 import { DEFAULT_PREFS } from "@/lib/types";
 
@@ -313,6 +314,25 @@ describe("pushDeviceDeleteSchema", () => {
         token: "f".repeat(64),
         platform: "android",
       }).success,
+    ).toBe(false);
+  });
+});
+
+describe("swipeRemoveSchema", () => {
+  it("accepte un identifiant d'idée valide", () => {
+    expect(swipeRemoveSchema.safeParse({ ideaId: "pique-nique-sunset" }).success).toBe(
+      true,
+    );
+  });
+
+  it("refuse les identifiants arbitraires", () => {
+    expect(swipeRemoveSchema.safeParse({ ideaId: "<script>" }).success).toBe(false);
+    expect(swipeRemoveSchema.safeParse({ ideaId: "" }).success).toBe(false);
+  });
+
+  it("refuse les champs supplémentaires", () => {
+    expect(
+      swipeRemoveSchema.safeParse({ ideaId: "lac", sessionId: "autre" }).success,
     ).toBe(false);
   });
 });

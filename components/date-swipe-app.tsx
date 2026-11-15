@@ -2,18 +2,20 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, MotionConfig, motion } from "motion/react";
+import { AppShell, type TabId } from "@/components/app-shell";
+import { DiscoverView } from "@/components/discover-view";
 import { DuoDialog, type DuoDialogTab } from "@/components/duo-dialog";
-import {
-  MatchCelebration,
-  type CelebrationData,
-} from "@/components/match-celebration";
-import { ResultsView } from "@/components/results-view";
-import { SetupScreen } from "@/components/setup-screen";
-import { SwipeScreen } from "@/components/swipe-screen";
+import { DuoTab } from "@/components/duo-tab";
+import { FiltersSheet } from "@/components/filters-sheet";
+import { MatchCelebration, type CelebrationData } from "@/components/match-celebration";
+import { PassedSheet } from "@/components/passed-sheet";
+import { ProfileView } from "@/components/profile-view";
 import { TapPulse } from "@/components/tap-pulse";
+import { WishlistView } from "@/components/wishlist-view";
 import {
   AlertIcon,
   CheckIcon,
+  SlidersIcon,
   SparklesIcon,
   XIcon,
 } from "@/components/icons";
@@ -25,13 +27,18 @@ import {
   playTapChime,
   vibrateTap,
 } from "@/lib/feedback";
-import { summarizePrefs, THEME_META } from "@/lib/preferences";
+import { THEME_META, countActivePrefs } from "@/lib/preferences";
 import {
+  readInviteCode,
   readLaunchAction,
   stripLaunchParams,
   type LaunchAction,
 } from "@/lib/launch-action";
-import { buildShareText } from "@/lib/share";
+import {
+  buildDuoInviteText,
+  buildMatchShareText,
+  buildShareText,
+} from "@/lib/share";
 import { useTapSoundPreference } from "@/lib/use-feedback";
 import {
   DEFAULT_PREFS,
@@ -50,15 +57,9 @@ import { useWidgetPairing } from "@/lib/use-widget-pairing";
 import { useNativeAuthListener } from "@/lib/native-auth";
 import { usePushNotifications } from "@/lib/push-notifications";
 
-type Mode = "setup" | "swiping" | "results";
 type LocalDecision = { ideaId: string; direction: SwipeDirection };
 type ToastTone = "info" | "success" | "error";
 type ToastState = { id: number; message: string; tone: ToastTone };
-
-function initialMode(session: SessionSnapshot | null): Mode {
-  if (!session) return "setup";
-  return session.ideas.length > 0 ? "swiping" : "results";
-}
 
 async function copyToClipboard(text: string): Promise<void> {
   if (navigator.clipboard && window.isSecureContext) {
@@ -66,7 +67,6 @@ async function copyToClipboard(text: string): Promise<void> {
     return;
   }
 
-  // Repli pour les contextes non sécurisés / anciens navigateurs.
   const textarea = document.createElement("textarea");
   textarea.value = text;
   textarea.setAttribute("readonly", "");
@@ -92,9 +92,10 @@ function celebrationForIdea(idea: Idea): CelebrationData {
     subtitle: `${idea.tagline} Vous êtes maintenant prévenus tous les deux.`,
     gradient: theme.gradient,
     kicker: "Match à deux",
-    heading: "Vous aimez la même idée",
+    heading: "C'est un match !",
     ctaLabel: "Voir notre duo",
     duoTab: "matches",
+    shareText: buildMatchShareText(idea),
   };
 }
 
@@ -104,12 +105,14 @@ function celebrationForChoice(choice: Choice): CelebrationData {
     id: `${choice.category}:${choice.id}`,
     emoji: choice.emoji,
     title: choice.title,
-    subtitle: "Vous aimez la même carte. Il ne reste plus qu'à passer à table ou à lancer le film.",
+    subtitle:
+      "Vous aimez la même carte. Il ne reste plus qu'à passer à table ou à lancer le film.",
     gradient: meta.gradient,
     kicker: `Match ${meta.label.toLowerCase()}`,
-    heading: "Vous aimez la même carte",
+    heading: "C'est un match !",
     ctaLabel: "Voir nos choix",
     duoTab: "choices",
+    shareText: `On aime tous les deux « ${choice.title} » ${choice.emoji}. On se le fait ?`,
   };
 }
 
@@ -123,9 +126,7 @@ export function DateSwipeApp({
   authProviders: AuthProvider[];
 }) {
   const [session, setSession] = useState<SessionSnapshot | null>(initialSession);
-  const [mode, setMode] = useState<Mode>(() => initialMode(initialSession));
-  const [returnMode, setReturnMode] = useState<Mode>("swiping");
-  const [editing, setEditing] = useState(false);
+  const [tab, setTab] = useState<TabId>("decouvrir");
   const [index, setIndex] = useState(0);
   const [decisions, setDecisions] = useState<LocalDecision[]>([]);
   const [liked, setLiked] = useState<Idea[]>(initialSession?.likedIdeas ?? []);
@@ -136,12 +137,10 @@ export function DateSwipeApp({
   const [startError, setStartError] = useState<string | null>(null);
   const [undoBusy, setUndoBusy] = useState(false);
   const [toast, setToast] = useState<ToastState | null>(null);
-  const [duoOpen, setDuoOpen] = useState(false);
   const [duoBusy, setDuoBusy] = useState(false);
   const [duoError, setDuoError] = useState<string | null>(null);
-  const [duoInitialTab, setDuoInitialTab] =
-    useState<DuoDialogTab>("matches");
-  const [duoLastTab, setDuoLastTab] = useState<DuoDialogTab>("matches");
+  const [duoDialogOpen, setDuoDialogOpen] = useState(false);
+  const [duoInitialTab, setDuoInitialTab] = useState<DuoDialogTab>("souvenirs");
   const [celebrationQueue, setCelebrationQueue] = useState<CelebrationData[]>(
     [],
   );
@@ -149,15 +148,17 @@ export function DateSwipeApp({
     useState<CelebrationData | null>(null);
   const [incomingTap, setIncomingTap] = useState<number | null>(null);
   const [tapSoundEnabled, setTapSoundEnabled] = useTapSoundPreference();
-  // Action demandée par un raccourci de l'icône installée (?ping=1, ?duo=1).
-  const [launchAction, setLaunchAction] = useState<LaunchAction>(() =>
-    typeof window === "undefined"
-      ? null
-      : readLaunchAction(window.location.search),
-  );
+  const [launchAction, setLaunchAction] = useState<LaunchAction>(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [passedOpen, setPassedOpen] = useState(false);
+  const [passedIdeas, setPassedIdeas] = useState<Idea[]>([]);
+  const [passedLoading, setPassedLoading] = useState(false);
+  const [passedError, setPassedError] = useState<string | null>(null);
+  const [removingLikedId, setRemovingLikedId] = useState<string | null>(null);
+  const [forgetting, setForgetting] = useState(false);
   const launchHandled = useRef(false);
+  const inviteHandled = useRef(false);
 
-  // Débloque la vibration Android et l'audio iOS au premier geste.
   useEffect(() => installFeedbackUnlock(), []);
 
   const showToast = useCallback(
@@ -169,12 +170,18 @@ export function DateSwipeApp({
 
   useEffect(() => {
     if (!toast) return;
-    const timer = window.setTimeout(() => setToast(null), 4500);
+    const timer = window.setTimeout(() => setToast(null), 3600);
     return () => window.clearTimeout(timer);
   }, [toast]);
 
-  // Le paramètre de raccourci ne doit jamais rester dans l'URL : un
-  // rechargement ou un partage ne doit pas rejouer l'action.
+  // Paramètres d'URL lus uniquement côté navigateur (pas de décalage SSR).
+  useEffect(() => {
+    setLaunchAction(readLaunchAction(window.location.search));
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("duo") === "1") setTab("deux");
+  }, []);
+
+  // Les paramètres d'action ne doivent pas survivre à un rechargement.
   useEffect(() => {
     const search = window.location.search;
     const cleaned = stripLaunchParams(search);
@@ -191,14 +198,15 @@ export function DateSwipeApp({
     setLiked([]);
     setDecisions([]);
     setIndex(0);
-    setEditing(false);
-    setMode("setup");
     setStartError("Votre session a expiré. Relancez une sélection.");
-    setDuoOpen(false);
     setDuoError(null);
+    setDuoDialogOpen(false);
     setCelebrationQueue([]);
     setActiveCelebration(null);
     setIncomingTap(null);
+    setFiltersOpen(false);
+    setPassedOpen(false);
+    setTab("decouvrir");
     showToast("Session expirée. Relancez une sélection.", "error");
   }, [showToast]);
 
@@ -252,7 +260,7 @@ export function DateSwipeApp({
   useEffect(() => {
     if (session) return;
     resetCouple();
-    setDuoOpen(false);
+    setDuoDialogOpen(false);
     setCelebrationQueue([]);
     setActiveCelebration(null);
     setIncomingTap(null);
@@ -274,8 +282,6 @@ export function DateSwipeApp({
     onSessionExpired: handleSessionExpired,
   });
 
-  // App native : associe le téléphone au widget « Petit ping » dès que le
-  // duo est complet. Sans effet dans un navigateur.
   useWidgetPairing({
     enabled: Boolean(session && couple?.complete),
     onPaired: () =>
@@ -301,7 +307,6 @@ export function DateSwipeApp({
     showToast("Pensée envoyée à votre partenaire.", "success");
   }, [sendTap, showToast]);
 
-  /** Envoi déclenché par le raccourci « Petit ping » de l'écran d'accueil. */
   const sendShortcutPing = useCallback(async () => {
     try {
       vibrateTap([12]);
@@ -322,10 +327,7 @@ export function DateSwipeApp({
       markKnown(idea.id);
       enqueueMatch(idea);
       void refreshCouple({ notify: false });
-      showToast(
-        `Vous aimez la même idée : ${idea.title}`,
-        "success",
-      );
+      showToast(`Vous aimez la même idée : ${idea.title}`, "success");
     },
     [enqueueMatch, markKnown, refreshCouple, showToast],
   );
@@ -350,20 +352,19 @@ export function DateSwipeApp({
     onMatch: handleSwipeMatch,
   });
 
-  const remaining = session ? Math.max(0, session.ideas.length - index) : 0;
   const swiped = (session?.swiped ?? 0) + decisions.length;
   const likedCount = liked.length;
-  const prefsSummary = session ? summarizePrefs(session.prefs) : "";
+  const activeFilters = useMemo(
+    () => countActivePrefs(session?.prefs ?? draftPrefs),
+    [session?.prefs, draftPrefs],
+  );
 
   const handleDecide = useCallback(
     (idea: Idea, direction: SwipeDirection) => {
       setLiked((current) =>
         direction === "like" ? [idea, ...current] : current,
       );
-      setDecisions((current) => [
-        ...current,
-        { ideaId: idea.id, direction },
-      ]);
+      setDecisions((current) => [...current, { ideaId: idea.id, direction }]);
       setIndex((current) => current + 1);
       enqueue(idea.id, direction);
     },
@@ -394,8 +395,6 @@ export function DateSwipeApp({
       if (last.direction === "like") {
         setLiked((current) => current.filter((idea) => idea.id !== last.ideaId));
       }
-      if (mode === "results") setMode("swiping");
-      // Un match peut disparaître si l'un des deux likes est annulé.
       void refreshCouple({ notify: false });
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) {
@@ -414,110 +413,119 @@ export function DateSwipeApp({
     offline,
     pending,
     undoBusy,
-    mode,
     showToast,
     handleSessionExpired,
     refreshCouple,
   ]);
 
-  const handleStart = useCallback(
+  const applySnapshot = useCallback(
+    (snapshot: SessionSnapshot) => {
+      setSession(snapshot);
+      setDraftPrefs(snapshot.prefs);
+      setLiked(snapshot.likedIdeas);
+      setDecisions([]);
+      setIndex(0);
+      updateCouple(snapshot.couple);
+    },
+    [updateCouple],
+  );
+
+  const handleApplyFilters = useCallback(
     async (prefs: Prefs) => {
+      if (starting) return;
+      if (pending > 0 || offline) {
+        showToast("Patientez pendant la synchronisation des cartes.", "info");
+        return;
+      }
+
       setStarting(true);
       setStartError(null);
-      setDuoError(null);
-      resetSync();
-
       try {
-        const snapshot = await api.createSession(prefs);
-        setSession(snapshot);
-        setDraftPrefs(snapshot.prefs);
-        setLiked(snapshot.likedIdeas);
-        setDecisions([]);
-        setIndex(0);
-        setEditing(false);
-        setMode(snapshot.ideas.length > 0 ? "swiping" : "results");
-        updateCouple(snapshot.couple);
-        showToast("Votre sélection est prête.", "success");
+        const snapshot = session
+          ? await api.updatePrefs(prefs)
+          : await api.createSession(prefs);
+        applySnapshot(snapshot);
+        setFiltersOpen(false);
+        setTab("decouvrir");
+        showToast(
+          session ? "Filtres appliqués. Bonne découverte !" : "Votre sélection est prête.",
+          "success",
+        );
       } catch (error) {
+        if (error instanceof ApiError && error.status === 401) {
+          handleSessionExpired();
+          return;
+        }
         setStartError(
-          errorMessage(error, "Impossible de démarrer la sélection."),
+          errorMessage(error, "Impossible de préparer cette sélection."),
         );
       } finally {
         setStarting(false);
       }
     },
-    [resetSync, showToast, updateCouple],
+    [
+      applySnapshot,
+      handleSessionExpired,
+      offline,
+      pending,
+      session,
+      showToast,
+      starting,
+    ],
   );
 
   /** Crée une session avec les préférences courantes si nécessaire. */
   const ensureSession = useCallback(
     async (prefs: Prefs): Promise<SessionSnapshot | null> => {
       if (session) return session;
-
       setStarting(true);
-      resetSync();
       try {
         const snapshot = await api.createSession(prefs);
-        setSession(snapshot);
-        setDraftPrefs(snapshot.prefs);
-        setLiked(snapshot.likedIdeas);
-        setDecisions([]);
-        setIndex(0);
-        setEditing(false);
-        updateCouple(snapshot.couple);
+        applySnapshot(snapshot);
         return snapshot;
       } finally {
         setStarting(false);
       }
     },
-    [session, resetSync, updateCouple],
+    [applySnapshot, session],
   );
 
-  const handleCreateDuo = useCallback(
-    async (prefs: Prefs) => {
-      if (duoBusy) return;
-      setDuoBusy(true);
-      setDuoError(null);
-      setStartError(null);
+  const handleCreateDuo = useCallback(async () => {
+    if (duoBusy) return;
+    setDuoBusy(true);
+    setDuoError(null);
+    setStartError(null);
 
-      try {
-        const current = await ensureSession(prefs);
-        if (!current) return;
-
-        const result = await api.createCouple();
-        updateCouple(result.couple);
-        setMode("swiping");
-        setDuoOpen(true);
-        showToast(
-          `Espace à deux créé. Partagez le code ${result.couple.code}.`,
-          "success",
-        );
-      } catch (error) {
-        setDuoError(
-          errorMessage(error, "Impossible de créer l’espace à deux."),
-        );
-      } finally {
-        setDuoBusy(false);
-      }
-    },
-    [duoBusy, ensureSession, showToast, updateCouple],
-  );
+    try {
+      const current = await ensureSession(draftPrefs);
+      if (!current) return;
+      const result = await api.createCouple();
+      updateCouple(result.couple);
+      setTab("deux");
+      showToast(
+        `Espace à deux créé. Partagez le code ${result.couple.code}.`,
+        "success",
+      );
+    } catch (error) {
+      setDuoError(errorMessage(error, "Impossible de créer l’espace à deux."));
+    } finally {
+      setDuoBusy(false);
+    }
+  }, [draftPrefs, duoBusy, ensureSession, showToast, updateCouple]);
 
   const handleJoinDuo = useCallback(
-    async (prefs: Prefs, code: string) => {
+    async (code: string) => {
       if (duoBusy) return;
       setDuoBusy(true);
       setDuoError(null);
       setStartError(null);
 
       try {
-        const current = await ensureSession(prefs);
+        const current = await ensureSession(draftPrefs);
         if (!current) return;
-
         const result = await api.joinCouple(code);
         updateCouple(result.couple);
-        setMode("swiping");
-        setDuoOpen(true);
+        setTab("deux");
         showToast(
           result.couple.complete
             ? "Vous avez rejoint votre partenaire. À vous de swiper !"
@@ -532,8 +540,53 @@ export function DateSwipeApp({
         setDuoBusy(false);
       }
     },
-    [duoBusy, ensureSession, showToast, updateCouple],
+    [draftPrefs, duoBusy, ensureSession, showToast, updateCouple],
   );
+
+  // Lien d'invitation `?code=XXXXXX` : rejoint le duo automatiquement.
+  const inviteCode = useRef<string | null>(
+    typeof window === "undefined"
+      ? null
+      : readInviteCode(window.location.search),
+  ).current;
+
+  useEffect(() => {
+    if (!inviteCode || inviteHandled.current) return;
+    inviteHandled.current = true;
+
+    void (async () => {
+      setDuoBusy(true);
+      try {
+        const current = session ?? (await ensureSession(draftPrefs));
+        if (!current) return;
+        if (current.couple) {
+          setTab("deux");
+          showToast("Vous êtes déjà dans un espace à deux.", "info");
+          return;
+        }
+        const result = await api.joinCouple(inviteCode);
+        updateCouple(result.couple);
+        setTab("deux");
+        showToast(
+          result.couple.complete
+            ? "Vous avez rejoint votre partenaire."
+            : "Code accepté. En attente de votre partenaire.",
+          "success",
+        );
+      } catch (error) {
+        setDuoError(
+          errorMessage(error, "Ce lien d’invitation n’est plus valable."),
+        );
+        setTab("deux");
+        showToast(
+          errorMessage(error, "Ce lien d’invitation n’est plus valable."),
+          "error",
+        );
+      } finally {
+        setDuoBusy(false);
+      }
+    })();
+  }, [draftPrefs, ensureSession, inviteCode, session, showToast, updateCouple]);
 
   const handleLeaveDuo = useCallback(async () => {
     if (duoBusy) return;
@@ -546,7 +599,6 @@ export function DateSwipeApp({
       setCelebrationQueue([]);
       setActiveCelebration(null);
       setIncomingTap(null);
-      setDuoInitialTab("matches");
       showToast("Vous avez quitté l’espace à deux.", "success");
     } catch (error) {
       setDuoError(
@@ -557,65 +609,6 @@ export function DateSwipeApp({
     }
   }, [duoBusy, showToast, updateCouple]);
 
-  const handleResume = useCallback(() => {
-    if (!session) {
-      setMode("setup");
-      return;
-    }
-    setEditing(false);
-    setStartError(null);
-    setMode(session.ideas.length > index ? "swiping" : "results");
-  }, [session, index]);
-
-  const openSettings = useCallback(() => {
-    setReturnMode(mode === "setup" ? "swiping" : mode);
-    setEditing(Boolean(session));
-    setStartError(null);
-    setDuoError(null);
-    setMode("setup");
-  }, [mode, session]);
-
-  const handleNewSelection = useCallback(() => {
-    setReturnMode("results");
-    setEditing(false);
-    setStartError(null);
-    setMode("setup");
-  }, []);
-
-  const cancelEdit = useCallback(() => {
-    setEditing(false);
-    setStartError(null);
-    setMode(returnMode);
-  }, [returnMode]);
-
-  const openResults = useCallback(() => {
-    setEditing(false);
-    setMode("results");
-  }, []);
-
-  const openDuoOn = useCallback(
-    (tab: DuoDialogTab) => {
-      setDuoError(null);
-      setDuoInitialTab(tab);
-      setDuoOpen(true);
-      if (tab === "matches") void markSeen();
-    },
-    [markSeen],
-  );
-
-  const openDuo = useCallback(() => {
-    // Un nouveau match d'activité ramène sur l'onglet Matchs, sinon on rouvre
-    // le dernier onglet consulté pour éviter un tap supplémentaire.
-    const tab: DuoDialogTab =
-      couple && couple.unread > 0 ? "matches" : duoLastTab;
-    openDuoOn(tab);
-  }, [couple, duoLastTab, openDuoOn]);
-
-  const closeDuo = useCallback(() => {
-    setDuoOpen(false);
-    setDuoError(null);
-  }, []);
-
   // Exécute une seule fois l'action demandée par le raccourci installé.
   useEffect(() => {
     if (!launchAction || launchHandled.current) return;
@@ -623,7 +616,7 @@ export function DateSwipeApp({
     setLaunchAction(null);
 
     if (launchAction === "duo") {
-      openDuo();
+      setTab("deux");
       return;
     }
 
@@ -635,7 +628,7 @@ export function DateSwipeApp({
       return;
     }
     if (!couple?.complete) {
-      openDuo();
+      setTab("deux");
       showToast(
         "Votre duo doit être complet pour envoyer un petit ping.",
         "info",
@@ -644,58 +637,160 @@ export function DateSwipeApp({
     }
 
     void sendShortcutPing();
-  }, [launchAction, session, couple, openDuo, sendShortcutPing, showToast]);
+  }, [launchAction, session, couple, sendShortcutPing, showToast]);
 
-  const handleCopy = useCallback(async () => {
+  const copyText = useCallback(
+    async (text: string, success: string) => {
+      try {
+        await copyToClipboard(text);
+        showToast(success, "success");
+        return true;
+      } catch {
+        showToast("Copie impossible. Sélectionnez le texte à la main.", "error");
+        return false;
+      }
+    },
+    [showToast],
+  );
+
+  const shareOrCopy = useCallback(
+    async (payload: { title: string; text: string; url: string }) => {
+      if (typeof navigator !== "undefined" && navigator.share) {
+        try {
+          await navigator.share(payload);
+          return;
+        } catch (error) {
+          if (error instanceof DOMException && error.name === "AbortError") {
+            return;
+          }
+        }
+      }
+      await copyText(`${payload.text}\n${payload.url}`, "Lien copié dans le presse-papiers.");
+    },
+    [copyText],
+  );
+
+  const handleCopyWishlist = useCallback(async () => {
     if (!session) return;
-    try {
-      await copyToClipboard(buildShareText(liked, session.prefs));
-      showToast("Liste copiée dans le presse-papiers.", "success");
-    } catch {
-      showToast(
-        "Copie impossible. Sélectionnez le texte de votre navigateur pour le partager.",
-        "error",
-      );
-    }
-  }, [liked, session, showToast]);
+    await copyText(
+      buildShareText(liked, session.prefs),
+      "Liste copiée dans le presse-papiers.",
+    );
+  }, [copyText, liked, session]);
 
   const handleCopyDuoCode = useCallback(async () => {
     if (!couple) return;
-    try {
-      await copyToClipboard(couple.code);
-      showToast(`Code ${couple.code} copié. Envoyez-le à votre partenaire.`, "success");
-    } catch {
-      showToast("Copie impossible. Notez le code affiché.", "error");
-    }
-  }, [couple, showToast]);
+    await copyText(
+      couple.code,
+      `Code ${couple.code} copié. Envoyez-le à votre partenaire.`,
+    );
+  }, [couple, copyText]);
+
+  const handleShareInvite = useCallback(async () => {
+    if (!couple) return;
+    const url = `${window.location.origin}/?code=${couple.code}`;
+    await shareOrCopy({
+      title: "Rejoins-moi sur À deux",
+      text: buildDuoInviteText(couple.code, url),
+      url,
+    });
+  }, [couple, shareOrCopy]);
+
+  const handleShareMatch = useCallback(
+    async (idea: Idea) => {
+      await shareOrCopy({
+        title: idea.title,
+        text: buildMatchShareText(idea),
+        url: `${window.location.origin}/?duo=1`,
+      });
+    },
+    [shareOrCopy],
+  );
+
+  const handleShareCelebration = useCallback(async () => {
+    if (!activeCelebration?.shareText) return;
+    await shareOrCopy({
+      title: activeCelebration.title,
+      text: activeCelebration.shareText,
+      url: `${window.location.origin}/?duo=1`,
+    });
+  }, [activeCelebration, shareOrCopy]);
+
+  const handleRemoveLiked = useCallback(
+    async (idea: Idea) => {
+      if (removingLikedId) return;
+      setRemovingLikedId(idea.id);
+      try {
+        await api.removeSwipe(idea.id);
+        setLiked((current) => current.filter((item) => item.id !== idea.id));
+        setDecisions((current) =>
+          current.filter((decision) => decision.ideaId !== idea.id),
+        );
+        showToast("Envie retirée de votre liste.", "success");
+        void refreshCouple({ notify: false });
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 401) {
+          handleSessionExpired();
+          return;
+        }
+        showToast(
+          errorMessage(error, "Impossible de retirer cette envie."),
+          "error",
+        );
+      } finally {
+        setRemovingLikedId(null);
+      }
+    },
+    [handleSessionExpired, refreshCouple, removingLikedId, showToast],
+  );
+
+  const openPassed = useCallback(() => {
+    setPassedOpen(true);
+    setPassedLoading(true);
+    setPassedError(null);
+    api
+      .listPassedIdeas()
+      .then((result) => setPassedIdeas(result.passed))
+      .catch((error) =>
+        setPassedError(
+          errorMessage(error, "Impossible de charger les idées passées."),
+        ),
+      )
+      .finally(() => setPassedLoading(false));
+  }, []);
 
   const handleForget = useCallback(async () => {
+    setForgetting(true);
     try {
-      await api.deleteSession();
-    } catch (error) {
-      if (!(error instanceof ApiError && error.status === 401)) {
-        showToast("Impossible d’effacer la session. Réessayez.", "error");
-        return;
+      try {
+        await api.deleteSession();
+      } catch (error) {
+        if (!(error instanceof ApiError && error.status === 401)) {
+          showToast("Impossible d’effacer la session. Réessayez.", "error");
+          return;
+        }
       }
-    }
 
-    resetSync();
-    resetCouple();
-    setSession(null);
-    setLiked([]);
-    setDecisions([]);
-    setIndex(0);
-    setEditing(false);
-    setDraftPrefs(DEFAULT_PREFS);
-    setMode("setup");
-    setStartError(null);
-    setDuoOpen(false);
-    setDuoError(null);
-    setCelebrationQueue([]);
-    setActiveCelebration(null);
-    setIncomingTap(null);
-    showToast("Votre session et vos envies ont été effacées.", "success");
-  }, [resetSync, resetCouple, showToast]);
+      resetSync();
+      resetCouple();
+      setSession(null);
+      setLiked([]);
+      setDecisions([]);
+      setIndex(0);
+      setDraftPrefs(DEFAULT_PREFS);
+      setStartError(null);
+      setDuoDialogOpen(false);
+      setDuoError(null);
+      setCelebrationQueue([]);
+      setActiveCelebration(null);
+      setIncomingTap(null);
+      setPassedOpen(false);
+      setTab("decouvrir");
+      showToast("Votre session et vos envies ont été effacées.", "success");
+    } finally {
+      setForgetting(false);
+    }
+  }, [resetCouple, resetSync, showToast]);
 
   const closeCelebration = useCallback(() => {
     setActiveCelebration(null);
@@ -703,99 +798,171 @@ export function DateSwipeApp({
   }, [markSeen]);
 
   const openDuoFromCelebration = useCallback(() => {
-    const tab = activeCelebration?.duoTab ?? "matches";
+    const target = activeCelebration?.duoTab ?? "matches";
     setActiveCelebration(null);
-    openDuoOn(tab);
-  }, [activeCelebration, openDuoOn]);
+    if (target === "matches") {
+      setTab("deux");
+      void markSeen();
+      return;
+    }
+    setDuoError(null);
+    setDuoInitialTab(target);
+    setDuoDialogOpen(true);
+  }, [activeCelebration, markSeen]);
 
-  const resumeInfo = useMemo(() => {
-    if (!session) return null;
-    return { remaining, liked: likedCount };
-  }, [session, remaining, likedCount]);
+  const openDuoDialog = useCallback((target: DuoDialogTab) => {
+    setDuoError(null);
+    setDuoInitialTab(target);
+    setDuoDialogOpen(true);
+  }, []);
+
+  const handleTabChange = useCallback(
+    (next: TabId) => {
+      setTab(next);
+      setFiltersOpen(false);
+      setPassedOpen(false);
+      if (next === "deux" && couple && couple.unread > 0) {
+        void markSeen();
+      }
+    },
+    [couple, markSeen],
+  );
+
+  const headerAction =
+    tab === "decouvrir" ? (
+      <button
+        type="button"
+        onClick={() => setFiltersOpen(true)}
+        aria-label={
+          activeFilters > 0
+            ? `Filtres, ${activeFilters} critère${activeFilters > 1 ? "s" : ""} actif${activeFilters > 1 ? "s" : ""}`
+            : "Filtres"
+        }
+        className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-gold/25 bg-ink-800/60 px-3 py-1.5 text-[11.5px] font-medium text-cream/75 transition hover:border-gold/45 hover:text-cream"
+      >
+        <SlidersIcon className="h-3.5 w-3.5 text-gold/80" />
+        Filtres
+        {activeFilters > 0 ? (
+          <span className="grid h-4 min-w-4 place-items-center rounded-full bg-gold px-1 text-[9.5px] font-bold leading-none text-[#17110a]">
+            {activeFilters}
+          </span>
+        ) : null}
+      </button>
+    ) : undefined;
 
   return (
     <MotionConfig reducedMotion="user">
-      {mode === "setup" ? (
-        <SetupScreen
-          initialPrefs={session?.prefs ?? draftPrefs}
-          resume={editing ? null : resumeInfo}
-          isEditing={editing}
-          starting={starting}
-          error={startError}
-          couple={couple}
-          duoBusy={duoBusy}
-          duoError={duoError}
-          account={account}
-          authProviders={authProviders}
-          hasSession={Boolean(session)}
-          onStart={handleStart}
-          onResume={handleResume}
-          onCancelEdit={cancelEdit}
-          onCreateDuo={handleCreateDuo}
-          onJoinDuo={handleJoinDuo}
-          onManageDuo={openDuo}
-          onCopyDuoCode={() => void handleCopyDuoCode()}
-        />
-      ) : null}
+      <AppShell
+        tab={tab}
+        onTabChange={handleTabChange}
+        unread={couple?.unread ?? 0}
+        action={headerAction}
+      >
+        {tab === "decouvrir" ? (
+          <DiscoverView
+            ideas={session?.ideas ?? []}
+            index={index}
+            total={session?.total ?? 0}
+            swiped={swiped}
+            likedCount={likedCount}
+            hasSession={Boolean(session)}
+            canUndo={
+              decisions.length > 0 && pending === 0 && !offline && !undoBusy
+            }
+            undoBusy={undoBusy}
+            pending={pending}
+            offline={offline}
+            syncError={syncError}
+            onDecide={handleDecide}
+            onUndo={() => void handleUndo()}
+            onRetrySync={retrySync}
+            onOpenFilters={() => setFiltersOpen(true)}
+            onOpenPassed={openPassed}
+            onOpenWishlist={() => setTab("envies")}
+          />
+        ) : null}
 
-      {mode === "swiping" && session ? (
-        <SwipeScreen
-          ideas={session.ideas}
-          index={index}
-          total={session.total}
-          swiped={swiped}
-          likedCount={likedCount}
-          prefsSummary={prefsSummary}
-          duoActive={couple !== null}
-          duoUnread={couple?.unread ?? 0}
-          choiceUnread={couple?.choiceUnread ?? 0}
-          tapEnabled={couple?.complete === true}
-          onSendTap={handleSendTap}
-          onTapError={(message) => showToast(message, "error")}
-          canUndo={
-            decisions.length > 0 && pending === 0 && !offline && !undoBusy
-          }
-          undoBusy={undoBusy}
-          pending={pending}
-          offline={offline}
-          syncError={syncError}
-          onDecide={handleDecide}
-          onUndo={() => void handleUndo()}
-          onRetrySync={retrySync}
-          onOpenSettings={openSettings}
-          onOpenResults={openResults}
-          onOpenDuo={openDuo}
-          onOpenChoices={() => openDuoOn("choices")}
-        />
-      ) : null}
+        {tab === "deux" ? (
+          <DuoTab
+            couple={couple}
+            hasSession={Boolean(session)}
+            busy={duoBusy}
+            error={duoError}
+            onSendTap={handleSendTap}
+            onTapError={(message) => showToast(message, "error")}
+            onCreate={() => void handleCreateDuo()}
+            onJoin={(code) => void handleJoinDuo(code)}
+            onLeave={() => void handleLeaveDuo()}
+            onShareInvite={() => void handleShareInvite()}
+            onCopyCode={() => void handleCopyDuoCode()}
+            onShareMatch={(idea) => void handleShareMatch(idea)}
+            onOpenSouvenirs={() => openDuoDialog("souvenirs")}
+            onOpenChoices={() => openDuoDialog("choices")}
+            onDiscover={() => setTab("decouvrir")}
+          />
+        ) : null}
 
-      {mode === "results" && session ? (
-        <ResultsView
-          likedIdeas={liked}
-          prefs={session.prefs}
-          total={session.total}
-          swiped={swiped}
-          remaining={remaining}
-          couple={couple}
-          onResume={() => setMode("swiping")}
-          onRestart={handleNewSelection}
-          onCopy={() => void handleCopy()}
-          onForget={handleForget}
-          onOpenDuo={openDuo}
-        />
-      ) : null}
+        {tab === "envies" ? (
+          <WishlistView
+            likedIdeas={liked}
+            total={session?.total ?? 0}
+            hasSession={Boolean(session)}
+            removingId={removingLikedId}
+            onCopy={() => void handleCopyWishlist()}
+            onRemove={(idea) => void handleRemoveLiked(idea)}
+            onDiscover={() => setTab("decouvrir")}
+            onOpenFilters={() => setFiltersOpen(true)}
+          />
+        ) : null}
+
+        {tab === "profil" ? (
+          <ProfileView
+            account={account}
+            authProviders={authProviders}
+            hasSession={Boolean(session)}
+            couple={couple}
+            forgetting={forgetting}
+            onForget={handleForget}
+          />
+        ) : null}
+      </AppShell>
+
+      <FiltersSheet
+        open={filtersOpen}
+        initialPrefs={session?.prefs ?? draftPrefs}
+        hasSession={Boolean(session)}
+        busy={starting}
+        error={startError}
+        onClose={() => setFiltersOpen(false)}
+        onSubmit={(prefs) => void handleApplyFilters(prefs)}
+      />
+
+      <PassedSheet
+        open={passedOpen}
+        loading={passedLoading}
+        ideas={passedIdeas}
+        error={passedError}
+        onClose={() => setPassedOpen(false)}
+        onOpenFilters={() => {
+          setPassedOpen(false);
+          setFiltersOpen(true);
+        }}
+      />
 
       <DuoDialog
-        open={duoOpen}
+        open={duoDialogOpen}
         couple={couple}
         busy={duoBusy}
         error={duoError}
         initialTab={duoInitialTab}
         onChoiceMatch={handleChoiceMatch}
-        onTabChange={setDuoLastTab}
+        onTabChange={() => undefined}
         soundEnabled={tapSoundEnabled}
         onToggleSound={() => setTapSoundEnabled(!tapSoundEnabled)}
-        onClose={closeDuo}
+        onClose={() => {
+          setDuoDialogOpen(false);
+          setDuoError(null);
+        }}
         onCreate={async () => {
           if (!session) {
             setDuoError("Choisissez d’abord vos envies pour créer un duo.");
@@ -856,24 +1023,27 @@ export function DateSwipeApp({
             data={activeCelebration}
             onClose={closeCelebration}
             onOpenDuo={openDuoFromCelebration}
+            onShare={
+              activeCelebration.shareText
+                ? () => void handleShareCelebration()
+                : undefined
+            }
           />
         ) : null}
       </AnimatePresence>
 
-      {incomingTap ? (
-        <TapPulse onDone={clearIncomingTap} />
-      ) : null}
+      {incomingTap ? <TapPulse onDone={clearIncomingTap} /> : null}
 
       <AnimatePresence>
         {toast ? (
           <motion.div
             key={toast.id}
-            initial={{ opacity: 0, y: 14, scale: 0.97 }}
+            initial={{ opacity: 0, y: -14, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 10, scale: 0.98 }}
+            exit={{ opacity: 0, y: -10, scale: 0.98 }}
             transition={{ duration: 0.22, ease: [0.3, 0.8, 0.2, 1] }}
             role={toast.tone === "error" ? "alert" : "status"}
-            className={`fixed inset-x-0 bottom-4 z-[70] mx-auto flex w-[calc(100%-2rem)] max-w-sm items-start gap-2.5 rounded-xl border px-3.5 py-2.5 text-[12px] shadow-[0_20px_50px_-20px_rgba(0,0,0,0.9)] backdrop-blur-xl ${
+            className={`fixed inset-x-0 top-[calc(3.75rem+env(safe-area-inset-top))] z-[70] mx-auto flex w-[calc(100%-2rem)] max-w-sm items-start gap-2.5 rounded-xl border px-3.5 py-2.5 text-[12px] shadow-[0_20px_50px_-20px_rgba(0,0,0,0.9)] backdrop-blur-xl ${
               toast.tone === "success"
                 ? "border-gold/35 bg-[#171208]/95 text-gold"
                 : toast.tone === "error"

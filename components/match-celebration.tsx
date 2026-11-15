@@ -1,7 +1,13 @@
 "use client";
 
 import { motion } from "motion/react";
-import { ArrowRightIcon, HeartIcon, SparklesIcon, XIcon } from "@/components/icons";
+import {
+  ArrowRightIcon,
+  HeartIcon,
+  ShareIcon,
+  SparklesIcon,
+  XIcon,
+} from "@/components/icons";
 
 /** Contenu générique : idées, plats ou films partagent la même célébration. */
 export type CelebrationData = {
@@ -14,15 +20,23 @@ export type CelebrationData = {
   heading?: string;
   ctaLabel?: string;
   duoTab?: "matches" | "souvenirs" | "choices";
+  /** Texte prêt à partager pour proposer le rendez-vous. */
+  shareText?: string;
 };
 
 type Props = {
   data: CelebrationData;
   onClose: () => void;
   onOpenDuo: () => void;
+  onShare?: () => void;
 };
 
-export function MatchCelebration({ data, onClose, onOpenDuo }: Props) {
+export function MatchCelebration({
+  data,
+  onClose,
+  onOpenDuo,
+  onShare,
+}: Props) {
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -101,19 +115,38 @@ export function MatchCelebration({ data, onClose, onOpenDuo }: Props) {
           <div className="mt-5 flex flex-col gap-2">
             <button
               type="button"
-              onClick={onOpenDuo}
+              onClick={onShare ?? onOpenDuo}
               className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl border border-gold/45 bg-gradient-to-r from-ember to-rose px-4 py-2.5 text-[12.5px] font-semibold text-cream transition hover:border-gold/70 hover:brightness-110"
             >
-              {data.ctaLabel ?? "Voir notre duo"}
-              <ArrowRightIcon className="h-4 w-4" />
+              {onShare ? (
+                <>
+                  <ShareIcon className="h-4 w-4" />
+                  Proposer ce rendez-vous
+                </>
+              ) : (
+                <>
+                  {data.ctaLabel ?? "Voir notre duo"}
+                  <ArrowRightIcon className="h-4 w-4" />
+                </>
+              )}
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl px-4 py-2 text-[11.5px] text-cream/55 transition hover:bg-white/5 hover:text-cream/80"
+              className="inline-flex min-h-11 items-center justify-center rounded-xl border border-gold/20 bg-ink-800/60 px-4 py-2 text-[12px] font-medium text-cream/75 transition hover:border-gold/40 hover:text-cream"
             >
-              Continuer
+              Continuer à swiper
             </button>
+            {onShare ? (
+              <button
+                type="button"
+                onClick={onOpenDuo}
+                className="inline-flex items-center justify-center gap-1 py-1 text-[10.5px] text-cream/45 transition hover:text-cream/75"
+              >
+                Voir notre duo
+                <ArrowRightIcon className="h-3 w-3" />
+              </button>
+            ) : null}
           </div>
         </div>
       </motion.div>

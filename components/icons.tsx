@@ -19,6 +19,22 @@ export function HeartIcon({ className = "h-5 w-5" }: IconProps) {
   );
 }
 
+export function FlameIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5Z" />
+    </svg>
+  );
+}
+
+export function TrashIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v5M14 11v5" />
+    </svg>
+  );
+}
+
 export function XIcon({ className = "h-5 w-5" }: IconProps) {
   return (
     <svg {...base} className={className}>

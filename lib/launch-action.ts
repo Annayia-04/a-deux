@@ -8,7 +8,7 @@
 
 export type LaunchAction = "ping" | "duo" | null;
 
-const ACTION_PARAMS = ["ping", "duo"] as const;
+const ACTION_PARAMS = ["ping", "duo", "code"] as const;
 
 export function readLaunchAction(search: string): LaunchAction {
   const params = new URLSearchParams(search);
@@ -22,4 +22,15 @@ export function stripLaunchParams(search: string): string {
   const params = new URLSearchParams(search);
   for (const key of ACTION_PARAMS) params.delete(key);
   return params.toString();
+}
+
+/**
+ * Code d'invitation transmis par un lien de partage (`?code=ABC123`).
+ * Le partenaire rejoint automatiquement le duo à l'ouverture.
+ */
+export function readInviteCode(search: string): string | null {
+  const value = new URLSearchParams(search).get("code");
+  if (!value) return null;
+  const normalized = value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  return normalized.length >= 4 && normalized.length <= 8 ? normalized : null;
 }

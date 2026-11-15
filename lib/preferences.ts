@@ -149,3 +149,14 @@ export function summarizePrefs(prefs: Prefs): string {
   }
   return parts.join("  ·  ");
 }
+
+/** Nombre de critères réellement restreints (pastille « Filtres (N) »). */
+export function countActivePrefs(prefs: Prefs): number {
+  let count = 0;
+  if (prefs.budget !== 80) count += 1;
+  if (prefs.setting !== "any") count += 1;
+  if (prefs.time !== "any") count += 1;
+  if (prefs.energy !== "any") count += 1;
+  count += prefs.themes.length;
+  return count;
+}

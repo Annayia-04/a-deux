@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { readLaunchAction, stripLaunchParams } from "@/lib/launch-action";
+import {
+  readInviteCode,
+  readLaunchAction,
+  stripLaunchParams,
+} from "@/lib/launch-action";
 
 describe("actions de lancement PWA", () => {
   it("reconnaît le raccourci petit ping", () => {
@@ -26,5 +30,19 @@ describe("actions de lancement PWA", () => {
     expect(stripLaunchParams("?ping=1&ref=ecran")).toBe("ref=ecran");
     expect(stripLaunchParams("?ref=ecran")).toBe("ref=ecran");
     expect(stripLaunchParams("")).toBe("");
+    expect(stripLaunchParams("?code=abc234&ref=ecran")).toBe("ref=ecran");
+  });
+});
+
+describe("code d'invitation", () => {
+  it("normalise un code en majuscules sans espaces", () => {
+    expect(readInviteCode("?code=abc234")).toBe("ABC234");
+    expect(readInviteCode("?code=%20ab-c2%2034%20")).toBe("ABC234");
+  });
+
+  it("refuse un code absent, trop court ou trop long", () => {
+    expect(readInviteCode("")).toBeNull();
+    expect(readInviteCode("?code=abc")).toBeNull();
+    expect(readInviteCode("?code=ABCDEFGHI")).toBeNull();
   });
 });
