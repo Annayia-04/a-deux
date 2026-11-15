@@ -107,7 +107,7 @@ export function DateCard({
 
       <div
         className={`relative shrink-0 overflow-hidden ${
-          compact ? "h-[24%] min-h-[84px]" : "h-[31%] min-h-[116px]"
+          compact ? "h-[34%] min-h-[104px]" : "h-[42%] min-h-[188px]"
         }`}
         style={{
           backgroundImage: `linear-gradient(145deg, ${primaryTheme.gradient[0]} 0%, ${primaryTheme.gradient[1]} 100%)`,
@@ -123,26 +123,75 @@ export function DateCard({
         />
         <div aria-hidden className="grain absolute inset-0 opacity-15" />
 
-        <div aria-hidden className="absolute inset-0 bg-ink-950/25" />
+        {compact ? (
+          <>
+            <Image
+              src={primaryTheme.illustration}
+              alt=""
+              fill
+              sizes="(max-width: 480px) 100vw, 420px"
+              unoptimized
+              priority={number === 1}
+              aria-hidden
+              className="pointer-events-none select-none object-cover"
+            />
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-ink-950/60 to-transparent"
+            />
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-x-0 -bottom-px h-16 bg-gradient-to-t from-ink-850 via-ink-850/40 to-transparent"
+            />
+          </>
+        ) : (
+          <>
+            <span
+              aria-hidden
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-[10px] leading-none text-gold/40"
+            >
+              ✦
+            </span>
+            <span
+              aria-hidden
+              className="absolute right-4 top-1/3 text-[8px] leading-none text-gold/30"
+            >
+              ✦
+            </span>
+            <span
+              aria-hidden
+              className="absolute bottom-5 right-6 text-[7px] leading-none text-gold/25"
+            >
+              ✦
+            </span>
 
-        <Image
-          src={primaryTheme.illustration}
-          alt=""
-          fill
-          sizes="(max-width: 480px) 100vw, 420px"
-          unoptimized
-          priority={number === 1}
-          aria-hidden
-          className="pointer-events-none select-none object-cover"
-        />
+            <div className="absolute inset-y-2 left-1/2 z-10 aspect-[3/4] -translate-x-1/2 overflow-hidden rounded-t-full rounded-b-[18px] border border-gold/45 bg-ink-950/70 p-1 shadow-[0_18px_40px_-18px_rgba(0,0,0,0.95)]">
+              <div className="relative h-full w-full overflow-hidden rounded-t-full rounded-b-[14px]">
+                <Image
+                  src={primaryTheme.illustration}
+                  alt=""
+                  fill
+                  sizes="240px"
+                  unoptimized
+                  priority={number === 1}
+                  aria-hidden
+                  className="pointer-events-none select-none object-cover"
+                />
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0 ring-1 ring-inset ring-gold/25"
+                />
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-ink-950/70 to-transparent"
+                />
+              </div>
+            </div>
+          </>
+        )}
 
         <div
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-ink-950/55 to-transparent"
-        />
-
-        <div
-          className={`absolute inset-x-0 top-0 flex items-start justify-between gap-2 ${
+          className={`absolute inset-x-0 top-0 z-20 flex items-start justify-between gap-2 ${
             compact ? "p-2.5" : "p-3.5"
           }`}
         >
