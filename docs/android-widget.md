@@ -42,7 +42,10 @@ node scripts/render-icons.mjs
 
 - JDK 21 (Temurin) ;
 - Android SDK Platform 35, Build-Tools 35.0.0, Platform-Tools ;
-- un `android/local.properties` pointant vers le SDK (fichier ignoré par git).
+- un `android/local.properties` pointant vers le SDK (fichier ignoré par git) ;
+- pour les notifications, `android/app/google-services.json` et la clé de
+  service Firebase (voir `docs/firebase-push.md`). Sans ce fichier, le build
+  passe mais FCM ne s’initialise pas.
 
 Configuration utilisée en local :
 
