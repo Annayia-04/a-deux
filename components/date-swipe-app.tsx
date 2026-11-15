@@ -352,7 +352,12 @@ export function DateSwipeApp({
     onMatch: handleSwipeMatch,
   });
 
-  const swiped = (session?.swiped ?? 0) + decisions.length;
+  // Progression du deck courant : le total peut changer avec les filtres,
+  // alors que la session conserve d'anciens swipes hors sélection.
+  const remaining = session ? session.ideas.length - index : 0;
+  const swiped = session
+    ? Math.max(0, Math.min(session.total, session.total - remaining))
+    : 0;
   const likedCount = liked.length;
   const activeFilters = useMemo(
     () => countActivePrefs(session?.prefs ?? draftPrefs),
