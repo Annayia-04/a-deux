@@ -2,6 +2,6 @@
 .env.*
 !.env.example
 .data/
-android/
-docs/
+/android/
+/docs/
 *.md

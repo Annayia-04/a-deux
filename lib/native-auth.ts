@@ -46,9 +46,12 @@ export function useNativeAuthListener({
 
     let disposed = false;
     let remove: (() => void) | null = null;
+    let handledUrl: string | null = null;
 
-    void App.addListener("appUrlOpen", ({ url }) => {
+    const handleUrl = (url: string) => {
       if (!url.startsWith(NATIVE_AUTH_URL)) return;
+      if (handledUrl === url) return;
+      handledUrl = url;
 
       void (async () => {
         await Browser.close().catch(() => undefined);
@@ -84,10 +87,22 @@ export function useNativeAuthListener({
           );
         }
       })();
-    }).then((listener) => {
-      if (disposed) void listener.remove();
-      else remove = () => void listener.remove();
-    });
+    };
+
+    void App.addListener("appUrlOpen", ({ url }) => handleUrl(url)).then(
+      (listener) => {
+        if (disposed) void listener.remove();
+        else remove = () => void listener.remove();
+      },
+    );
+
+    // Démarrage à froid depuis le deep link : l'événement a pu être émis avant
+    // que le listener soit branché.
+    void App.getLaunchUrl()
+      .then((result) => {
+        if (result?.url) handleUrl(result.url);
+      })
+      .catch(() => undefined);
 
     return () => {
       disposed = true;
