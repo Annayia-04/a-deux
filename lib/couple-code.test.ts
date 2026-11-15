@@ -15,16 +15,18 @@ describe("code d'invitation du duo", () => {
   it("accepte uniquement le format attendu", () => {
     expect(isValidCoupleCode("ABC234")).toBe(true);
     expect(isValidCoupleCode("ZZZZZZ")).toBe(true);
+    expect(isValidCoupleCode("ABCD2345")).toBe(true);
     expect(isValidCoupleCode("abc234")).toBe(false);
     expect(isValidCoupleCode("ABC123")).toBe(false); // 1 et 0 sont exclus
     expect(isValidCoupleCode("ABC23")).toBe(false);
-    expect(isValidCoupleCode("ABCDEFG")).toBe(false);
+    expect(isValidCoupleCode("ABCDEFG")).toBe(true);
+    expect(isValidCoupleCode("ABCDEFGHJ")).toBe(false);
   });
 
   it("génère des codes lisibles et toujours valides", () => {
     for (let index = 0; index < 50; index += 1) {
       const code = generateCoupleCode();
-      expect(code).toHaveLength(6);
+      expect(code).toHaveLength(8);
       expect(isValidCoupleCode(code), code).toBe(true);
       expect(code).not.toMatch(/[01IO]/);
     }

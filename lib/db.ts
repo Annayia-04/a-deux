@@ -534,6 +534,11 @@ export async function joinCoupleRecord(
   });
 }
 
+/** Supprime la room et tout son contenu partagé (cascades PostgreSQL). */
+export async function deleteCoupleRecord(coupleId: string): Promise<void> {
+  await query("DELETE FROM couples WHERE id = $1", [coupleId]);
+}
+
 export async function leaveCoupleRecord(
   sessionId: string,
 ): Promise<LeaveResult | null> {

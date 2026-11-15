@@ -86,10 +86,12 @@ function MetaItem({
 export function DateCard({
   idea,
   compact = false,
+  tight = false,
   number,
 }: {
   idea: Idea;
   compact?: boolean;
+  tight?: boolean;
   number?: number;
 }) {
   const primaryTheme = THEME_META[idea.themes[0] ?? "detente"];
@@ -107,7 +109,11 @@ export function DateCard({
 
       <div
         className={`relative shrink-0 overflow-hidden ${
-          compact ? "h-[34%] min-h-[104px]" : "h-[42%] min-h-[188px]"
+          tight
+            ? "h-[24%] min-h-[70px]"
+            : compact
+              ? "h-[34%] min-h-[104px]"
+              : "h-[42%] min-h-[188px]"
         }`}
         style={{
           backgroundImage: `linear-gradient(145deg, ${primaryTheme.gradient[0]} 0%, ${primaryTheme.gradient[1]} 100%)`,
@@ -234,13 +240,21 @@ export function DateCard({
         <div className="min-h-0">
           <div
             className={`relative z-10 flex justify-center ${
-              compact ? "-mt-4 mb-0.5" : "-mt-6 mb-1"
+              tight
+                ? "-mt-3 mb-0.5"
+                : compact
+                  ? "-mt-4 mb-0.5"
+                  : "-mt-6 mb-1"
             }`}
           >
             <span
               aria-hidden
               className={`grid place-items-center rounded-full border border-gold/45 bg-ink-900/95 shadow-[0_10px_24px_-12px_rgba(0,0,0,0.9)] ring-1 ring-inset ring-gold/15 ${
-                compact ? "h-9 w-9 text-[17px]" : "h-11 w-11 text-[21px]"
+                tight
+                  ? "h-8 w-8 text-[15px]"
+                  : compact
+                    ? "h-9 w-9 text-[17px]"
+                    : "h-11 w-11 text-[21px]"
               }`}
             >
               {idea.emoji}
@@ -263,7 +277,7 @@ export function DateCard({
 
           <h2
             className={`balance line-clamp-2 text-center font-display leading-[1.06] tracking-[-0.01em] text-cream ${
-              compact ? "text-[19px]" : "text-[23px]"
+              tight ? "text-[17px]" : compact ? "text-[19px]" : "text-[23px]"
             }`}
           >
             {idea.title}
@@ -275,15 +289,17 @@ export function DateCard({
           >
             {idea.tagline}
           </p>
-          <p
-            className={`mx-auto max-w-[95%] text-pretty text-center leading-relaxed text-cream/60 ${
-              compact
-                ? "mt-1 line-clamp-1 text-[10px]"
-                : "mt-1.5 line-clamp-2 text-[11px]"
-            }`}
-          >
-            {idea.description}
-          </p>
+          {tight ? null : (
+            <p
+              className={`mx-auto max-w-[95%] text-pretty text-center leading-relaxed text-cream/60 ${
+                compact
+                  ? "mt-1 line-clamp-1 text-[10px]"
+                  : "mt-1.5 line-clamp-2 text-[11px]"
+              }`}
+            >
+              {idea.description}
+            </p>
+          )}
         </div>
 
         <ul
@@ -308,6 +324,7 @@ export function DateCard({
           />
         </ul>
 
+        {tight ? null : (
         <div
           className={`rounded-xl border border-gold/20 bg-gold/[0.07] ${
             compact ? "px-2 py-1" : "px-2.5 py-1.5"
@@ -321,6 +338,7 @@ export function DateCard({
             {idea.tip}
           </p>
         </div>
+        )}
       </div>
     </article>
   );

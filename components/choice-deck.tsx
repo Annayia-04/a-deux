@@ -45,6 +45,8 @@ export function ChoiceDeck({
   pending,
   onSwipe,
   onRefresh,
+  hideTabs = false,
+  discover = false,
 }: {
   category: ChoiceCategory;
   onCategoryChange: (category: ChoiceCategory) => void;
@@ -54,6 +56,8 @@ export function ChoiceDeck({
   pending: string | null;
   onSwipe: (choice: Choice, direction: SwipeDirection) => void;
   onRefresh: () => void;
+  hideTabs?: boolean;
+  discover?: boolean;
 }) {
   const meta = CHOICE_CATEGORY_META[category];
   const [exitDirection, setExitDirection] = useState<SwipeDirection>("like");
@@ -73,7 +77,14 @@ export function ChoiceDeck({
     : 0;
 
   return (
-    <section className="space-y-4">
+    <section
+      className={
+        discover
+          ? "flex h-full min-h-0 flex-col justify-center gap-3"
+          : "space-y-4"
+      }
+    >
+      {hideTabs ? null : (
       <div className="flex rounded-xl border border-gold/20 bg-ink-800/50 p-1">
         {(["food", "movie"] as const).map((key) => {
           const item = CHOICE_CATEGORY_META[key];
@@ -98,8 +109,9 @@ export function ChoiceDeck({
           );
         })}
       </div>
+      )}
 
-      <div>
+      <div className={discover ? "mx-auto w-full max-w-[360px]" : ""}>
         <div className="mb-1.5 flex items-center justify-between gap-2 text-[10px] text-ash">
           <span className="tabular-nums">
             {snapshot ? `${snapshot.swiped} / ${snapshot.total} cartes` : "—"}
@@ -144,7 +156,7 @@ export function ChoiceDeck({
         </div>
       ) : null}
 
-      {snapshot && snapshot.matches.length > 0 ? (
+      {!discover && snapshot && snapshot.matches.length > 0 ? (
         <div>
           <p className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-gold/80">
             <HeartIcon className="h-3 w-3 text-rose" />
@@ -177,7 +189,13 @@ export function ChoiceDeck({
         </div>
       ) : null}
 
-      <div className="relative mx-auto h-[248px] w-full max-w-[320px]">
+      <div
+        className={
+          discover
+            ? "relative mx-auto h-[min(52dvh,400px)] w-full max-w-[360px]"
+            : "relative mx-auto h-[248px] w-full max-w-[320px]"
+        }
+      >
         {third ? (
           <div
             aria-hidden
@@ -217,7 +235,9 @@ export function ChoiceDeck({
                   decide(top, "pass");
                 }
               }}
-              className="frame-gold absolute inset-0 z-10 flex cursor-grab touch-pan-y flex-col overflow-hidden rounded-[26px] border border-gold/30 bg-ink-850 p-4 shadow-[0_24px_60px_-30px_rgba(0,0,0,0.9)] active:cursor-grabbing"
+              className={`frame-gold absolute inset-0 z-10 flex cursor-grab touch-pan-y flex-col overflow-hidden rounded-[26px] border border-gold/30 bg-ink-850 shadow-[0_24px_60px_-30px_rgba(0,0,0,0.9)] active:cursor-grabbing ${
+                discover ? "p-5 [@media(max-height:720px)]:p-4" : "p-4"
+              }`}
             >
               <div
                 aria-hidden
@@ -226,39 +246,82 @@ export function ChoiceDeck({
                   backgroundImage: `radial-gradient(circle at 78% 8%, ${meta.gradient[0]}, transparent 55%), radial-gradient(circle at 8% 95%, ${meta.gradient[1]}, transparent 60%)`,
                 }}
               />
-              <div className="relative flex items-start justify-between gap-2">
-                <span
-                  aria-hidden
-                  className="grid h-16 w-16 place-items-center rounded-2xl text-[34px] ring-1 ring-gold/25"
-                  style={{
-                    backgroundImage: `linear-gradient(145deg, ${meta.gradient[0]}, ${meta.gradient[1]})`,
-                  }}
-                >
-                  {top.emoji}
-                </span>
-                <span className="rounded-full border border-gold/25 bg-ink-950/60 px-2 py-0.5 text-[9px] uppercase tracking-[0.14em] text-gold/80">
-                  {meta.kicker}
-                </span>
-              </div>
+              {discover ? (
+                <>
+                  <div className="relative flex items-start justify-between gap-2">
+                    <span className="rounded-full border border-gold/25 bg-ink-950/60 px-2.5 py-1 text-[9px] uppercase tracking-[0.14em] text-cream/80">
+                      {meta.label}
+                    </span>
+                    <span className="rounded-full border border-gold/25 bg-ink-950/60 px-2 py-0.5 text-[9px] uppercase tracking-[0.14em] text-gold/80">
+                      {meta.kicker}
+                    </span>
+                  </div>
 
-              <div className="relative mt-3 min-h-0 flex-1 overflow-hidden">
-                <h4 className="balance font-display text-[24px] leading-[1.1] text-cream">
-                  {top.title}
-                </h4>
-                <p className="mt-1.5 text-[11.5px] leading-relaxed text-cream/55">
-                  {top.tagline}
-                </p>
-                <ul className="mt-2.5 flex flex-wrap gap-1">
-                  {top.tags.map((tag) => (
-                    <li
-                      key={tag}
-                      className="rounded-full bg-ink-800/80 px-2 py-0.5 text-[9.5px] text-cream/55 ring-1 ring-inset ring-gold/10"
+                  <div className="relative flex min-h-0 flex-1 flex-col items-center justify-center px-1 text-center">
+                    <span
+                      aria-hidden
+                      className="grid h-24 w-24 place-items-center rounded-[28px] text-[52px] ring-1 ring-gold/25 [@media(max-height:720px)]:h-16 [@media(max-height:720px)]:w-16 [@media(max-height:720px)]:rounded-[22px] [@media(max-height:720px)]:text-[34px]"
+                      style={{
+                        backgroundImage: `linear-gradient(145deg, ${meta.gradient[0]}, ${meta.gradient[1]})`,
+                      }}
                     >
-                      {tag.replaceAll("-", " ")}
-                    </li>
-                  ))}
-                </ul>
-              </div>
+                      {top.emoji}
+                    </span>
+                    <h4 className="balance mt-4 font-display text-[27px] leading-[1.05] text-cream [@media(max-height:720px)]:mt-2 [@media(max-height:720px)]:text-[21px]">
+                      {top.title}
+                    </h4>
+                    <p className="mt-1.5 line-clamp-2 max-w-[280px] text-[12.5px] leading-relaxed text-cream/60 [@media(max-height:720px)]:mt-1 [@media(max-height:720px)]:text-[11px]">
+                      {top.tagline}
+                    </p>
+                    <ul className="mt-3 flex flex-wrap justify-center gap-1.5 [@media(max-height:720px)]:hidden">
+                      {top.tags.map((tag) => (
+                        <li
+                          key={tag}
+                          className="rounded-full bg-ink-800/80 px-2.5 py-0.5 text-[9.5px] text-cream/55 ring-1 ring-inset ring-gold/10"
+                        >
+                          {tag.replaceAll("-", " ")}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="relative flex items-start justify-between gap-2">
+                    <span
+                      aria-hidden
+                      className="grid h-16 w-16 place-items-center rounded-2xl text-[34px] ring-1 ring-gold/25"
+                      style={{
+                        backgroundImage: `linear-gradient(145deg, ${meta.gradient[0]}, ${meta.gradient[1]})`,
+                      }}
+                    >
+                      {top.emoji}
+                    </span>
+                    <span className="rounded-full border border-gold/25 bg-ink-950/60 px-2 py-0.5 text-[9px] uppercase tracking-[0.14em] text-gold/80">
+                      {meta.kicker}
+                    </span>
+                  </div>
+
+                  <div className="relative mt-3 min-h-0 flex-1 overflow-hidden">
+                    <h4 className="balance font-display text-[24px] leading-[1.1] text-cream">
+                      {top.title}
+                    </h4>
+                    <p className="mt-1.5 text-[11.5px] leading-relaxed text-cream/55">
+                      {top.tagline}
+                    </p>
+                    <ul className="mt-2.5 flex flex-wrap gap-1">
+                      {top.tags.map((tag) => (
+                        <li
+                          key={tag}
+                          className="rounded-full bg-ink-800/80 px-2 py-0.5 text-[9.5px] text-cream/55 ring-1 ring-inset ring-gold/10"
+                        >
+                          {tag.replaceAll("-", " ")}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </>
+              )}
 
               <div className="relative mt-3 flex items-center justify-center gap-4">
                 <button
@@ -312,12 +375,14 @@ export function ChoiceDeck({
         ) : null}
       </div>
 
-      <p className="flex items-center justify-center gap-1.5 text-center text-[10px] text-ash">
-        <SparklesIcon className="h-3 w-3" />
-        Glissez la carte ou utilisez les boutons · un match apparaît quand vous
-        aimez la même carte
-        <ArrowRightIcon className="h-3 w-3" />
-      </p>
+      {discover ? null : (
+        <p className="flex items-center justify-center gap-1.5 text-center text-[10px] text-ash">
+          <SparklesIcon className="h-3 w-3" />
+          Glissez la carte ou utilisez les boutons · un match apparaît quand vous
+          aimez la même carte
+          <ArrowRightIcon className="h-3 w-3" />
+        </p>
+      )}
     </section>
   );
 }

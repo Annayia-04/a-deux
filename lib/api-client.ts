@@ -151,6 +151,12 @@ export const api = {
     return request<{ ok: boolean }>("/api/couple", { method: "DELETE" });
   },
 
+  dissolveCouple(): Promise<{ ok: boolean }> {
+    return request<{ ok: boolean }>("/api/couple/dissolve", {
+      method: "POST",
+    });
+  },
+
   markCoupleSeen(): Promise<{ couple: CoupleSnapshot }> {
     return request<{ couple: CoupleSnapshot }>("/api/couple/seen", {
       method: "POST",

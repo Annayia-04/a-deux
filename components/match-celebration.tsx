@@ -22,6 +22,8 @@ export type CelebrationData = {
   duoTab?: "matches" | "souvenirs" | "choices";
   /** Texte prêt à partager pour proposer le rendez-vous. */
   shareText?: string;
+  /** Élément à préremplir dans le Date Builder. */
+  builder?: { slot: "activity" | "food" | "movie"; id: string } | null;
 };
 
 type Props = {
@@ -29,6 +31,7 @@ type Props = {
   onClose: () => void;
   onOpenDuo: () => void;
   onShare?: () => void;
+  onAddToSoiree?: () => void;
 };
 
 export function MatchCelebration({
@@ -36,6 +39,7 @@ export function MatchCelebration({
   onClose,
   onOpenDuo,
   onShare,
+  onAddToSoiree,
 }: Props) {
   return (
     <motion.div
@@ -115,10 +119,15 @@ export function MatchCelebration({
           <div className="mt-5 flex flex-col gap-2">
             <button
               type="button"
-              onClick={onShare ?? onOpenDuo}
+              onClick={onAddToSoiree ?? onShare ?? onOpenDuo}
               className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl border border-gold/45 bg-gradient-to-r from-ember to-rose px-4 py-2.5 text-[12.5px] font-semibold text-cream transition hover:border-gold/70 hover:brightness-110"
             >
-              {onShare ? (
+              {onAddToSoiree ? (
+                <>
+                  <SparklesIcon className="h-4 w-4" />
+                  Ajouter à notre soirée
+                </>
+              ) : onShare ? (
                 <>
                   <ShareIcon className="h-4 w-4" />
                   Proposer ce rendez-vous
@@ -137,16 +146,26 @@ export function MatchCelebration({
             >
               Continuer à swiper
             </button>
-            {onShare ? (
+            <div className="flex items-center justify-center gap-4 pt-1">
+              {onAddToSoiree && onShare ? (
+                <button
+                  type="button"
+                  onClick={onShare}
+                  className="inline-flex items-center gap-1 text-[10.5px] text-cream/45 transition hover:text-cream/75"
+                >
+                  <ShareIcon className="h-3 w-3" />
+                  Partager
+                </button>
+              ) : null}
               <button
                 type="button"
                 onClick={onOpenDuo}
-                className="inline-flex items-center justify-center gap-1 py-1 text-[10.5px] text-cream/45 transition hover:text-cream/75"
+                className="inline-flex items-center gap-1 text-[10.5px] text-cream/45 transition hover:text-cream/75"
               >
                 Voir notre duo
                 <ArrowRightIcon className="h-3 w-3" />
               </button>
-            ) : null}
+            </div>
           </div>
         </div>
       </motion.div>

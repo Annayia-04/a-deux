@@ -9,6 +9,7 @@ import {
 import {
   countCoupleMembers,
   createCoupleRecord,
+  deleteCoupleRecord,
   deleteMatchIfNotMutual,
   getCoupleByCode,
   getMembershipBySession,
@@ -37,6 +38,9 @@ import type {
 } from "@/lib/types";
 
 export const MAX_COUPLE_MEMBERS = 2;
+
+/** Un code d'invitation ne vit que 24 heures. */
+export const COUPLE_CODE_TTL_MS = 24 * 60 * 60 * 1000;
 
 function isUniqueViolation(error: unknown): boolean {
   return (
@@ -82,6 +86,7 @@ export async function getCoupleSnapshot(
 
   return {
     code: membership.code,
+    codeExpiresAt: membership.createdAt + COUPLE_CODE_TTL_MS,
     memberCount,
     complete: memberCount >= MAX_COUPLE_MEMBERS,
     matches,
@@ -177,6 +182,16 @@ export async function joinCoupleForSession(
     throw new HttpError(404, "Aucun duo ne correspond à ce code.");
   }
 
+  if ((await countCoupleMembers(couple.id)) >= MAX_COUPLE_MEMBERS) {
+    throw new HttpError(409, "Ce duo est déjà complet.");
+  }
+  if (now - couple.createdAt > COUPLE_CODE_TTL_MS) {
+    throw new HttpError(
+      410,
+      "Ce code d’invitation a expiré (24 h). Demandez un nouveau code.",
+    );
+  }
+
   const result = await joinCoupleRecord(couple.id, sessionId, now);
   if (result === "full") {
     throw new HttpError(409, "Ce duo est déjà complet.");
@@ -206,6 +221,17 @@ export async function leaveCoupleForSession(sessionId: string): Promise<void> {
   if (!result) {
     throw new HttpError(409, "Vous ne faites partie d’aucun duo.");
   }
+}
+
+/** Supprime définitivement la room, son historique et ses contenus partagés. */
+export async function dissolveCoupleForSession(
+  sessionId: string,
+): Promise<void> {
+  const membership = await getMembershipBySession(sessionId);
+  if (!membership) {
+    throw new HttpError(409, "Vous ne faites partie d’aucun duo.");
+  }
+  await deleteCoupleRecord(membership.id);
 }
 
 /**

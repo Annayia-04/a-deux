@@ -5,8 +5,9 @@ import { randomInt } from "node:crypto";
  * un code se lit et se recopie sans erreur au téléphone.
  */
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-const CODE_LENGTH = 6;
-const CODE_PATTERN = /^[A-HJ-NP-Z2-9]{6}$/;
+const CODE_LENGTH = 8;
+/** Les codes historiques à 6 caractères restent acceptés. */
+const CODE_PATTERN = /^[A-HJ-NP-Z2-9]{6,8}$/;
 
 /** Retire espaces et tirets, puis passe en majuscules. */
 export function normalizeCoupleCode(input: string): string {

@@ -15,11 +15,12 @@ const TABS: {
   id: TabId;
   label: string;
   icon: (props: { className?: string }) => ReactNode;
+  small?: boolean;
 }[] = [
   { id: "decouvrir", label: "Découvrir", icon: FlameIcon },
-  { id: "deux", label: "À deux", icon: UsersIcon },
-  { id: "envies", label: "Mes envies", icon: HeartIcon },
-  { id: "profil", label: "Profil", icon: UserIcon },
+  { id: "deux", label: "Notre Espace", icon: UsersIcon },
+  { id: "envies", label: "Mes Envies", icon: HeartIcon },
+  { id: "profil", label: "Nous & Réglages", icon: UserIcon, small: true },
 ];
 
 /**
@@ -32,19 +33,38 @@ export function AppShell({
   onTabChange,
   unread,
   action,
+  status,
   children,
 }: {
   tab: TabId;
   onTabChange: (tab: TabId) => void;
   unread: number;
   action?: ReactNode;
+  status?: { label: string; complete: boolean; onClick?: () => void };
   children: ReactNode;
 }) {
   return (
     <div className="flex h-dvh w-full flex-col overflow-hidden bg-ink-950">
       <header className="shrink-0 border-b border-gold/10 bg-ink-950/80 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
         <div className="mx-auto flex h-14 w-full max-w-3xl items-center justify-between gap-3 px-4">
-          <Brand />
+          <div className="flex min-w-0 flex-col justify-center">
+            <Brand />
+            {status ? (
+              <button
+                type="button"
+                onClick={status.onClick}
+                className="mt-0.5 inline-flex items-center gap-1.5 self-start text-[8.5px] font-medium text-ash transition hover:text-cream/75"
+              >
+                <span
+                  aria-hidden
+                  className={`h-1.5 w-1.5 rounded-full ${
+                    status.complete ? "bg-mint" : "bg-gold"
+                  }`}
+                />
+                {status.label}
+              </button>
+            ) : null}
+          </div>
           {action}
         </div>
       </header>
@@ -84,9 +104,9 @@ export function AppShell({
                     ) : null}
                   </span>
                   <span
-                    className={`text-[9.5px] leading-none ${
-                      active ? "font-semibold" : "font-medium"
-                    }`}
+                    className={`whitespace-nowrap leading-none ${
+                      item.small ? "text-[8.5px]" : "text-[9.5px]"
+                    } ${active ? "font-semibold" : "font-medium"}`}
                   >
                     {item.label}
                   </span>

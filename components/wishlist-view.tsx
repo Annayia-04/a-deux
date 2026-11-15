@@ -5,6 +5,7 @@ import {
   ArrowRightIcon,
   CopyIcon,
   HeartIcon,
+  SparklesIcon,
   TrashIcon,
 } from "@/components/icons";
 import { SETTING_LABEL, THEME_META } from "@/lib/preferences";
@@ -18,6 +19,7 @@ type Props = {
   onCopy: () => void;
   onRemove: (idea: Idea) => void;
   onOpenDetail: (idea: Idea) => void;
+  onOpenBuilder: () => void;
   onDiscover: () => void;
   onOpenFilters: () => void;
 };
@@ -30,6 +32,7 @@ export function WishlistView({
   onCopy,
   onRemove,
   onOpenDetail,
+  onOpenBuilder,
   onDiscover,
   onOpenFilters,
 }: Props) {
@@ -42,7 +45,7 @@ export function WishlistView({
               Ma liste
             </p>
             <h1 className="mt-1.5 font-display text-[30px] leading-[1.05] text-cream">
-              Mes envies
+              Mes Envies
             </h1>
             <p className="mt-1 text-[11.5px] text-cream/55">
               {likedIdeas.length > 0
@@ -62,6 +65,27 @@ export function WishlistView({
             </button>
           ) : null}
         </div>
+
+        {likedIdeas.length > 0 ? (
+          <button
+            type="button"
+            onClick={onOpenBuilder}
+            className="mt-4 flex w-full items-center gap-3 rounded-2xl border border-gold/30 bg-gradient-to-br from-gold/[0.1] via-transparent to-rose/[0.08] p-3.5 text-left transition hover:border-gold/50"
+          >
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-gold/30 bg-gold/10 text-gold">
+              <SparklesIcon className="h-5 w-5" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block font-display text-[18px] leading-tight text-cream">
+                Composez votre soirée
+              </span>
+              <span className="mt-0.5 block text-[10.5px] leading-snug text-cream/55">
+                Une activité, un plat, un film — à partir de vos envies.
+              </span>
+            </span>
+            <ArrowRightIcon className="h-4 w-4 shrink-0 text-gold/50" />
+          </button>
+        ) : null}
 
         {likedIdeas.length === 0 ? (
           <section className="grimoire ornament-corners mt-5 flex flex-col items-center rounded-[26px] px-6 py-10 text-center">

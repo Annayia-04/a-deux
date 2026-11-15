@@ -81,7 +81,9 @@ export function DiscoverView({
 }: Props) {
   const cardRef = useRef<SwipeCardHandle>(null);
   const deckRef = useRef<HTMLDivElement>(null);
-  const [compact, setCompact] = useState(false);
+  const [density, setDensity] = useState<"regular" | "compact" | "tight">(
+    "regular",
+  );
   const [hintVisible, setHintVisible] = useState(false);
   const top = ideas[index];
   const second = ideas[index + 1];
@@ -93,7 +95,9 @@ export function DiscoverView({
     const element = deckRef.current;
     if (!element) return;
     const observer = new ResizeObserver(([entry]) => {
-      if (entry) setCompact(entry.contentRect.height < 520);
+      if (!entry) return;
+      const height = entry.contentRect.height;
+      setDensity(height < 380 ? "tight" : height < 520 ? "compact" : "regular");
     });
     observer.observe(element);
     return () => observer.disconnect();
@@ -248,7 +252,8 @@ export function DiscoverView({
                 >
                   <DateCard
                     idea={third}
-                    compact={compact}
+                    compact={density !== "regular"}
+                    tight={density === "tight"}
                     number={swiped + 3}
                   />
                 </div>
@@ -260,7 +265,8 @@ export function DiscoverView({
                 >
                   <DateCard
                     idea={second}
-                    compact={compact}
+                    compact={density !== "regular"}
+                    tight={density === "tight"}
                     number={swiped + 2}
                   />
                 </div>
@@ -270,7 +276,8 @@ export function DiscoverView({
                 key={top.id}
                 ref={cardRef}
                 idea={top}
-                compact={compact}
+                compact={density !== "regular"}
+                tight={density === "tight"}
                 number={swiped + 1}
                 onDecide={onDecide}
                 onInteract={dismissHint}
@@ -330,12 +337,16 @@ export function DiscoverView({
 const SwipeCard = forwardRef<SwipeCardHandle, {
   idea: Idea;
   compact: boolean;
+  tight: boolean;
   number: number;
   onDecide: (idea: Idea, direction: SwipeDirection) => void;
   onInteract: () => void;
-}>(function SwipeCard({ idea, compact, number, onDecide, onInteract }, ref) {
+}>(function SwipeCard(
+  { idea, compact, tight, number, onDecide, onInteract },
+  ref,
+) {
   const x = useMotionValue(0);
-  const rotate = useTransform(x, [-FLY_DISTANCE, 0, FLY_DISTANCE], [-16, 0, 16]);
+  const rotate = useTransform(x, [-FLY_DISTANCE, 0, FLY_DISTANCE], [-12, 0, 12]);
   const likeOpacity = useTransform(x, [24, 120], [0, 1]);
   const passOpacity = useTransform(x, [-120, -24], [1, 0]);
   const decidedRef = useRef(false);
@@ -401,22 +412,27 @@ const SwipeCard = forwardRef<SwipeCardHandle, {
         className="h-full w-full cursor-grab touch-none active:cursor-grabbing"
         aria-roledescription="carte à swiper"
       >
-        <DateCard idea={idea} compact={compact} number={number} />
+        <DateCard
+          idea={idea}
+          compact={compact}
+          tight={tight}
+          number={number}
+        />
 
         <motion.div
           style={{ opacity: likeOpacity }}
           aria-hidden
-          className="pointer-events-none absolute left-4 top-[30%] z-10 rotate-[-7deg] rounded-lg border-2 border-mint/80 bg-ink-950/60 px-3 py-1 font-display text-[15px] font-semibold uppercase tracking-[0.14em] text-mint shadow-lg backdrop-blur-sm"
+          className="pointer-events-none absolute left-4 top-[30%] z-10 rotate-[-7deg] rounded-lg border-2 border-[#7fbf9a] bg-ink-950/60 px-3 py-1 font-display text-[15px] font-semibold uppercase tracking-[0.14em] text-[#a8dcc0] shadow-lg backdrop-blur-sm"
         >
-          À garder
+          Coup de cœur
         </motion.div>
 
         <motion.div
           style={{ opacity: passOpacity }}
           aria-hidden
-          className="pointer-events-none absolute right-4 top-[30%] z-10 rotate-[7deg] rounded-lg border-2 border-rose-soft/80 bg-ink-950/60 px-3 py-1 font-display text-[15px] font-semibold uppercase tracking-[0.14em] text-rose-soft shadow-lg backdrop-blur-sm"
+          className="pointer-events-none absolute right-4 top-[30%] z-10 rotate-[7deg] rounded-lg border-2 border-cream/35 bg-ink-950/60 px-3 py-1 font-display text-[15px] font-semibold uppercase tracking-[0.14em] text-cream/70 shadow-lg backdrop-blur-sm"
         >
-          Passer
+          Pas ce soir
         </motion.div>
 
       </motion.div>

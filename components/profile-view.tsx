@@ -52,7 +52,7 @@ export function ProfileView({
             Mon espace
           </p>
           <h1 className="mt-1.5 font-display text-[30px] leading-[1.05] text-cream">
-            Profil
+            Nous &amp; Réglages
           </h1>
           <p className="mt-1 text-[11.5px] text-cream/55">
             {account

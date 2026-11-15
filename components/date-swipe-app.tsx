@@ -3,15 +3,23 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, MotionConfig, motion } from "motion/react";
 import { AppShell, type TabId } from "@/components/app-shell";
+import { ChoiceFiltersSheet } from "@/components/choice-filters-sheet";
+import { ChoicesDiscover } from "@/components/choices-discover";
 import { DiscoverView } from "@/components/discover-view";
 import { DuoDialog, type DuoDialogTab } from "@/components/duo-dialog";
 import { DuoTab } from "@/components/duo-tab";
 import { FiltersSheet } from "@/components/filters-sheet";
 import { IdeaDetailSheet } from "@/components/idea-detail-sheet";
+import {
+  DateBuilderSheet,
+  type BuilderOptions,
+  type BuilderPrefill,
+} from "@/components/date-builder-sheet";
 import { MatchCelebration, type CelebrationData } from "@/components/match-celebration";
 import { PassedSheet } from "@/components/passed-sheet";
 import { ProfileView } from "@/components/profile-view";
 import { TapPulse } from "@/components/tap-pulse";
+import { UniverseSwitch, type Universe } from "@/components/universe-switch";
 import { WishlistView } from "@/components/wishlist-view";
 import {
   AlertIcon,
@@ -52,6 +60,7 @@ import {
   type SessionSnapshot,
   type SwipeDirection,
 } from "@/lib/types";
+import { useChoices } from "@/lib/use-choices";
 import { useCoupleSync } from "@/lib/use-couple-sync";
 import { useSwipeSync } from "@/lib/use-swipe-sync";
 import { useTaps } from "@/lib/use-taps";
@@ -94,10 +103,11 @@ function celebrationForIdea(idea: Idea): CelebrationData {
     subtitle: `${idea.tagline} Vous êtes maintenant prévenus tous les deux.`,
     gradient: theme.gradient,
     kicker: "Match à deux",
-    heading: "C'est un match !",
+    heading: "Vous êtes sur la même longueur d’onde !",
     ctaLabel: "Voir notre duo",
     duoTab: "matches",
     shareText: buildMatchShareText(idea),
+    builder: { slot: "activity", id: idea.id },
   };
 }
 
@@ -111,10 +121,11 @@ function celebrationForChoice(choice: Choice): CelebrationData {
       "Vous aimez la même carte. Il ne reste plus qu'à passer à table ou à lancer le film.",
     gradient: meta.gradient,
     kicker: `Match ${meta.label.toLowerCase()}`,
-    heading: "C'est un match !",
+    heading: "Vous êtes sur la même longueur d’onde !",
     ctaLabel: "Voir nos choix",
     duoTab: "choices",
     shareText: `On aime tous les deux « ${choice.title} » ${choice.emoji}. On se le fait ?`,
+    builder: { slot: choice.category === "food" ? "food" : "movie", id: choice.id },
   };
 }
 
@@ -154,6 +165,11 @@ export function DateSwipeApp({
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [passedOpen, setPassedOpen] = useState(false);
   const [detailIdea, setDetailIdea] = useState<Idea | null>(null);
+  const [universe, setUniverse] = useState<Universe>("activity");
+  const [choiceFilter, setChoiceFilter] = useState<string | null>(null);
+  const [choiceFiltersOpen, setChoiceFiltersOpen] = useState(false);
+  const [builderOpen, setBuilderOpen] = useState(false);
+  const [builderPrefill, setBuilderPrefill] = useState<BuilderPrefill>(null);
   const [detailSource, setDetailSource] = useState<"match" | "envie">("match");
   const [passedIdeas, setPassedIdeas] = useState<Idea[]>([]);
   const [passedLoading, setPassedLoading] = useState(false);
@@ -343,6 +359,26 @@ export function DateSwipeApp({
     },
     [enqueueCelebration, markChoiceKnown],
   );
+
+  const choices = useChoices({
+    enabled: universe !== "activity" && couple?.complete === true,
+    coupleCode: couple?.code ?? null,
+    onMatch: handleChoiceMatch,
+  });
+
+  useEffect(() => {
+    if (universe === "activity") return;
+    choices.setCategory(universe);
+  }, [choices.setCategory, universe]);
+
+  const filteredChoices = useMemo(() => {
+    const snapshot = choices.snapshot;
+    if (!snapshot || !choiceFilter) return snapshot;
+    const deck = snapshot.deck.filter((choice) =>
+      choice.tags.includes(choiceFilter),
+    );
+    return { ...snapshot, deck, total: deck.length, swiped: 0 };
+  }, [choiceFilter, choices.snapshot]);
 
   const {
     enqueue,
@@ -597,21 +633,22 @@ export function DateSwipeApp({
     })();
   }, [draftPrefs, ensureSession, inviteCode, session, showToast, updateCouple]);
 
-  const handleLeaveDuo = useCallback(async () => {
+  const handleDissolveDuo = useCallback(async () => {
     if (duoBusy) return;
     setDuoBusy(true);
     setDuoError(null);
 
     try {
-      await api.leaveCouple();
+      await api.dissolveCouple();
       updateCouple(null);
+      setDetailIdea(null);
       setCelebrationQueue([]);
       setActiveCelebration(null);
       setIncomingTap(null);
-      showToast("Vous avez quitté l’espace à deux.", "success");
+      showToast("Votre espace à deux a été dissous.", "success");
     } catch (error) {
       setDuoError(
-        errorMessage(error, "Impossible de quitter l’espace à deux."),
+        errorMessage(error, "Impossible de dissoudre l’espace à deux."),
       );
     } finally {
       setDuoBusy(false);
@@ -848,26 +885,79 @@ export function DateSwipeApp({
     [couple, markSeen],
   );
 
+  const builderOptions = useMemo<BuilderOptions>(() => {
+    if (couple?.complete) {
+      const find = (id: string) => CHOICES_BY_ID.get(id);
+      return {
+        activity: couple.matches.map((match) => match.idea),
+        food: couple.choiceMatches
+          .filter((match) => match.category === "food")
+          .map((match) => find(match.choiceId))
+          .filter((choice): choice is Choice => Boolean(choice)),
+        movie: couple.choiceMatches
+          .filter((match) => match.category === "movie")
+          .map((match) => find(match.choiceId))
+          .filter((choice): choice is Choice => Boolean(choice)),
+      };
+    }
+    return { activity: liked, food: [], movie: [] };
+  }, [couple, liked]);
+
+  const openBuilder = useCallback((prefill: BuilderPrefill = null) => {
+    setBuilderPrefill(prefill);
+    setBuilderOpen(true);
+  }, []);
+
+  const handleAddCelebration = useCallback(() => {
+    if (!activeCelebration) return;
+    const prefill = activeCelebration.builder ?? null;
+    setActiveCelebration(null);
+    void markSeen();
+    void refreshCouple({ notify: false });
+    openBuilder(prefill);
+  }, [activeCelebration, markSeen, openBuilder, refreshCouple]);
+
   const headerAction =
     tab === "decouvrir" ? (
-      <button
-        type="button"
-        onClick={() => setFiltersOpen(true)}
-        aria-label={
-          activeFilters > 0
-            ? `Filtres, ${activeFilters} critère${activeFilters > 1 ? "s" : ""} actif${activeFilters > 1 ? "s" : ""}`
-            : "Filtres"
-        }
-        className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-gold/25 bg-ink-800/60 px-3 py-1.5 text-[11.5px] font-medium text-cream/75 transition hover:border-gold/45 hover:text-cream"
-      >
-        <SlidersIcon className="h-3.5 w-3.5 text-gold/80" />
-        Filtres
-        {activeFilters > 0 ? (
-          <span className="grid h-4 min-w-4 place-items-center rounded-full bg-gold px-1 text-[9.5px] font-bold leading-none text-[#17110a]">
-            {activeFilters}
-          </span>
-        ) : null}
-      </button>
+      universe === "activity" ? (
+        <button
+          type="button"
+          onClick={() => setFiltersOpen(true)}
+          aria-label={
+            activeFilters > 0
+              ? `Filtres, ${activeFilters} critère${activeFilters > 1 ? "s" : ""} actif${activeFilters > 1 ? "s" : ""}`
+              : "Filtres"
+          }
+          className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-gold/25 bg-ink-800/60 px-3 py-1.5 text-[11.5px] font-medium text-cream/75 transition hover:border-gold/45 hover:text-cream"
+        >
+          <SlidersIcon className="h-3.5 w-3.5 text-gold/80" />
+          Filtres
+          {activeFilters > 0 ? (
+            <span className="grid h-4 min-w-4 place-items-center rounded-full bg-gold px-1 text-[9.5px] font-bold leading-none text-[#17110a]">
+              {activeFilters}
+            </span>
+          ) : null}
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setChoiceFiltersOpen(true)}
+          aria-label={
+            choiceFilter
+              ? `Filtres, ${choiceFilter} sélectionné`
+              : "Filtres"
+          }
+          className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-gold/25 bg-ink-800/60 px-3 py-1.5 text-[11.5px] font-medium text-cream/75 transition hover:border-gold/45 hover:text-cream"
+        >
+          <SlidersIcon className="h-3.5 w-3.5 text-gold/80" />
+          Filtres
+          {choiceFilter ? (
+            <span className="grid h-4 min-w-4 place-items-center rounded-full bg-gold px-1 text-[9.5px] font-bold leading-none text-[#17110a]">
+              1
+            </span>
+          ) : null}
+        </button>
+      )
     ) : undefined;
 
   return (
@@ -875,31 +965,73 @@ export function DateSwipeApp({
       <AppShell
         tab={tab}
         onTabChange={handleTabChange}
-        unread={couple?.unread ?? 0}
+        unread={(couple?.unread ?? 0) + (couple?.choiceUnread ?? 0)}
         action={headerAction}
+        status={{
+          label: couple
+            ? couple.complete
+              ? "Duo connecté"
+              : "Invitation en attente"
+            : "Inviter ma moitié",
+          complete: couple?.complete === true,
+          onClick: () => setTab("deux"),
+        }}
       >
         {tab === "decouvrir" ? (
-          <DiscoverView
-            ideas={session?.ideas ?? []}
-            index={index}
-            total={session?.total ?? 0}
-            swiped={swiped}
-            likedCount={likedCount}
-            hasSession={Boolean(session)}
-            canUndo={
-              decisions.length > 0 && pending === 0 && !offline && !undoBusy
-            }
-            undoBusy={undoBusy}
-            pending={pending}
-            offline={offline}
-            syncError={syncError}
-            onDecide={handleDecide}
-            onUndo={() => void handleUndo()}
-            onRetrySync={retrySync}
-            onOpenFilters={() => setFiltersOpen(true)}
-            onOpenPassed={openPassed}
-            onOpenWishlist={() => setTab("envies")}
-          />
+          <div className="flex h-full min-h-0 flex-col">
+            <div className="shrink-0 px-4 pt-2.5">
+              <UniverseSwitch
+                value={universe}
+                onChange={(next) => {
+                  setUniverse(next);
+                  setChoiceFilter(null);
+                  setChoiceFiltersOpen(false);
+                }}
+              />
+            </div>
+            <div className="min-h-0 flex-1">
+              {universe === "activity" ? (
+                <DiscoverView
+                  ideas={session?.ideas ?? []}
+                  index={index}
+                  total={session?.total ?? 0}
+                  swiped={swiped}
+                  likedCount={likedCount}
+                  hasSession={Boolean(session)}
+                  canUndo={
+                    decisions.length > 0 &&
+                    pending === 0 &&
+                    !offline &&
+                    !undoBusy
+                  }
+                  undoBusy={undoBusy}
+                  pending={pending}
+                  offline={offline}
+                  syncError={syncError}
+                  onDecide={handleDecide}
+                  onUndo={() => void handleUndo()}
+                  onRetrySync={retrySync}
+                  onOpenFilters={() => setFiltersOpen(true)}
+                  onOpenPassed={openPassed}
+                  onOpenWishlist={() => setTab("envies")}
+                />
+              ) : (
+                <ChoicesDiscover
+                  category={universe}
+                  complete={couple?.complete === true}
+                  snapshot={filteredChoices}
+                  loading={choices.loading}
+                  error={choices.error}
+                  pending={choices.pending}
+                  onSwipe={(choice, direction) =>
+                    void choices.swipe(choice, direction)
+                  }
+                  onRefresh={() => void choices.refresh()}
+                  onGoDuo={() => setTab("deux")}
+                />
+              )}
+            </div>
+          </div>
         ) : null}
 
         {tab === "deux" ? (
@@ -912,7 +1044,7 @@ export function DateSwipeApp({
             onTapError={(message) => showToast(message, "error")}
             onCreate={() => void handleCreateDuo()}
             onJoin={(code) => void handleJoinDuo(code)}
-            onLeave={() => void handleLeaveDuo()}
+            onDissolve={() => void handleDissolveDuo()}
             onShareInvite={() => void handleShareInvite()}
             onCopyCode={() => void handleCopyDuoCode()}
             onShareMatch={(idea) => void handleShareMatch(idea)}
@@ -923,6 +1055,7 @@ export function DateSwipeApp({
             onOpenSouvenirs={() => openDuoDialog("souvenirs")}
             onOpenChoices={() => openDuoDialog("choices")}
             onDiscover={() => setTab("decouvrir")}
+            onOpenBuilder={() => openBuilder()}
           />
         ) : null}
 
@@ -938,6 +1071,7 @@ export function DateSwipeApp({
               setDetailSource("envie");
               setDetailIdea(idea);
             }}
+            onOpenBuilder={() => openBuilder()}
             onDiscover={() => setTab("decouvrir")}
             onOpenFilters={() => setFiltersOpen(true)}
           />
@@ -1039,9 +1173,29 @@ export function DateSwipeApp({
             setDuoBusy(false);
           }
         }}
-        onLeave={handleLeaveDuo}
+        onLeave={handleDissolveDuo}
         onCopyCode={() => void handleCopyDuoCode()}
         onMarkSeen={() => void markSeen()}
+      />
+
+      <ChoiceFiltersSheet
+        open={choiceFiltersOpen}
+        category={universe === "food" ? "food" : "movie"}
+        selected={choiceFilter}
+        onSelect={setChoiceFilter}
+        onClose={() => setChoiceFiltersOpen(false)}
+      />
+
+      <DateBuilderSheet
+        open={builderOpen}
+        duo={couple?.complete === true}
+        options={builderOptions}
+        prefill={builderPrefill}
+        onClose={() => {
+          setBuilderOpen(false);
+          setBuilderPrefill(null);
+        }}
+        onToast={(message, tone) => showToast(message, tone ?? "info")}
       />
 
       <IdeaDetailSheet
@@ -1070,6 +1224,9 @@ export function DateSwipeApp({
               activeCelebration.shareText
                 ? () => void handleShareCelebration()
                 : undefined
+            }
+            onAddToSoiree={
+              activeCelebration.builder ? handleAddCelebration : undefined
             }
           />
         ) : null}

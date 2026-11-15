@@ -326,7 +326,7 @@ await check("création d'un espace à deux (code à 6 caractères)", async () =>
   const result = await clientApi(clientA, "/api/couple", { method: "POST" });
   assert.equal(result.response.status, 201, result.text);
   duoCode = result.data.couple.code;
-  assert.match(duoCode, /^[A-HJ-NP-Z2-9]{6}$/);
+  assert.match(duoCode, /^[A-HJ-NP-Z2-9]{8}$/);
   assert.equal(result.data.couple.memberCount, 1);
   assert.equal(result.data.couple.complete, false);
   assert.equal(result.data.couple.matches.length, 0);

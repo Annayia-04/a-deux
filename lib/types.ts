@@ -136,6 +136,8 @@ export type MatchSnapshot = {
 export type CoupleSnapshot = {
   /** Code d'invitation à partager avec l'autre membre. */
   code: string;
+  /** Fin de validité du code d'invitation (24 h après la création). */
+  codeExpiresAt: number;
   memberCount: number;
   /** Vrai quand les deux membres ont rejoint l'espace. */
   complete: boolean;

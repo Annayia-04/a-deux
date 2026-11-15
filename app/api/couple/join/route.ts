@@ -21,7 +21,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     // Deux limites : par session et par IP, pour freiner les essais de codes.
     enforceRateLimit(request, "couple:join", 12, 60_000, session.id);
-    enforceRateLimit(request, "couple:join:ip", 30, 60_000);
+    enforceRateLimit(request, "couple:join:ip", 5, 60_000);
 
     const { code } = await readJson(request, coupleJoinSchema);
     const couple = await joinCoupleForSession(code, session.id);

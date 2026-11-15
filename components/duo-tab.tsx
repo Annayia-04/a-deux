@@ -25,13 +25,14 @@ type Props = {
   onTapError: (message: string) => void;
   onCreate: () => void;
   onJoin: (code: string) => void;
-  onLeave: () => void;
+  onDissolve: () => void;
   onShareInvite: () => void;
   onCopyCode: () => void;
   onShareMatch: (idea: Idea) => void;
   onOpenMatch: (idea: Idea) => void;
   onOpenSouvenirs: () => void;
   onOpenChoices: () => void;
+  onOpenBuilder: () => void;
   onDiscover: () => void;
 };
 
@@ -49,24 +50,27 @@ export function DuoTab({
   onTapError,
   onCreate,
   onJoin,
-  onLeave,
+  onDissolve,
   onShareInvite,
   onCopyCode,
   onShareMatch,
   onOpenMatch,
   onOpenSouvenirs,
   onOpenChoices,
+  onOpenBuilder,
   onDiscover,
 }: Props) {
   const [code, setCode] = useState("");
   const [confirmLeave, setConfirmLeave] = useState(false);
   const joinCode = code.replace(/[\s-]/g, "");
+  const expired =
+    couple !== null && !couple.complete && couple.codeExpiresAt <= Date.now();
 
   return (
     <div className="h-full overflow-y-auto overscroll-contain px-4 pb-6 pt-4">
       <div className="mx-auto w-full max-w-md">
         <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-gold/80">
-          Espace à deux
+          Notre espace
         </p>
         <h1 className="mt-1.5 font-display text-[30px] leading-[1.05] text-cream">
           {couple ? "Votre duo" : "À deux, c’est mieux"}
@@ -80,6 +84,27 @@ export function DuoTab({
             <AlertIcon className="mt-0.5 h-3.5 w-3.5 shrink-0" />
             {error}
           </p>
+        ) : null}
+
+        {hasSession ? (
+          <button
+            type="button"
+            onClick={onOpenBuilder}
+            className="mt-4 flex w-full items-center gap-3 rounded-2xl border border-gold/30 bg-gradient-to-br from-gold/[0.1] via-transparent to-rose/[0.08] p-3.5 text-left transition hover:border-gold/50"
+          >
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-gold/30 bg-gold/10 text-gold">
+              <SparklesIcon className="h-5 w-5" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block font-display text-[18px] leading-tight text-cream">
+                Composez votre soirée
+              </span>
+              <span className="mt-0.5 block text-[10.5px] leading-snug text-cream/55">
+                Activité, plat et film — ou une seule étape.
+              </span>
+            </span>
+            <ArrowRightIcon className="h-4 w-4 shrink-0 text-gold/50" />
+          </button>
         ) : null}
 
         {!couple ? (
@@ -135,14 +160,14 @@ export function DuoTab({
               <form
                 onSubmit={(event) => {
                   event.preventDefault();
-                  if (!busy && joinCode.length >= 4) onJoin(joinCode);
+                  if (!busy && joinCode.length >= 6) onJoin(joinCode);
                 }}
                 className="mt-3 flex gap-2"
               >
                 <input
                   value={code}
                   onChange={(event) => setCode(event.target.value.toUpperCase())}
-                  placeholder="ABC123"
+                  placeholder="ABCD2345"
                   aria-label="Code d’invitation"
                   inputMode="text"
                   autoComplete="off"
@@ -153,7 +178,7 @@ export function DuoTab({
                 />
                 <button
                   type="submit"
-                  disabled={busy || joinCode.length < 4}
+                  disabled={busy || joinCode.length < 6}
                   className="shrink-0 rounded-xl border border-gold/30 bg-gold/[0.08] px-4 py-2.5 text-[12px] font-semibold text-gold transition hover:border-gold/55 hover:bg-gold/15 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   {busy ? "…" : "Rejoindre"}
@@ -214,7 +239,7 @@ export function DuoTab({
                 <span className="text-[10.5px] uppercase tracking-[0.16em] text-ash">
                   Code
                 </span>
-                <span className="font-display text-[20px] tracking-[0.22em] text-gold">
+                <span className="font-display text-[17px] tracking-[0.14em] text-gold">
                   {couple.code}
                 </span>
                 <button
@@ -226,6 +251,16 @@ export function DuoTab({
                   <CopyIcon className="h-4 w-4" />
                 </button>
               </div>
+
+              <p
+                className={`mt-1.5 text-[10px] ${
+                  expired ? "text-rose-soft" : "text-ash"
+                }`}
+              >
+                {expired
+                  ? "Code expiré (24 h). Dissolvez puis recréez l’espace."
+                  : "Code valable 24 h."}
+              </p>
 
               <div className="mt-2 flex flex-wrap gap-2">
                 <button
@@ -249,8 +284,8 @@ export function DuoTab({
               <div className="mt-2.5 flex items-center justify-between gap-2 border-t border-gold/10 pt-2">
                 {confirmLeave ? (
                   <div className="flex w-full items-center justify-between gap-2">
-                    <span className="text-[10.5px] text-rose-soft">
-                      Quitter supprime les matchs partagés.
+                    <span className="text-[10.5px] leading-snug text-rose-soft">
+                      Dissoudre supprime le duo, les matchs et les souvenirs.
                     </span>
                     <span className="flex shrink-0 gap-1.5">
                       <button
@@ -262,11 +297,11 @@ export function DuoTab({
                       </button>
                       <button
                         type="button"
-                        onClick={onLeave}
+                        onClick={onDissolve}
                         disabled={busy}
                         className="rounded-lg border border-rose/40 bg-rose/15 px-2.5 py-1 text-[10.5px] font-semibold text-rose-soft transition hover:bg-rose/25 disabled:opacity-50"
                       >
-                        Quitter
+                        Dissoudre
                       </button>
                     </span>
                   </div>
@@ -276,7 +311,7 @@ export function DuoTab({
                     onClick={() => setConfirmLeave(true)}
                     className="rounded-md px-1 py-1 text-[10.5px] text-ash transition hover:text-rose-soft"
                   >
-                    Quitter l’espace
+                    Dissoudre notre espace
                   </button>
                 )}
               </div>
